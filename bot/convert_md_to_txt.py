@@ -5,10 +5,16 @@ import markdown2
 current_directory = os.getcwd()
 
 # Define the directory where your cloned repository is located
-repo_directory = "/home/alalulu/workspace/chatbot_bmz/bioimage.io/docs"
+repo_directory= r"C:\Users\CaterinaFusterBarcel\Documents\GitHub\bioimage.io\docs"
+# repo_directory = "/home/alalulu/workspace/chatbot_bmz/bioimage.io/docs"
+
+# Get the name of the repository
+repo_name = repo_directory.split("GitHub")[1][1:]
+repo_name = repo_name.replace("\\", "-")
+repo_name = repo_name.replace("/", "-")
 
 # Create a directory for text files if it doesn't exist in the current directory
-txt_directory = os.path.join(current_directory, "text_files")
+txt_directory = os.path.join(current_directory, repo_name)
 os.makedirs(txt_directory, exist_ok=True)
 
 for root, dirs, files in os.walk(repo_directory):
