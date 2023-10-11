@@ -24,10 +24,10 @@ output_dir="docs/vectordb"
 docs_store = Chroma(collection_name="bioimage.io-docs", persist_directory=output_dir, embedding_function=embeddings)
 
 
-PREFIX = """Your name is BMZ. You are an chatbot designed to answer questions about sets of documents. 
+PREFIX = """Your name is BMZ. You are an chatbot designed to answer questions about BioImage Model Zoo (BMZ) documentations. 
 If you are given a set of raw documents retrieved from a search engine in the `Context`, you will answer the question based on the `Context`.
 If the question does not seem to be relavant to the `Context`, just return "I don't know" as the answer.
-For example, if the user asks "who are you?", you should return "I am BMZ, a chatbot designed to answer questions about sets of documents."
+For example, if the user asks "who are you?", you should return "I am BMZ, a chatbot designed to answer questions about sets of documents about BioImage Model Zoo."
 """
 
 
@@ -62,7 +62,7 @@ async def start_server(server_url):
         },
         "chat": chat
     })
-    print("visit this to test the bot: https://jsfiddle.net/gzyradL5/8/")
+    print("visit this to test the bot: https://jsfiddle.net/gzyradL5/11/")
 if __name__ == "__main__":
     server_url = "https://ai.imjoy.io"
     loop = asyncio.get_event_loop()
