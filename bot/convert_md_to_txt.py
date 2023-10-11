@@ -1,43 +1,34 @@
+import os
 import markdown2
-import re
 
-# Define a function to extract links from a Markdown file
-def extract_links_from_md(md_file):
-    # Read the Markdown content from the file
-    with open(md_file, 'r', encoding='utf-8') as f:
-        md_content = f.read()
+# Get the current working directory
+current_directory = os.getcwd()
 
-    # Parse the Markdown content into HTML
-    html_content = markdown2.markdown(md_content)
+# Define the directory where your cloned repository is located
+repo_directory = "/home/alalulu/workspace/chatbot_bmz/bioimage.io/docs"
 
-    # Use regular expressions to find links to websites and figures
-    website_links = re.findall(r'href=["\'](https?://[^"\']+)["\']', html_content)
-    figure_links = re.findall(r'src=["\']([^"\']+)["\']', html_content)
+# Create a directory for text files if it doesn't exist in the current directory
+txt_directory = os.path.join(current_directory, "text_files")
+os.makedirs(txt_directory, exist_ok=True)
 
-    return website_links, figure_links
+for root, dirs, files in os.walk(repo_directory):
+    for file in files:
+        if file.endswith(".md"):
+            # Read the Markdown file
+            with open(os.path.join(root, file), 'r', encoding='utf-8') as md_file:
+                markdown_content = md_file.read()
 
-# Define the input Markdown file and output text file
-input_md_file = 'input.md'
-output_txt_file = 'links.txt'
+            # Convert Markdown to HTML
+            html_content = markdown2.markdown(markdown_content)
 
-# Extract links
-website_links, figure_links = extract_links_from_md(input_md_file)
+            # Save HTML to a text file in the current directory
+            relative_path = os.path.relpath(root, repo_directory)
+            txt_file_dir = os.path.join(txt_directory, relative_path)
+            os.makedirs(txt_file_dir, exist_ok=True)
 
-# Save the links to a text file
-with open(output_txt_file, 'w', encoding='utf-8') as f:
-    f.write("Website Links:\n")
-    for link in website_links:
-        f.write(link + '\n')
+            txt_file = os.path.splitext(file)[0] + ".txt"
+            with open(os.path.join(txt_file_dir, txt_file), 'w', encoding='utf-8') as txt_file:
+                txt_file.write(html_content)
 
-    f.write("\nFigure Links:\n")
-    for link in figure_links:
-        f.write(link + '\n')
+print("Markdown to text conversion completed. Text files are saved in the current directory.")
 
-print(f"Links extracted and saved to {output_txt_file}")
-
-
-if __name__ == "__main__":
-    input_file = "/home/alalulu/workspace/chatbot_bmz/chatbot/bot/how_to_join.md"  # Replace with the path to your Markdown file
-    output_file = "output.txt"  # Replace with the desired output file path
-
-    markdown_to_text(input_file, output_file)
