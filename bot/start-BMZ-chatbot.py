@@ -62,7 +62,7 @@ async def start_server(server_url):
         },
         "chat": chat
     })
-    print("visit this to test the bot: https://jsfiddle.net/gzyradL5/11/")
+    print("visit this to test the bot: https://jsfiddle.net/gzyradL5/11/show")
 if __name__ == "__main__":
     server_url = "https://ai.imjoy.io"
     loop = asyncio.get_event_loop()
