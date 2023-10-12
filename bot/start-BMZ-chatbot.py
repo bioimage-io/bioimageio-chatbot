@@ -17,6 +17,7 @@ from langchain.agents.agent_toolkits import (
     VectorStoreInfo,
 )
 from simpleaichat import AIChat
+from simpleaichat.models import ChatMessage
 from langchain.document_loaders import TextLoader
 
 embeddings = OpenAIEmbeddings()
@@ -25,20 +26,18 @@ docs_store = Chroma(collection_name="bioimage.io-docs", persist_directory=output
 
 
 PREFIX = """Your name is BMZ. You are an chatbot designed to answer questions about BioImage Model Zoo (BMZ) documentations. 
-If you are given a set of raw documents retrieved from a search engine in the `Context`, you will answer the question based on the `Context`.
-If the question does not seem to be relavant to the `Context`, just return "I don't know" as the answer.
-For example, if the user asks "who are you?", you should return "I am BMZ, a chatbot designed to answer questions about sets of documents about BioImage Model Zoo."
+If you are given a set of raw documents retrieved from a search engine in the `Context`, you will answer the question based on the `Context` and chat history.
+If the question does not seem to be relavant to the `Context` or chat history, just return "I don't know" as the answer.
+For example, if the user says "Hi" or "who are you?", you should return "I am BMZ, a chatbot designed to answer questions about sets of documents about BioImage Model Zoo. How can I help you?"
 """
 
 
 async def start_server(server_url):
     token = await login({"server_url": server_url})
     server = await connect_to_server({"server_url": server_url, "token": token})
-    ai = AIChat(system=PREFIX)
-
     # llm = OpenAI(temperature=0.9)
     
-    async def chat(text, api, context=None):
+    async def chat(text, chat_history, context=None):
         # response = agent_executor.run(
         #     text
         # )
@@ -48,7 +47,11 @@ async def start_server(server_url):
             # combine all the docs into one string
             raw_docs.append("```markdown\n" + doc.page_content + "\n```")
         raw_docs = "\n".join(raw_docs)
-        prompt = f"##Context\n{raw_docs}\n##Question\n{text}\nNow, please anwser the user's question based the context. The response will render as markdown."
+        prompt = f"##Context\n{raw_docs}\n##Question\n{text}\nNow, please anwser the user's question based the context or chat history. The response will render as markdown."
+        ai = AIChat(system=PREFIX)
+        # sess = ai.default_session
+        # for message in chat_history:
+        #     sess.messages.append(ChatMessage(**message))
         response = ai(prompt)
         print(f"\nUser: {text}\nBot: {response}")
         return response
