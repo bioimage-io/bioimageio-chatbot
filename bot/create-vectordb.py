@@ -10,11 +10,6 @@ from langchain.agents.agent_toolkits import (
     VectorStoreToolkit,
     VectorStoreInfo,
 )
-from simpleaichat import AIChat
-# llm = OpenAI(temperature=0)
-# Load the text file
-# loader = TextLoader("/home/alalulu/workspace/chatbot_bmz/chatbot/text_files/CODE_OF_CONDUCT.txt")
-
 
 # Read text_files folder to get all txt files including the ones in subfolders
 def md_to_vectorstore(root_folder):
@@ -31,23 +26,16 @@ def md_to_vectorstore(root_folder):
                     texts=text_splitter.split_documents(documents)
                     txt_list.append(texts)
     return txt_list
-root_folder = "/home/alalulu/workspace/chatbot_bmz/bioimage.io/docs"# "/home/alalulu/workspace/chatbot_bmz/chatbot/text_files"
-txt_list = md_to_vectorstore(root_folder)
-texts = [item for sublist in txt_list for item in sublist]
+# root_folder = "/home/alalulu/workspace/chatbot_bmz/bioimage.io/docs"# "/home/alalulu/workspace/chatbot_bmz/chatbot/text_files"
+# txt_list = md_to_vectorstore(root_folder)
+# texts = [item for sublist in txt_list for item in sublist]
+
+# load from vectorstore
 embeddings = OpenAIEmbeddings()
 output_dir="docs/vectordb"
-# docs_store = Chroma.from_documents(
-#     texts, embeddings, persist_directory=output_dir, collection_name="bioimage.io-docs"
-# )
+docs_store = Chroma(collection_name="bioimage.io-docs", persist_directory=output_dir, embedding_function=embeddings)
 
 
-
-PREFIX = """Your name is BMZ. You are an chatbot designed to answer questions about sets of documents. 
-If you are given a set of raw documents retrieved from a search engine in the `Context`, you will answer the question based on the `Context`.
-If the question does not seem to be relavant to the `Context`, just return "I don't know" as the answer.
-"""
-
-ai = AIChat(system=PREFIX)
 
 question = "what are Model contribution guidelines?"
 docs = docs_store.similarity_search(question)
@@ -57,7 +45,5 @@ for doc in docs:
     raw_docs.append("```markdown\n" + doc.page_content + "\n```")
 raw_docs = "\n".join(raw_docs)
 
-prompt = f"##Context\n{raw_docs}\n##Question\n{question}\nNow, please anwser the user's question based the context."
-response = ai(prompt)
-print(response)
+
 
