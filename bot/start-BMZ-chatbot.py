@@ -33,24 +33,24 @@ class QuestionWithHistory(BaseModel):
     question: str = Field(description="The user's question.")
     chat_history: Optional[List[Dict[str, str]]] = Field(None, description="The chat history.")
 
-async def retrieve_document(question_with_history: QuestionWithHistory = None, role: Role = None) -> str:
-    """Answer the user's question directly or retrieve relevant documents from the documentation."""
-    inputs = list(question_with_history.chat_history) + [question_with_history.question]
-    request = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput])
-    if isinstance(request, DirectResponse):
-        return request.response
-    relevant_docs = docs_store.similarity_search(request.query, k=2)
-    raw_docs = [doc.page_content for doc in relevant_docs]
-    search_input = DocumentSearchInput(user_question=request.request, relevant_context=raw_docs)
-    response = await role.aask(search_input, FinalResponse)
-    return response.response
-
-# Load from vector store
-embeddings = OpenAIEmbeddings()
-output_dir = "docs/vectordb"
-docs_store = Chroma(collection_name="bioimage.io-docs", persist_directory=output_dir, embedding_function=embeddings)
 
 def create_customer_service():
+
+    docs_store = load_bioimageio_docs()
+    assert docs_store._collection.count() == 66
+
+    async def retrieve_document(question_with_history: QuestionWithHistory = None, role: Role = None) -> str:
+        """Answer the user's question directly or retrieve relevant documents from the documentation."""
+        inputs = list(question_with_history.chat_history) + [question_with_history.question]
+        request = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput])
+        if isinstance(request, DirectResponse):
+            return request.response
+        relevant_docs = docs_store.similarity_search(request.query, k=2)
+        raw_docs = [doc.page_content for doc in relevant_docs]
+        search_input = DocumentSearchInput(user_question=request.request, relevant_context=raw_docs)
+        response = await role.aask(search_input, FinalResponse)
+        return response.response
+
     CustomerServiceRole = Role.create(
         name="Liza",
         profile="Customer Service",
@@ -60,6 +60,13 @@ def create_customer_service():
     )
     customer_service = CustomerServiceRole()
     return customer_service
+
+def load_bioimageio_docs():
+    # Load from vector store
+    embeddings = OpenAIEmbeddings()
+    output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../docs')
+    docs_store = Chroma(collection_name="bioimage.io-docs", persist_directory=output_dir, embedding_function=embeddings)
+    return docs_store
 
 async def main():
     customer_service = create_customer_service()

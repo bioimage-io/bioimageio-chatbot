@@ -10,7 +10,9 @@ __pycache__/
 .Python
 build/
 develop-eggs/
+data/
 dist/
+docs/
 downloads/
 eggs/
 .eggs/
@@ -143,3 +145,4 @@ cython_debug/
 # others
 *.txt
 *.md
+*.bin
