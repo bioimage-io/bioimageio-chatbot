@@ -124,27 +124,27 @@ def create_customer_service():
         ), FinalResponse)
         return response.response
 
-    async def retrieve_document(question_with_history: QuestionWithHistory = None, role: Role = None) -> str:
-        """Answer the user's question directly or retrieve relevant documents from the documentation."""
+    async def respond_to_user(question_with_history: QuestionWithHistory = None, role: Role = None) -> str:
+        """Answer the user's question directly or retrieve relevant documents from the documentation, or create a Python Script to get information about details of models."""
         inputs = list(question_with_history.chat_history) + [question_with_history.question]
         request = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, ModelZooInfoScript])
         if isinstance(request, DirectResponse):
             return request.response
-        elif isinstance(request, ModelZooInfoScript):
-            return await query_model_zoo(request, role)
         elif isinstance(request, DocumentRetrievalInput):
             relevant_docs = docs_store.similarity_search(request.query, k=2)
             raw_docs = [doc.page_content for doc in relevant_docs]
             search_input = DocumentSearchInput(user_question=request.request, relevant_context=raw_docs)
             response = await role.aask(search_input, FinalResponse)
             return response.response
-
+        elif isinstance(request, ModelZooInfoScript):
+            return await query_model_zoo(request, role)
+        
     CustomerServiceRole = Role.create(
         name="Liza",
         profile="Customer Service",
         goal="You are a customer service representative for the help desk of BioImage Model Zoo website. You will answer user's questions about the website, ask for clarification, and retrieve documents from the website's documentation.",
         constraints=None,
-        actions=[retrieve_document],
+        actions=[respond_to_user],
     )
     customer_service = CustomerServiceRole()
     return customer_service
