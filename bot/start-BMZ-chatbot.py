@@ -9,6 +9,65 @@ from schema_agents.schema import Message
 from langchain.vectorstores import Chroma
 from langchain.embeddings.openai import OpenAIEmbeddings
 from typing import Any, Dict, List, Optional, Union
+import requests
+import sys
+import io
+import json
+
+
+def load_model_info():
+    response = requests.get("https://bioimage-io.github.io/collection-bioimage-io/collection.json")
+    assert response.status_code == 200
+    model_info = response.json()
+    resource_items = model_info['collection']
+    return resource_items
+
+
+def execute_code(script, context=None):
+    if context is None:
+        context = {}
+
+    # Redirect stdout and stderr to capture their output
+    original_stdout = sys.stdout
+    original_stderr = sys.stderr
+    sys.stdout = io.StringIO()
+    sys.stderr = io.StringIO()
+
+    try:
+        # Create a copy of the context to avoid modifying the original
+        local_vars = context.copy()
+
+        # Execute the provided Python script with access to context variables
+        exec(script, local_vars)
+
+        # Capture the output from stdout and stderr
+        stdout_output = sys.stdout.getvalue()
+        stderr_output = sys.stderr.getvalue()
+
+        return {
+            "stdout": stdout_output,
+            "stderr": stderr_output,
+            "context": local_vars  # Include context variables in the result
+        }
+    except Exception as e:
+        return {
+            "stdout": "",
+            "stderr": str(e),
+            "context": context  # Include context variables in the result even if an error occurs
+        }
+    finally:
+        # Restore the original stdout and stderr
+        sys.stdout = original_stdout
+        sys.stderr = original_stderr
+
+
+
+
+class ModelZooInfoScriptResults(BaseModel):
+    """Results of executing the model zoo info query script."""
+    stdout: str = Field(description="The output from stdout.")
+    stderr: str = Field(description="The output from stderr.")
+    request: str = Field(description="User's request in details")
 
 class DocumentRetrievalInput(BaseModel):
     """Input for finding relevant documents."""
@@ -35,9 +94,37 @@ class QuestionWithHistory(BaseModel):
 
 
 def create_customer_service():
+    resource_items = load_model_info()
+    types = set()
+    tags = set()
+    for resource in resource_items:
+        types.add(resource['type'])
+        tags.update(resource['tags'])
+    types = list(types)
+    tags = list(tags)[:10]
+    
+    resource_item_stats = f"""Each item contains the following fields: {list(resource_items[0].keys())}\nThe available resource types are {types}\nSome example tags: {tags}\nHere is an example: {resource_items[0]}"""
+    class ModelZooInfoScript(BaseModel):
+        """Create a Python Script to retrieve information about the model zoo."""
+        script: str = Field(description="The script to be executed, the script use a predefined local variable `resources` which contains a list of dictionaries with all the resources in the model zoo (with different types including models and applications etc.), the response to the query should be printed to the stdout. Details about the `resources`:\n" + resource_item_stats)
+        request: str = Field(description="User's request in details")
 
     docs_store = load_bioimageio_docs()
     assert docs_store._collection.count() == 66
+
+    async def query_model_zoo(question_with_history: QuestionWithHistory, role: Role) -> str:
+        """Respond to queries about the models in the model zoo"""
+        inputs = list(question_with_history.chat_history) + [question_with_history.question]
+        resp = await role.aask(inputs, ModelZooInfoScript)
+        # execute the code
+        result = execute_code(resp.script, {"resources": resource_items})
+
+        response = await role.aask(ModelZooInfoScriptResults(
+            stdout=result["stdout"],
+            stderr=result["stderr"],
+            request=resp.request
+        ), FinalResponse)
+        return response.response
 
     async def retrieve_document(question_with_history: QuestionWithHistory = None, role: Role = None) -> str:
         """Answer the user's question directly or retrieve relevant documents from the documentation."""
@@ -56,7 +143,7 @@ def create_customer_service():
         profile="Customer Service",
         goal="You are a customer service representative for the help desk of BioImage Model Zoo website. You will answer user's questions about the website, ask for clarification, and retrieve documents from the website's documentation.",
         constraints=None,
-        actions=[retrieve_document],
+        actions=[retrieve_document, query_model_zoo],
     )
     customer_service = CustomerServiceRole()
     return customer_service
@@ -70,9 +157,12 @@ def load_bioimageio_docs():
 
 async def main():
     customer_service = create_customer_service()
-    resp = await customer_service.handle(Message(content="Who are you?", role="User"))
-
-    resp = await customer_service.handle(Message(content="What are Model Contribution Guidelines?", role="User"))
+    chat_history=[]
+    question = "How can I test the models?"
+    m = QuestionWithHistory(question=question, chat_history=chat_history)
+    resp = await customer_service.handle(Message(content=m.json(), instruct_content=m , role="User"))
+    print(resp)
+    # resp = await customer_service.handle(Message(content="What are Model Contribution Guidelines?", role="User"))
 
 
 async def start_server(server_url):
