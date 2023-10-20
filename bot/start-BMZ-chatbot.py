@@ -66,11 +66,13 @@ class ModelZooInfoScriptResults(BaseModel):
     stdout: str = Field(description="The output from stdout.")
     stderr: str = Field(description="The output from stderr.")
     request: str = Field(description="User's request in details")
+    user_info: str = Field(description="User info for personalize response.")
 
 class DocumentRetrievalInput(BaseModel):
     """Input for finding relevant documents."""
     query: str = Field(description="Query used to retrieve related documents.")
     request: str = Field(description="User's request in details")
+    user_info: str = Field(description="Brief user info summary for personalized response, including name, background etc.")
 
 class DirectResponse(BaseModel):
     """Direct response to a user's question."""
@@ -80,6 +82,8 @@ class DocumentSearchInput(BaseModel):
     """Results of document retrieval from documentation."""
     user_question: str = Field(description="The user's original question.")
     relevant_context: List[str] = Field(description="Context chunks from the documentation (in markdown format), ordered by relevance.")
+    user_info: str = Field(description="User info for personalize response.")
+
 
 class FinalResponse(BaseModel):
     """The final response to the user's question."""
@@ -93,12 +97,12 @@ class UserProfile(BaseModel):
     background: str = Field(description="The user's background. ", max_length=256)
 
 class QuestionWithHistory(BaseModel):
-    """The user's question and the chat history."""
+    """The user's question, chat history and user's profile."""
     question: str = Field(description="The user's question.")
     chat_history: Optional[List[Dict[str, str]]] = Field(None, description="The chat history.")
-    user_profile: Optional[UserProfile] = Field(None, description="The user's profile. You should use this to personalize the response.")
+    user_profile: Optional[UserProfile] = Field(None, description="The user's profile. You should use this to personalize the response based on the user's background and occupation.")
 
-def create_customer_service():
+def create_customer_service(channel):
     resource_items = load_model_info()
     types = set()
     tags = set()
@@ -113,23 +117,11 @@ def create_customer_service():
         """Create a Python Script to get information about details of models."""
         script: str = Field(description="The script to be executed, the script use a predefined local variable `resources` which contains a list of dictionaries with all the resources in the model zoo (with different types including models and applications etc.), the response to the query should be printed to the stdout. Details about the `resources`:\n" + resource_item_stats)
         request: str = Field(description="User's request in details")
+        user_info: str = Field(description="Brief user info summary for personalized response, including name, background etc.")
 
-    docs_store = load_bioimageio_docs()
-    assert docs_store._collection.count() == 66
 
-    async def query_model_zoo(resp: ModelZooInfoScript, role: Role) -> str:
-        """Respond to queries about the models in the model zoo"""
-        # inputs = list(question_with_history.chat_history) + [question_with_history.question]
-        # resp = await role.aask(inputs, ModelZooInfoScript)
-        # execute the code
-        result = execute_code(resp.script, {"resources": resource_items})
-
-        response = await role.aask(ModelZooInfoScriptResults(
-            stdout=result["stdout"],
-            stderr=result["stderr"],
-            request=resp.request
-        ), FinalResponse)
-        return response.response
+    docs_store = load_bioimageio_docs(channel)
+    assert docs_store._collection.count() > 0
 
     async def respond_to_user(question_with_history: QuestionWithHistory = None, role: Role = None) -> str:
         """Answer the user's question directly or retrieve relevant documents from the documentation, or create a Python Script to get information about details of models."""
@@ -140,27 +132,35 @@ def create_customer_service():
         elif isinstance(request, DocumentRetrievalInput):
             relevant_docs = docs_store.similarity_search(request.query, k=2)
             raw_docs = [doc.page_content for doc in relevant_docs]
-            search_input = DocumentSearchInput(user_question=request.request, relevant_context=raw_docs)
+            search_input = DocumentSearchInput(user_question=request.request, relevant_context=raw_docs, user_info=request.user_info)
             response = await role.aask(search_input, FinalResponse)
             return response.response
         elif isinstance(request, ModelZooInfoScript):
-            return await query_model_zoo(request, role)
+            result = execute_code(request.script, {"resources": resource_items})
+
+            response = await role.aask(ModelZooInfoScriptResults(
+                stdout=result["stdout"],
+                stderr=result["stderr"],
+                request=request.request,
+                user_info=request.user_info
+            ), FinalResponse)
+            return response.response
         
     CustomerServiceRole = Role.create(
         name="Liza",
         profile="Customer Service",
-        goal="You are a customer service representative for the help desk of BioImage Model Zoo website. You will answer user's questions about the website, ask for clarification, and retrieve documents from the website's documentation.",
+        goal="You are a customer service representative for the help desk of BioImage Model Zoo website. You will answer user's questions about the website, ask for clarification, and retrieve documents from the website's documentation. You may also get user's profile to personalize the response in order to improve the user experience.",
         constraints=None,
         actions=[respond_to_user],
     )
     customer_service = CustomerServiceRole()
     return customer_service
 
-def load_bioimageio_docs():
+def load_bioimageio_docs(collection_name="bioimage.io-main"):
     # Load from vector store
     embeddings = OpenAIEmbeddings()
-    output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../docs')
-    docs_store = Chroma(collection_name="bioimage.io-docs", persist_directory=output_dir, embedding_function=embeddings)
+    output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../docs/", collection_name)
+    docs_store = Chroma(collection_name=collection_name, persist_directory=output_dir, embedding_function=embeddings)
     return docs_store
 
 async def main():
@@ -180,11 +180,11 @@ async def main():
 
 async def start_server(server_url):
     token = await login({"server_url": server_url})
-    server = await connect_to_server({"server_url": server_url, "token": token})
+    server = await connect_to_server({"server_url": server_url, "token": token, "method_timeout": 100})
     # llm = OpenAI(temperature=0.9)
     
-    async def chat(text, chat_history, user_profile=None, context=None):
-        ai = create_customer_service()
+    async def chat(text, chat_history, user_profile=None, channel=None, context=None):
+        ai = create_customer_service(channel)
         # user_profile = {"name": "lulu", "occupation": "data scientist", "background": "machine learning and AI"}
         m = QuestionWithHistory(question=text, chat_history=chat_history, user_profile=UserProfile.parse_obj(user_profile))
         response = await ai.handle(Message(content=m.json(), instruct_content=m , role="User"))
@@ -200,7 +200,8 @@ async def start_server(server_url):
             "visibility": "public",
             "require_context": True
         },
-        "chat": chat
+        "chat": chat,
+        "channels": ["bioimage.io-main", "ImJoy-master"]
     })
     print("visit this to test the bot: https://jsfiddle.net/gzyradL5/11/show")
 
