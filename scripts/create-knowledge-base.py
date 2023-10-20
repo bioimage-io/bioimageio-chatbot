@@ -6,6 +6,9 @@ from langchain.text_splitter import CharacterTextSplitter, RecursiveCharacterTex
 from langchain.vectorstores import FAISS
 from langchain.document_loaders import TextLoader, PyPDFLoader
 from langchain.embeddings.openai import OpenAIEmbeddings
+from langchain.docstore.document import Document
+import json
+import pickle
 
 TEMP_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
 
@@ -24,7 +27,20 @@ def parse_docs(root_folder, md_separator=None, pdf_separator=None, chunk_size=10
                     print(f"Reading {file_path}...")
                     documents = PyPDFLoader(file_path).load()
                     text_splitter = RecursiveCharacterTextSplitter(separators=pdf_separator or ["\n\n", "\n", " ", ""], chunk_size=chunk_size, chunk_overlap=chunk_overlap)
-                    chunks = text_splitter.split_documents(documents)                
+                    chunks = text_splitter.split_documents(documents)    
+                elif filename.endswith(".txt"):
+                    print(f"Reading {file_path}...")
+                    documents = TextLoader(file_path).load()
+                    text_splitter = CharacterTextSplitter(separator="\n", chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+                    chunks = text_splitter.split_documents(documents)
+                elif filename.endswith(".json"):
+                    # convert json to yaml
+                    print(f"Reading {file_path}...")
+                    with open(file_path, "r") as json_file:
+                        obj = json.load(json_file)
+                    yaml_content = yaml.dump(obj)
+                    metadata = {"source": file_path}
+                    chunks = [Document(page_content=yaml_content, metadata=metadata)]         
                 else:
                     print(f"Skipping {file_path}")
                     continue
@@ -72,8 +88,16 @@ def create_vector_knowledge_base(collections, output_dir):
     embeddings = OpenAIEmbeddings()
     for collection in collections:
         url = collection['url']
-        docs_dir = download_docs(url)
-        documents = parse_docs(docs_dir)
+        cached_docs_file = os.path.join(output_dir, collection['id'] + "-docs.pickle")
+        if os.path.exists(cached_docs_file):
+            with open(cached_docs_file, "rb") as f:
+                documents = pickle.load(f)
+        else:    
+            docs_dir = download_docs(url)
+            documents = parse_docs(os.path.join(docs_dir, collection.get('directory', '')))
+        if len(documents) > 1000:
+            print(f"Waring: only using the first 1000 documents kept for the vector database: {collection['id']}(#documents={len(documents)}))")
+            documents = documents[:1000]
         # save the vector db to output_dir
         print(f"Creating embeddings (#documents={len(documents)}))")
         vectordb = FAISS.from_documents(documents, embeddings)
