@@ -1,2 +1,3 @@
-# chatbot
-Chatbot to retrieve information to response to users' query about the BioImage Model Zoo.
+# BioImageIO ChatBot
+
+This repository contains the code for the BioImageIO ChatBot.

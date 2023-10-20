@@ -14,6 +14,9 @@ import sys
 import io
 import json
 
+import yaml
+manifest = yaml.load(open("../manifest.yaml", "r"), Loader=yaml.FullLoader)
+
 
 def load_model_info():
     response = requests.get("https://bioimage-io.github.io/collection-bioimage-io/collection.json")
@@ -102,7 +105,7 @@ class QuestionWithHistory(BaseModel):
     chat_history: Optional[List[Dict[str, str]]] = Field(None, description="The chat history.")
     user_profile: Optional[UserProfile] = Field(None, description="The user's profile. You should use this to personalize the response based on the user's background and occupation.")
 
-def create_customer_service(channel):
+def create_customer_service(docs_store):
     resource_items = load_model_info()
     types = set()
     tags = set()
@@ -120,8 +123,7 @@ def create_customer_service(channel):
         user_info: str = Field(description="Brief user info summary for personalized response, including name, background etc.")
 
 
-    docs_store = load_bioimageio_docs(channel)
-    assert docs_store._collection.count() > 0
+
 
     async def respond_to_user(question_with_history: QuestionWithHistory = None, role: Role = None) -> str:
         """Answer the user's question directly or retrieve relevant documents from the documentation, or create a Python Script to get information about details of models."""
@@ -156,7 +158,7 @@ def create_customer_service(channel):
     customer_service = CustomerServiceRole()
     return customer_service
 
-def load_bioimageio_docs(collection_name="bioimage.io-main"):
+def load_docs_store(collection_name):
     # Load from vector store
     embeddings = OpenAIEmbeddings()
     output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../docs/", collection_name)
@@ -164,7 +166,9 @@ def load_bioimageio_docs(collection_name="bioimage.io-main"):
     return docs_store
 
 async def main():
-    customer_service = create_customer_service()
+    docs_store = load_docs_store("BioImage.IO")
+    assert docs_store._collection.count() > 0
+    customer_service = create_customer_service(docs_store)
     chat_history=[]
     question = "How can I test the models?"
     profile = UserProfile(name="lulu", occupation="data scientist", background="machine learning and AI")
@@ -179,12 +183,17 @@ async def main():
 
 
 async def start_server(server_url):
+    channels = [collection['name'] for collection in manifest['collections']]
     token = await login({"server_url": server_url})
     server = await connect_to_server({"server_url": server_url, "token": token, "method_timeout": 100})
     # llm = OpenAI(temperature=0.9)
     
+    docs_store_dict = {channel: load_docs_store(channel) for channel in channels}
+    for docs_store in docs_store_dict.values():
+        assert docs_store._collection.count() > 0, f"Please make sure the docs store {docs_store._collection.name} is not empty."
+    
     async def chat(text, chat_history, user_profile=None, channel=None, context=None):
-        ai = create_customer_service(channel)
+        ai = create_customer_service(docs_store_dict[channel])
         # user_profile = {"name": "lulu", "occupation": "data scientist", "background": "machine learning and AI"}
         m = QuestionWithHistory(question=text, chat_history=chat_history, user_profile=UserProfile.parse_obj(user_profile))
         response = await ai.handle(Message(content=m.json(), instruct_content=m , role="User"))
@@ -201,7 +210,7 @@ async def start_server(server_url):
             "require_context": True
         },
         "chat": chat,
-        "channels": ["bioimage.io-main", "ImJoy-master"]
+        "channels": channels
     })
     print("visit this to test the bot: https://jsfiddle.net/gzyradL5/11/show")
 

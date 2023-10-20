@@ -1,0 +1,5 @@
+collections:
+  - name: ImJoy
+    url: https://github.com/imjoy-team/ImJoy/archive/refs/heads/master.zip
+  - name: BioImage.IO
+    url: https://github.com/bioimage-io/bioimage.io/archive/refs/heads/main.zip
