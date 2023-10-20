@@ -9,7 +9,13 @@ collections:
     url: https://github.com/bioimage-io/bioimage.io/archive/refs/heads/main.zip
     directory: docs
     description: A model repository for bioimage analysis.
-  - name: scikit-image
-    id: scikit-image
-    url: https://raw.githubusercontent.com/oeway/hypha-knowledge-base/gh-pages/scikit-image-0.21.0.pdf
-    description: A collection of algorithms for image processing.
+  - name: deepImageJ
+    id: deepimagej
+    url: https://s3.imjoy.io/public-datasets/deepimagej-plugin.wiki.zip
+    directory: "."
+    description: The ImageJ plugin to run deep-learning models
+
+  # - name: scikit-image
+  #   id: scikit-image
+  #   url: https://raw.githubusercontent.com/oeway/hypha-knowledge-base/gh-pages/scikit-image-0.21.0.pdf
+  #   description: A collection of algorithms for image processing.
