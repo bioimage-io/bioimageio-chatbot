@@ -1,20 +1,24 @@
 collections:
+  - name: bio.tools
+    id: bio.tools
+    url: https://github.com/research-software-ecosystem/content/archive/refs/heads/master.zip
+    directory: content-master/data
+    description: A repository for research software tools with metadata.
   - name: ImJoy
     id: imjoy
     url: https://github.com/imjoy-team/ImJoy/archive/refs/heads/master.zip
-    directory: docs
+    directory: ImJoy-master/docs
     description: A plugin powered hybrid computing platform for deploying deep learning applications such as advanced image analysis tools.
   - name: BioImage.IO
     id: bioimage.io
     url: https://github.com/bioimage-io/bioimage.io/archive/refs/heads/main.zip
-    directory: docs
+    directory: bioimage.io-main/docs
     description: A model repository for bioimage analysis.
   - name: deepImageJ
     id: deepimagej
     url: https://s3.imjoy.io/public-datasets/deepimagej-plugin.wiki.zip
     directory: "."
     description: The ImageJ plugin to run deep-learning models
-
   # - name: scikit-image
   #   id: scikit-image
   #   url: https://raw.githubusercontent.com/oeway/hypha-knowledge-base/gh-pages/scikit-image-0.21.0.pdf
