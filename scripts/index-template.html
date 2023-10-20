@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BioImage.IO ChatBot</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Add the Font Awesome library -->
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css"
+    integrity="sha384-DyZ88mC6Up2uqS4h/KRgHuoeGwBcD4Ng9SiP4dIRy0EXTlnuz47vAwmeGwVChigm" crossorigin="anonymous" />
+
+  <style>
+    /* Custom CSS */
+    /* Styles for the message container */
+    #chat1 .message-container {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      margin-bottom: 10px;
+    }
+
+    #chat1 .message-container.user-message {
+      flex-direction: row-reverse;
+    }
+
+    #chat1 .message-container i {
+      font-size: 20px;
+      margin-right: 10px;
+    }
+
+    #chat1 .message-container.robot-message i {
+      margin-right: 0;
+      margin-left: 10px;
+    }
+
+    #chat1 .message-container .message-content {
+      background-color: #f2f2f2;
+      padding: 10px;
+      border-radius: 10px;
+      max-width: 70%;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    #chat1 .message-container.user-message .message-content {
+      background-color: #dff9fb;
+    }
+
+    #chat1 .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #3498db;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      animation: spin 2s linear infinite;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+
+    #chat1 textarea {
+      resize: none;
+      overflow: hidden;
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
+</head>
+
+
+<body>
+  <div class="container mt-5">
+    <div class="card" id="chat1">
+      <div class="card-header">
+        <img src="https://bioimage.io/static/img/bioimage-io-icon.svg" alt="BioImage.IO Icon"
+          style="height: 24px; margin-right: 10px">
+        BioImage.IO ChatBot
+      </div>
+
+      <div class="card-body">
+        <div class="message-holder"></div>
+        <div class="form-outline">
+          <textarea class="form-control message" id="textAreaExample"></textarea>
+          <label class="form-label" for="textAreaExample" id="status-text">Type your message</label>
+        </div>
+        <button type="button" class="btn btn-primary mt-3 send-btn">Send</button>
+
+        <!-- Add an "Edit Profile" button to toggle the profile options -->
+        <button type="button" class="btn btn-info mt-3" id="edit-profile-btn">
+          Edit Profile
+        </button>
+        <!-- Add a "Reset" button to restart the session -->
+        <button type="button" class="btn btn-secondary mt-3" id="reset-btn">
+          Reset
+        </button>
+        <!-- Add the "Channels" dropdown menu -->
+        <div class="form-outline btn-info mt-3">
+          <select class="form-select" id="channelSelect">
+            <option value="" disabled selected>Select a Channel</option>
+          </select>
+        </div>
+
+        <!-- Profile options initially collapsed -->
+        <div id="profileOptions" class="collapse">
+          <input type="text" class="form-control mt-3" id="userNameInput" placeholder="Enter your name...">
+          <input type="text" class="form-control mt-3" id="userOccupationInput" placeholder="Enter your occupation...">
+          <input type="text" class="form-control mt-3" id="userBackgroundInput" placeholder="Enter your background...">
+          <!-- Add a "Save" button for the user profile -->
+          <button type="button" class="btn btn-success mt-3" id="save-profile-btn">
+            Save
+          </button>
+        </div>
+
+        <!-- Helper message for personalized answers -->
+        <p class="mt-3">Tips: Customize your profile to get personalized answers based on your background.</p>
+
+      </div>
+      <div class="card-footer text-center">
+        <img src="https://ai4life.eurobioimaging.eu/wp-content/uploads/2022/09/AI4Life-logo_giraffe-nodes-2048x946.png"
+          alt="AI4Life Icon" style="height: 40px; margin-right: 10px">
+        <!--  <p>BioImage.IO ChatBot is supported by the European Union's Horizon Europe Research and Innovation programme via the AI4Life project.</p> -->
+      </div>
+
+    </div>
+  </div>
+
+
+
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/imjoy-rpc@0.5.6/dist/hypha-rpc-websocket.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/2.1.3/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
+
+  <script>
+    $(document).ready(async function () {
+      // Manually toggle the collapse for profile options
+      $('#edit-profile-btn').click(function () {
+        $('#profileOptions').collapse('toggle');
+      });
+      // Reset the chat session and clear chat history
+      function resetChat() {
+        chat_history.length = 0; // Clear the chat history
+        code = ''; // Reset code
+        error_message = ''; // Reset error message
+        $('.message-holder').empty(); // Clear the messages
+      }
+
+      $('#reset-btn').click(function () {
+        resetChat(); // Call the reset function when the "Reset" button is clicked
+      });
+
+      // Load user profile from local storage
+      const savedUserProfile = JSON.parse(localStorage.getItem('userProfile'));
+      if (savedUserProfile) {
+        $('#userNameInput').val(savedUserProfile.name);
+        $('#userOccupationInput').val(savedUserProfile.occupation);
+        $('#userBackgroundInput').val(savedUserProfile.background);
+      }
+
+      // Save button click event to save the user profile to local storage
+      $('#save-profile-btn').click(function () {
+        const userName = $('#userNameInput').val();
+        const userOccupation = $('#userOccupationInput').val();
+        const userBackground = $('#userBackgroundInput').val();
+
+        // Create a user_profile object with name, occupation, and background
+        const user_profile = {
+          name: userName,
+          occupation: userOccupation,
+          background: userBackground
+        };
+
+        // Save the user profile to local storage
+        localStorage.setItem('userProfile', JSON.stringify(user_profile));
+
+        // Collapse the profile options after saving
+        $('#profileOptions').collapse('hide');
+      });
+      var spinner = `<div class="spinner"></div>`; // Spinner HTML
+      var code;
+      var error_message;
+      // Add this event listener to automatically resize the textarea based on its content
+      var textarea = document.getElementById('textAreaExample');
+
+      textarea.addEventListener('input', autoResize, false);
+      autoResize.call(textarea);
+
+
+      marked.setOptions({
+        renderer: new marked.Renderer(),
+        gfm: true,
+        tables: true,
+        breaks: false,
+        pedantic: false,
+        smartLists: true,
+        smartypants: false
+      });
+
+      function autoResize() {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
+      }
+
+      $('.message-holder').append(spinner);
+
+      let svc;
+      showConnectingStatus();
+      try {
+        const server = await hyphaWebsocketClient.connectToServer({
+          "server_url": "https://ai.imjoy.io"
+        })
+        svc = await server.getService("{{ SERVICE_ID }}")
+        const channels = svc.channels;
+        const channelSelect = document.getElementById('channelSelect');
+
+        // Clear any existing options
+        channelSelect.innerHTML = '<option value="" disabled selected>Select a Channel</option>';
+
+        channels.forEach((channel) => {
+          const option = document.createElement('option');
+          option.value = channel;
+          option.textContent = channel;
+          channelSelect.appendChild(option);
+        });
+        showReadyStatus();
+      }
+      catch (e) {
+        // If connection fails, show an error message in the status
+        showErrorStatus('Failed to connect to the server');
+        alert("Failed to get hypha bot service")
+      }
+      finally {
+        $('.spinner').remove();
+      }
+
+
+      const chat_history = [];
+      $('.send-btn').on('click', async function (e) {
+        e.preventDefault();
+        const message = $('.message').val();
+        const userName = $('#userNameInput').val();
+        const userOccupation = $('#userOccupationInput').val();
+        const userBackground = $('#userBackgroundInput').val();
+        const selectedChannel = $('#channelSelect').val(); // Get the selected channel
+
+
+
+        // Create a user_profile object with name, occupation, and background
+        let user_profile = {
+          name: userName,
+          occupation: userOccupation,
+          background: userBackground
+        };
+
+        $('.message').val('').focus();
+
+        appendUserMessage(message); // Append user message to the message container
+        $('.message-holder').append(spinner); // Append spinner while waiting for the server's response
+        // Show 'Thinking...' status while waiting for the server's response
+        showThinkingStatus();
+
+        code = await svc.chat(message, chat_history, user_profile, selectedChannel);
+        console.log(code)
+        chat_history.push({ role: 'user', content: message })
+        chat_history.push({ role: 'assistant', content: code })
+        // Remove spinner and set status back to 'Ready to chat' after finishing
+        $('.spinner').remove();
+        showReadyStatus();
+        appendRobotMessage(code); // Append robot message to the message container
+      });
+
+
+      function appendUserMessage(message) {
+        let messageContainer = `<div class="message-container user-message">
+                                   <i class="fas fa-user"></i>
+                                   <div class="message-content">${message}</div>
+                                </div>`;
+        $('.message-holder').append(messageContainer);
+      }
+
+      /* function appendRobotMessage(message) {
+        let messageContainer = `<div class="message-container robot-message">
+                                   <i class="fas fa-robot"></i>
+                                   <div class="message-content">${message}</div>
+                                </div>`;
+        $('.message-holder').append(messageContainer);
+      } */
+      function appendRobotMessage(message) {
+        // Convert the message to HTML using the marked library
+        const htmlMessage = marked(message);
+
+        let messageContainer = `<div class="message-container robot-message">
+            <i class="fas fa-robot"></i>
+            <div class="message-content">${htmlMessage}</div>
+        </div>`;
+
+        $('.message-holder').append(messageContainer);
+      }
+      // Function to update the status text
+      function updateStatus(status) {
+        $('#status-text').text(status);
+      }
+      // Function to show the status as 'Connecting to server...'
+      function showConnectingStatus() {
+        updateStatus('Connecting to server...');
+      }
+      // Function to show the status as 'Thinking...'
+      function showThinkingStatus() {
+        updateStatus('Thinking...');
+      }
+
+      // Function to show the status as 'Ready to chat'
+      function showReadyStatus() {
+        updateStatus('Ready to chat');
+      }
+
+      // Function to show the error message in the status
+      function showErrorStatus(errorMessage) {
+        updateStatus('Error: ' + errorMessage);
+      }
+    });
+  </script>
+</body>
+
+</html>

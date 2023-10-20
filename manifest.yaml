@@ -1,0 +1,15 @@
+collections:
+  - name: ImJoy
+    id: imjoy
+    url: https://github.com/imjoy-team/ImJoy/archive/refs/heads/master.zip
+    directory: docs
+    description: A plugin powered hybrid computing platform for deploying deep learning applications such as advanced image analysis tools.
+  - name: BioImage.IO
+    id: bioimage.io
+    url: https://github.com/bioimage-io/bioimage.io/archive/refs/heads/main.zip
+    directory: docs
+    description: A model repository for bioimage analysis.
+  - name: scikit-image
+    id: scikit-image
+    url: https://raw.githubusercontent.com/oeway/hypha-knowledge-base/gh-pages/scikit-image-0.21.0.pdf
+    description: A collection of algorithms for image processing.
