@@ -143,6 +143,5 @@ cython_debug/
 .vscode/
 
 # others
-*.txt
-*.md
 *.bin
+logs/
