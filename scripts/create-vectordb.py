@@ -25,7 +25,7 @@ def md_to_vectorstore(root_folder):
                     txt_list.append(texts)
     return txt_list
 
-def download_bioimageio_docs(url):
+def download_docs(url):
     # URL of the ZIP file
     # url = "https://github.com/bioimage-io/bioimage.io/archive/refs/heads/main.zip"
 
@@ -58,14 +58,15 @@ def download_bioimageio_docs(url):
     return folder_name
     
 
-def create_vecdb(url_list):
+def create_vector_database(collections):
     vec_doc_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../docs")
     # check if the docs directory exists
     if os.path.exists(vec_doc_dir):
         shutil.rmtree(vec_doc_dir)
     os.mkdir(vec_doc_dir)
-    for url in url_list:
-        folder_name = download_bioimageio_docs(url)
+    for collection in collections:
+        url = collection['url']
+        folder_name = download_docs(url)
         target_directory = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../data")
         # check if the target directory exists
         if not os.path.exists(target_directory):
@@ -85,15 +86,15 @@ def create_vecdb(url_list):
             shutil.rmtree(output_dir)
         os.mkdir(output_dir)
         # save the vector db to output_dir
-        db = Chroma.from_documents(texts, embeddings, collection_name=folder_name, persist_directory=output_dir)
+        db = Chroma.from_documents(texts, embeddings, collection_name=collection['name'], persist_directory=output_dir)
         print("Created a vector database from the downloaded documents.")
 
 
 if __name__ == "__main__":
-    url = "https://github.com/bioimage-io/bioimage.io/archive/refs/heads/main.zip"
-    url2 = "https://github.com/imjoy-team/ImJoy/archive/refs/heads/master.zip"
-    # download_bioimageio_docs(url)
-    create_vecdb([url, url2])
+    import yaml
+    manifest = yaml.load(open("../manifest.yaml", "r"), Loader=yaml.FullLoader)
+    # download_docs(url)
+    create_vector_database(manifest['collection'])
 
     
  
