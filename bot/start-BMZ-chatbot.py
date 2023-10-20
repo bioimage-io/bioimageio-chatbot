@@ -85,11 +85,18 @@ class FinalResponse(BaseModel):
     """The final response to the user's question."""
     response: str = Field(description="The answer to the user's question in markdown format. If the question isn't relevant, return 'I don't know'.")
 
+
+class UserProfile(BaseModel):
+    """The user's profile. This will be used to personalize the response."""
+    name: str = Field(description="The user's name.", max_length=32)
+    occupation: str = Field(description="The user's occupation. ", max_length=128)
+    background: str = Field(description="The user's background. ", max_length=256)
+
 class QuestionWithHistory(BaseModel):
     """The user's question and the chat history."""
     question: str = Field(description="The user's question.")
     chat_history: Optional[List[Dict[str, str]]] = Field(None, description="The chat history.")
-
+    user_profile: Optional[UserProfile] = Field(None, description="The user's profile. You should use this to personalize the response.")
 
 def create_customer_service():
     resource_items = load_model_info()
@@ -126,7 +133,7 @@ def create_customer_service():
 
     async def respond_to_user(question_with_history: QuestionWithHistory = None, role: Role = None) -> str:
         """Answer the user's question directly or retrieve relevant documents from the documentation, or create a Python Script to get information about details of models."""
-        inputs = list(question_with_history.chat_history) + [question_with_history.question]
+        inputs = [question_with_history.user_profile] + list(question_with_history.chat_history) + [question_with_history.question] 
         request = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, ModelZooInfoScript])
         if isinstance(request, DirectResponse):
             return request.response
@@ -160,10 +167,12 @@ async def main():
     customer_service = create_customer_service()
     chat_history=[]
     question = "How can I test the models?"
-    m = QuestionWithHistory(question=question, chat_history=chat_history)
+    profile = UserProfile(name="lulu", occupation="data scientist", background="machine learning and AI")
+    m = QuestionWithHistory(question=question, chat_history=chat_history, user_profile=UserProfile.parse_obj(profile))
     resp = await customer_service.handle(Message(content=m.json(), instruct_content=m , role="User"))
 
-    m = QuestionWithHistory(question="what models can do segment", chat_history=chat_history)
+    question2 = "What are Model Contribution Guidelines?"
+    m = QuestionWithHistory(question=question2, chat_history=chat_history, user_profile=UserProfile.parse_obj(profile))
     resp = await customer_service.handle(Message(content=m.json(), instruct_content=m , role="User"))
     print(resp)
     # resp = await customer_service.handle(Message(content="What are Model Contribution Guidelines?", role="User"))
@@ -174,9 +183,10 @@ async def start_server(server_url):
     server = await connect_to_server({"server_url": server_url, "token": token})
     # llm = OpenAI(temperature=0.9)
     
-    async def chat(text, chat_history, context=None):
+    async def chat(text, chat_history, user_profile=None, context=None):
         ai = create_customer_service()
-        m = QuestionWithHistory(question=text, chat_history=chat_history)
+        # user_profile = {"name": "lulu", "occupation": "data scientist", "background": "machine learning and AI"}
+        m = QuestionWithHistory(question=text, chat_history=chat_history, user_profile=UserProfile.parse_obj(user_profile))
         response = await ai.handle(Message(content=m.json(), instruct_content=m , role="User"))
         # get the content of the last response
         response = response[-1].content
