@@ -12,7 +12,7 @@ build/
 develop-eggs/
 data/
 dist/
-docs/
+
 downloads/
 eggs/
 .eggs/
@@ -145,3 +145,4 @@ cython_debug/
 # others
 *.bin
 logs/
+bioimageio-knowledge-base/

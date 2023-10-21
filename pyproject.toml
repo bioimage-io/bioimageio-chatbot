@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+
+[project]
+name = "bioimageio-chatbot"
+version = "0.1.0"
+readme = "README.md"
+description = "Your Personal Assistant in BioImage Analysis."
+dependencies = [
+  "schema-agents",
+  "imjoy-rpc",
+  "requests",
+  "pypdf",
+  "hypha",
+]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["bioimageio_chatbot*"]
+exclude = ["tests*", "scripts*"]

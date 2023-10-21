@@ -1,18 +1,21 @@
+name: "BioImage.IO Knowledge Base"
+description: "A knowledge base for bioimage analysis models, tools, workflows etc."
+format_version: "0.1.0"
 collections:
   - name: bio.tools
     id: bio.tools
     url: https://github.com/research-software-ecosystem/content/archive/refs/heads/master.zip
-    directory: content-master/data
+    directory: data
     description: A repository for research software tools with metadata.
   - name: ImJoy
     id: imjoy
     url: https://github.com/imjoy-team/ImJoy/archive/refs/heads/master.zip
-    directory: ImJoy-master/docs
+    directory: docs
     description: A plugin powered hybrid computing platform for deploying deep learning applications such as advanced image analysis tools.
   - name: BioImage.IO
     id: bioimage.io
     url: https://github.com/bioimage-io/bioimage.io/archive/refs/heads/main.zip
-    directory: bioimage.io-main/docs
+    directory: docs
     description: A model repository for bioimage analysis.
   - name: deepImageJ
     id: deepimagej
