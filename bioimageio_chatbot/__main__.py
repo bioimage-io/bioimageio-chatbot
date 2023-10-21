@@ -27,7 +27,8 @@ def create_knowledge_base(args):
     from bioimageio_chatbot.knowledge_base import create_vector_knowledge_base
     create_vector_knowledge_base(args.output_dir)
 
-if __name__ == '__main__':
+
+def main():
     parser = argparse.ArgumentParser(description="BioImage.IO Chatbot utility commands.")
     
     subparsers = parser.add_subparsers()
@@ -53,3 +54,6 @@ if __name__ == '__main__':
         args.func(args)
     else:
         parser.print_help()
+        
+if __name__ == '__main__':
+    main()
