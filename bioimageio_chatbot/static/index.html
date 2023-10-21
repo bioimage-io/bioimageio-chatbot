@@ -214,12 +214,13 @@
       let svc;
       showConnectingStatus();
       try {
-        const server = await hyphaWebsocketClient.connectToServer({
-          "server_url": "http://localhost:9000"
-        })
         // get service_id from query string
         const urlParams = new URLSearchParams(window.location.search);
         const service_id = urlParams.get('service_id');
+        const server_url = urlParams.get('server_url');
+        const server = await hyphaWebsocketClient.connectToServer({
+          "server_url": server_url || "https://ai.imjoy.io"
+        })
         svc = await server.getService(service_id || "hypha-bot")
         const channels = svc.channels;
         const channelSelect = document.getElementById('channelSelect');

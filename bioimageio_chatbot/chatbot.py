@@ -11,12 +11,7 @@ from typing import Dict, List, Optional, Union
 import requests
 import sys
 import io
-import yaml
-import json
-
-MANIFEST = yaml.load(open("./manifest.yaml", "r"), Loader=yaml.FullLoader)
-DOCS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "docs")
-DB_PATH = os.path.join(DOCS_DIR, "knowledge-base")
+from bioimageio_chatbot.utils import get_manifest
 
 def load_model_info():
     response = requests.get("https://bioimage-io.github.io/collection-bioimage-io/collection.json")
@@ -103,8 +98,9 @@ class QuestionWithHistory(BaseModel):
     user_profile: Optional[UserProfile] = Field(None, description="The user's profile. You should use this to personalize the response based on the user's background and occupation.")
     channel_id: Optional[str] = Field(None, description="The channel id of the user's question. This is used to limit the search scope to a specific channel, None means all the channels.")
 
-def create_customer_service():
-    docs_store_dict = load_knowledge_base()
+def create_customer_service(db_path):
+    collections = get_manifest()['collections']
+    docs_store_dict = load_knowledge_base(db_path)
     resource_items = load_model_info()
     types = set()
     tags = set()
@@ -114,7 +110,7 @@ def create_customer_service():
     types = list(types)
     tags = list(tags)[:10]
     
-    channels_info = "\n".join(f"""- `{collection['id']}`: {collection['description']}""" for collection in MANIFEST['collections'])
+    channels_info = "\n".join(f"""- `{collection['id']}`: {collection['description']}""" for collection in collections)
     resource_item_stats = f"""Each item contains the following fields: {list(resource_items[0].keys())}\nThe available resource types are: {types}\nSome example tags: {tags}\nHere is an example: {resource_items[0]}"""
     class DocumentRetrievalInput(BaseModel):
         """Input for finding relevant documents from database."""
@@ -173,9 +169,10 @@ def load_docs_store(db_path, collection_name):
     docs_store = FAISS.load_local(index_name=collection_name, folder_path=db_path, embeddings=embeddings)
     return docs_store
 
-def load_knowledge_base():
-    channel_ids = [collection['id'] for collection in MANIFEST['collections']]
-    docs_store_dict = {channel: load_docs_store(DB_PATH, channel) for channel in channel_ids}
+def load_knowledge_base(db_path):
+    collections = get_manifest()['collections']
+    channel_ids = [collection['id'] for collection in collections]
+    docs_store_dict = {channel: load_docs_store(db_path, channel) for channel in channel_ids}
     for name, docs_store in docs_store_dict.items():
         length = len(docs_store.docstore._dict.keys())
         assert  length > 0, f"Please make sure the docs store {name} is not empty."
@@ -183,41 +180,20 @@ def load_knowledge_base():
 
     return docs_store_dict
 
-async def main():
-    customer_service = create_customer_service()
-    chat_history=[]
-
-    question = "Which tool can I use to analyse western blot image?"
-    profile = UserProfile(name="lulu", occupation="data scientist", background="machine learning and AI")
-    m = QuestionWithHistory(question=question, chat_history=chat_history, user_profile=UserProfile.parse_obj(profile), channel_id=None)
-    resp = await customer_service.handle(Message(content=m.json(), instruct_content=m , role="User"))
-
-    question = "Which tool can I use to segment an cell image?"
-    profile = UserProfile(name="lulu", occupation="data scientist", background="machine learning and AI")
-    m = QuestionWithHistory(question=question, chat_history=chat_history, user_profile=UserProfile.parse_obj(profile), channel_id=None)
-    resp = await customer_service.handle(Message(content=m.json(), instruct_content=m , role="User"))
-
-    question = "How can I test the models?"
-    profile = UserProfile(name="lulu", occupation="data scientist", background="machine learning and AI")
-    m = QuestionWithHistory(question=question, chat_history=chat_history, user_profile=UserProfile.parse_obj(profile), channel_id="bioimage.io")
-    resp = await customer_service.handle(Message(content=m.json(), instruct_content=m , role="User"))
-
-    question = "What are Model Contribution Guidelines?"
-    m = QuestionWithHistory(question=question, chat_history=chat_history, user_profile=UserProfile.parse_obj(profile))
-    resp = await customer_service.handle(Message(content=m.json(), instruct_content=m , role="User"))
-    print(resp)
-    # resp = await customer_service.handle(Message(content="What are Model Contribution Guidelines?", role="User"))
-
-async def start_server(server_url):
+async def connect_server(server_url):
     token = await login({"server_url": server_url})
     server = await connect_to_server({"server_url": server_url, "token": token, "method_timeout": 100})
     await register_chat_service(server)
     
 async def register_chat_service(server):
     """Hypha startup function."""
+    collections = get_manifest()['collections']
+    knowledge_base_path = os.environ.get("BIOIMAGEIO_KNOWLEDGE_BASE_PATH", "./bioimageio-knowledge-base")
+    assert knowledge_base_path is not None, "Please set the BIOIMAGEIO_KNOWLEDGE_BASE_PATH environment variable to the path of the knowledge base."
+    assert os.path.exists(knowledge_base_path), f"The knowledge base path {knowledge_base_path} doesn't exist."
 
-    channel_id_by_name = {collection['name']: collection['id'] for collection in MANIFEST['collections']}
-    customer_service = create_customer_service()
+    channel_id_by_name = {collection['name']: collection['id'] for collection in collections}
+    customer_service = create_customer_service(knowledge_base_path)
 
     async def chat(text, chat_history, user_profile=None, channel=None, context=None):
         # Get the channel id by its name
@@ -243,11 +219,13 @@ async def register_chat_service(server):
             "require_context": True
         },
         "chat": chat,
-        "channels": [collection['name'] for collection in MANIFEST['collections']]
+        "channels": [collection['name'] for collection in collections]
     })
     
-    with open(os.path.join(os.path.dirname(__file__), "../static/index.html"), "r") as f:
+    with open(os.path.join(os.path.dirname(__file__), "static/index.html"), "r") as f:
         index_html = f.read()
+    index_html = index_html.replace("https://ai.imjoy.io", server.config['public_base_url'])
+    index_html = index_html.replace('"hypha-bot"', f'"{hypha_service_info["id"]}"')
 
     async def index(event, context=None):
         return {
@@ -266,12 +244,12 @@ async def register_chat_service(server):
         "index": index,
     })
     server_url = server.config['public_base_url']
-    print(f"visit this to test the bot: {server_url}/{server.config['workspace']}/apps/hypha-bot-client/index?service_id={hypha_service_info['id']}")
 
+    print(f"The BioImage.IO Chatbot is available at: {server_url}/{server.config['workspace']}/apps/hypha-bot-client/index")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    # asyncio.run(main())
     server_url = "https://ai.imjoy.io"
     loop = asyncio.get_event_loop()
-    loop.create_task(start_server(server_url))
+    loop.create_task(connect_server(server_url))
     loop.run_forever()
