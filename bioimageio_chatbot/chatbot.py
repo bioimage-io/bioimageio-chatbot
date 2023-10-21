@@ -7,7 +7,7 @@ from schema_agents.role import Role
 from schema_agents.schema import Message
 from langchain.vectorstores import FAISS
 from langchain.embeddings.openai import OpenAIEmbeddings
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 import requests
 import sys
 import io
@@ -73,6 +73,8 @@ class DocWithScore(BaseModel):
     """A document with relevance score."""
     doc: str = Field(description="The document retrieved.")
     score: float = Field(description="The relevance score of the document.")
+    metadata: Dict[str, Any] = Field(description="The metadata of the document.")
+
 class DocumentSearchInput(BaseModel):
     """Results of document retrieval from documentation."""
     user_question: str = Field(description="The user's original question.")
@@ -136,7 +138,7 @@ def create_customer_service(db_path):
             selected_channel = question_with_history.channel_id or req.database_id
             docs_store = docs_store_dict[selected_channel]
             results_with_scores = await docs_store.asimilarity_search_with_relevance_scores(req.query, k=3)
-            docs_with_score = [DocWithScore(doc=doc.page_content, score=score) for doc, score in results_with_scores]
+            docs_with_score = [DocWithScore(doc=doc.page_content, score=score, metadata=doc.metadata) for doc, score in results_with_scores]
             search_input = DocumentSearchInput(user_question=req.request, relevant_context=docs_with_score, user_info=req.user_info)
             response = await role.aask(search_input, FinalResponse)
             return response.response
