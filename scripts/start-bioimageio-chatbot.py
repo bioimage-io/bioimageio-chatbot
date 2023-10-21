@@ -7,7 +7,7 @@ from schema_agents.role import Role
 from schema_agents.schema import Message
 from langchain.vectorstores import FAISS
 from langchain.embeddings.openai import OpenAIEmbeddings
-from typing import Any, Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union
 import requests
 import sys
 import io
@@ -74,16 +74,20 @@ class DirectResponse(BaseModel):
     """Direct response to a user's question."""
     response: str = Field(description="The response to the user's question.")
 
+class DocWithScore(BaseModel):
+    """A document with relevance score."""
+    doc: str = Field(description="The document retrieved.")
+    score: float = Field(description="The relevance score of the document.")
 class DocumentSearchInput(BaseModel):
     """Results of document retrieval from documentation."""
     user_question: str = Field(description="The user's original question.")
-    relevant_context: List[str] = Field(description="Context chunks from the documentation (in markdown format), ordered by relevance.")
+    relevant_context: List[DocWithScore] = Field(description="Context chunks from the documentation")
     user_info: str = Field(description="User info for personalize response.")
 
 
 class FinalResponse(BaseModel):
-    """The final response to the user's question."""
-    response: str = Field(description="The answer to the user's question in markdown format. If the question isn't relevant, return 'I don't know'.")
+    """The final response to the user's question. If the retrieved context has low relevance score, or the question isn't relevant to the retried context, return 'I don't know'."""
+    response: str = Field(description="The answer to the user's question in markdown format.")
 
 
 class UserProfile(BaseModel):
@@ -135,9 +139,9 @@ def create_customer_service():
             # Use the automatic channel selection if the user doesn't specify a channel
             selected_channel = question_with_history.channel_id or req.database_id
             docs_store = docs_store_dict[selected_channel]
-            relevant_docs = await docs_store.asimilarity_search(req.query, k=3)
-            raw_docs = [doc.page_content for doc in relevant_docs]
-            search_input = DocumentSearchInput(user_question=req.request, relevant_context=raw_docs, user_info=req.user_info)
+            results_with_scores = await docs_store.asimilarity_search_with_relevance_scores(req.query, k=3)
+            docs_with_score = [DocWithScore(doc=doc.page_content, score=score) for doc, score in results_with_scores]
+            search_input = DocumentSearchInput(user_question=req.request, relevant_context=docs_with_score, user_info=req.user_info)
             response = await role.aask(search_input, FinalResponse)
             return response.response
         elif isinstance(req, ModelZooInfoScript):
@@ -183,9 +187,14 @@ async def main():
     customer_service = create_customer_service()
     chat_history=[]
 
-    question = "How can I segment an cell image?"
+    question = "Which tool can I use to analyse western blot image?"
     profile = UserProfile(name="lulu", occupation="data scientist", background="machine learning and AI")
-    m = QuestionWithHistory(question=question, chat_history=chat_history, user_profile=UserProfile.parse_obj(profile), channel_id="scikit-image")
+    m = QuestionWithHistory(question=question, chat_history=chat_history, user_profile=UserProfile.parse_obj(profile), channel_id=None)
+    resp = await customer_service.handle(Message(content=m.json(), instruct_content=m , role="User"))
+
+    question = "Which tool can I use to segment an cell image?"
+    profile = UserProfile(name="lulu", occupation="data scientist", background="machine learning and AI")
+    m = QuestionWithHistory(question=question, chat_history=chat_history, user_profile=UserProfile.parse_obj(profile), channel_id=None)
     resp = await customer_service.handle(Message(content=m.json(), instruct_content=m , role="User"))
 
     question = "How can I test the models?"
@@ -199,11 +208,15 @@ async def main():
     print(resp)
     # resp = await customer_service.handle(Message(content="What are Model Contribution Guidelines?", role="User"))
 
-
 async def start_server(server_url):
-    channel_id_by_name = {collection['name']: collection['id'] for collection in MANIFEST['collections']}
     token = await login({"server_url": server_url})
     server = await connect_to_server({"server_url": server_url, "token": token, "method_timeout": 100})
+    await register_chat_service(server)
+    
+async def register_chat_service(server):
+    """Hypha startup function."""
+
+    channel_id_by_name = {collection['name']: collection['id'] for collection in MANIFEST['collections']}
     customer_service = create_customer_service()
 
     async def chat(text, chat_history, user_profile=None, channel=None, context=None):
@@ -233,14 +246,14 @@ async def start_server(server_url):
         "channels": [collection['name'] for collection in MANIFEST['collections']]
     })
     
+    with open(os.path.join(os.path.dirname(__file__), "../static/index.html"), "r") as f:
+        index_html = f.read()
+
     async def index(event, context=None):
-        with open(os.path.join(os.path.dirname(__file__), "index-template.html"), "r") as f:
-            html = f.read()
-        html = html.replace("{{ SERVICE_ID }}", hypha_service_info['id'])
         return {
             "status": 200,
             "headers": {'Content-Type': 'text/html'},
-            "body": html
+            "body": index_html
         }
     
     await server.register_service({
@@ -252,11 +265,12 @@ async def start_server(server_url):
         },
         "index": index,
     })
+    server_url = server.config['public_base_url']
+    print(f"visit this to test the bot: {server_url}/{server.config['workspace']}/apps/hypha-bot-client/index?service_id={hypha_service_info['id']}")
 
-    print(f"visit this to test the bot: {server_url}/{server.config['workspace']}/apps/hypha-bot-client/index")
 
 if __name__ == "__main__":
-    # asyncio.run(main())
+    asyncio.run(main())
     server_url = "https://ai.imjoy.io"
     loop = asyncio.get_event_loop()
     loop.create_task(start_server(server_url))
