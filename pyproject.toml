@@ -20,3 +20,8 @@ include-package-data = true
 [tool.setuptools.packages.find]
 include = ["bioimageio_chatbot*"]
 exclude = ["tests*", "scripts*"]
+
+[options.entry_points]
+console_scripts = [
+    "bioimageio-chatbot = bioimageio_chatbot.__main__:main",
+]
