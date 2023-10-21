@@ -37,6 +37,15 @@ The chatbot uses your user profile information, such as your name, occupation, a
 ## Example Interactions
 > missing
 
+## Running the Chatbot
+To run the chatbot, you need to have an OpenAI API key. You can get one by signing up at [OpenAI](https://beta.openai.com/). Once you have your API key, you can run the chatbot using the following command:
+```bash
+export OPENAI_API_KEY=sk-xxxxxxxx
+python3 -m hypha.server --host=0.0.0.0 --port=9000 --static-mounts /chatbot:./static --startup-functions=scripts/start-bioimageio-chatbot.py:register_chat_service
+```
+
+After this, you will be able to access the chatbot at `http://localhost:9000/chatbot/index.html`.
+
 ## Reference
 > missing
 

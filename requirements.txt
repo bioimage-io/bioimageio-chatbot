@@ -3,3 +3,4 @@ imjoy-rpc
 requests
 chromadb
 pypdf
+hypha
