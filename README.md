@@ -24,6 +24,88 @@ The BioImage.IO Chatbot offers the following features:
 
 You can visit the BioImage.IO Chatbot at [https://chat.bioimage.io](https://chat.bioimage.io). Please note that the chatbot is still in beta and is being actively developed. If you encounter any issues, please report them via [Github issues](https://github.com/bioimage-io/bioimageio-chatbot/issues).
 
+## Setup the Chatbot locally
+
+If you want to run the chatbot server locally, you need to have an OpenAI API key. You can get one by signing up at [OpenAI](https://beta.openai.com/). Once you have your API key, you can run the chatbot using the following command:
+
+```bash
+pip install bioimageio-chatbot
+```
+
+You will also need to set the following environment variables:
+```bash
+export OPENAI_API_KEY=sk-xxxxxxxx
+export BIOIMAGEIO_KNOWLEDGE_BASE_PATH=/path/to/bioimageio-knowledge-base  # default to ./bioimageio-knowledge-base 
+```
+
+For more detailed usage, please follow the instructions for the **Command-line Interface**.
+
+### Command-line Interface
+
+BioImage.IO Chatbot comes with a command-line interface to facilitate server management, connection to external servers, and knowledge base creation. Below are the available commands:
+
+#### Start Server
+
+To start your own server entirely, use the `start-server` command:
+
+```bash
+python -m bioimageio_chatbot start-server [--host HOST] [--port PORT]
+```
+
+**Options:**
+
+- `--host`: The host address to run the server on (default: `0.0.0.0`)
+- `--port`: The port number to run the server on (default: `9000`)
+
+**Example:**
+
+```bash
+export OPENAI_API_KEY=sk-xxxxxxxx
+export BIOIMAGEIO_KNOWLEDGE_BASE_PATH=./bioimageio-knowledge-base
+python -m bioimageio_chatbot start-server --host=0.0.0.0 --port=9000
+```
+
+#### Connect to Server
+
+To connect to an external hypha server, use the `connect-server` command:
+
+```bash
+python -m bioimageio_chatbot connect-server [--server-url SERVER_URL]
+```
+
+**Options:**
+
+- `--server-url`: The URL of the external hypha server to connect to (default: `https://ai.imjoy.io`)
+
+**Example:**
+
+```bash
+export OPENAI_API_KEY=sk-xxxxxxxx
+export BIOIMAGEIO_KNOWLEDGE_BASE_PATH=./bioimageio-knowledge-base
+python -m bioimageio_chatbot connect-server --server-url=https://ai.imjoy.io
+```
+
+#### Create Knowledge Base
+
+To create a new knowledge base, use the `create-knowledge-base` command:
+
+```bash
+python -m bioimageio_chatbot create-knowledge-base [--output-dir OUTPUT_DIR]
+```
+
+**Options:**
+
+- `--output-dir`: The directory where the knowledge base will be created (default: `./bioimageio-knowledge-base`)
+
+**Example:**
+
+```bash
+export OPENAI_API_KEY=sk-xxxxxxxx
+export BIOIMAGEIO_KNOWLEDGE_BASE_PATH=./bioimageio-knowledge-base
+python -m bioimageio_chatbot create-knowledge-base --output-dir=./bioimageio-knowledge-base
+```
+
+
 ### Asking Questions
 
 To ask the chatbot a question, simply type your query and send it. The chatbot will analyze your question and provide a relevant response. You can ask questions related to bioimage analysis, software tools, models, and more.
@@ -31,22 +113,6 @@ To ask the chatbot a question, simply type your query and send it. The chatbot w
 ### Personalized Responses
 
 The chatbot uses your user profile information, such as your name, occupation, and background, to personalize its responses. This ensures that the information you receive is tailored to your specific needs.
-
-## Setup the Chatbot Server Locally
-
-To run the chatbot, you need to have an OpenAI API key. You can get one by signing up at [OpenAI](https://beta.openai.com/). Once you have your API key, you can run the chatbot using the following command:
-
-```bash
-pip install bioimageio-chatbot
-```
-
-```bash
-export OPENAI_API_KEY=sk-xxxxxxxx
-BIOIMAGEIO_KNOWLEDGE_BASE_PATH=/path/to/bioimageio-knowledge-base    
-python3 -m hypha.server --host=0.0.0.0 --port=9000 --static-mounts /chatbot:./static --startup-functions=scripts/start-bioimageio-chatbot.py:register_chat_service
-```
-
-After this, you will be able to access the chatbot at `http://localhost:9000/chatbot/index.html`.
 
 ## Join Us as a Community Partner
 
