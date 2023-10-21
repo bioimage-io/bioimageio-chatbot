@@ -42,14 +42,18 @@ For more detailed usage, please follow the instructions for the **Command-line I
 
 ### Command-line Interface
 
-BioImage.IO Chatbot comes with a command-line interface to facilitate server management, connection to external servers, and knowledge base creation. Below are the available commands:
+BioImage.IO Chatbot comes with a command-line interface to facilitate server management, connection to external servers, and knowledge base creation.
+
+You can access the command-line interface by running `python -m bioimageio_chatbot` or the `bioimageio-chatbot` command.
+
+Below are the available commands and options:
 
 #### Start Server
 
 To start your own server entirely, use the `start-server` command:
 
 ```bash
-python -m bioimageio_chatbot start-server [--host HOST] [--port PORT]
+bioimageio-chatbot start-server [--host HOST] [--port PORT]
 ```
 
 **Options:**
@@ -62,7 +66,7 @@ python -m bioimageio_chatbot start-server [--host HOST] [--port PORT]
 ```bash
 export OPENAI_API_KEY=sk-xxxxxxxx
 export BIOIMAGEIO_KNOWLEDGE_BASE_PATH=./bioimageio-knowledge-base
-python -m bioimageio_chatbot start-server --host=0.0.0.0 --port=9000
+bioimageio-chatbot start-server --host=0.0.0.0 --port=9000
 ```
 
 #### Connect to Server
@@ -70,7 +74,7 @@ python -m bioimageio_chatbot start-server --host=0.0.0.0 --port=9000
 To connect to an external hypha server, use the `connect-server` command:
 
 ```bash
-python -m bioimageio_chatbot connect-server [--server-url SERVER_URL]
+bioimageio-chatbot connect-server [--server-url SERVER_URL]
 ```
 
 **Options:**
@@ -82,7 +86,7 @@ python -m bioimageio_chatbot connect-server [--server-url SERVER_URL]
 ```bash
 export OPENAI_API_KEY=sk-xxxxxxxx
 export BIOIMAGEIO_KNOWLEDGE_BASE_PATH=./bioimageio-knowledge-base
-python -m bioimageio_chatbot connect-server --server-url=https://ai.imjoy.io
+bioimageio-chatbot connect-server --server-url=https://ai.imjoy.io
 ```
 
 #### Create Knowledge Base
@@ -90,7 +94,7 @@ python -m bioimageio_chatbot connect-server --server-url=https://ai.imjoy.io
 To create a new knowledge base, use the `create-knowledge-base` command:
 
 ```bash
-python -m bioimageio_chatbot create-knowledge-base [--output-dir OUTPUT_DIR]
+bioimageio-chatbot create-knowledge-base [--output-dir OUTPUT_DIR]
 ```
 
 **Options:**
@@ -102,7 +106,7 @@ python -m bioimageio_chatbot create-knowledge-base [--output-dir OUTPUT_DIR]
 ```bash
 export OPENAI_API_KEY=sk-xxxxxxxx
 export BIOIMAGEIO_KNOWLEDGE_BASE_PATH=./bioimageio-knowledge-base
-python -m bioimageio_chatbot create-knowledge-base --output-dir=./bioimageio-knowledge-base
+bioimageio-chatbot create-knowledge-base --output-dir=./bioimageio-knowledge-base
 ```
 
 
