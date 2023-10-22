@@ -147,3 +147,4 @@ cython_debug/
 *.bin
 logs/
 bioimageio-knowledge-base/
+.DS_Store
