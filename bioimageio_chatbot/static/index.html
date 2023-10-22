@@ -197,10 +197,9 @@
 
       var renderer = new marked.Renderer();
       marked.setOptions({
-        renderer: new marked.Renderer(),
         gfm: true,
         tables: true,
-        breaks: false,
+        breaks: true,
         pedantic: false,
         smartLists: true,
         smartypants: false
@@ -309,7 +308,7 @@
 
         let messageContainer = `<div class="message-container robot-message">
             <i class="fas fa-robot"></i>
-            <div class="message-content">${htmlMessage}</div>
+            <div class="message-content markdown-body">${htmlMessage}</div>
         </div>`;
 
         $('.message-holder').append(messageContainer);
@@ -338,6 +337,8 @@
       }
     });
   </script>
+  <!-- https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.3.0/github-markdown.min.css -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.3.0/github-markdown-light.css" />
 </body>
 
 </html>
