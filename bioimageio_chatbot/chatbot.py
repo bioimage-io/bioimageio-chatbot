@@ -82,7 +82,7 @@ class DocumentSearchInput(BaseModel):
     user_question: str = Field(description="The user's original question.")
     relevant_context: List[DocWithScore] = Field(description="Context chunks from the documentation")
     user_info: str = Field(description="User info for personalize response.")
-    base_url: str = Field(description="The base url of the documentation, used for resolve relative URL in the document and produce markdown links.")
+    base_url: Optional[str] = Field(None, description="The base url of the documentation, used for resolve relative URL in the document and produce markdown links.")
 
 class FinalResponse(BaseModel):
     """The final response to the user's question. If the retrieved context has low relevance score, or the question isn't relevant to the retried context, return 'I don't know'."""
