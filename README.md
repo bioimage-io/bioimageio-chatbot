@@ -22,7 +22,9 @@ The BioImage.IO Chatbot offers the following features:
 
 ## Using the Chatbot
 
-You can visit the BioImage.IO Chatbot at [https://chat.bioimage.io](https://chat.bioimage.io). Please note that the chatbot is still in beta and is being actively developed. If you encounter any issues, please report them via [Github issues](https://github.com/bioimage-io/bioimageio-chatbot/issues).
+You can visit the BioImage.IO Chatbot at [https://chat.bioimage.io](https://chat.bioimage.io)[TBD: Available Soon]. Please note that the chatbot is still in beta and is being actively developed. See the [Disclaimer for BioImage.IO Chatbot](./docs/DISCLAIMER.md).
+
+If you encounter any issues, please report them via [Github issues](https://github.com/bioimage-io/bioimageio-chatbot/issues).
 
 ## Setup the Chatbot locally
 
