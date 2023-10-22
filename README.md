@@ -71,13 +71,14 @@ After running the `init` command, it will list the databases that are loaded int
 To start your own server entirely, use the `start-server` command:
 
 ```bash
-python -m bioimageio_chatbot start-server [--host HOST] [--port PORT]
+python -m bioimageio_chatbot start-server [--host HOST] [--port PORT] [--public-base-url PUBLIC_BASE_URL]
 ```
 
 **Options:**
 
 - `--host`: The host address to run the server on (default: `0.0.0.0`)
 - `--port`: The port number to run the server on (default: `9000`)
+- `--public-base-url`: The public base URL of the server (default: `http://127.0.0.1:9000`)
 
 **Example:**
 
