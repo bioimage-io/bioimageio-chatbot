@@ -1,4 +1,4 @@
-# 🤖 BioImageIO ChatBot
+# 🤖 BioImage.IO ChatBot
 
 ## Your Personal Assistant in BioImage Analysis
 

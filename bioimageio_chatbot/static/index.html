@@ -12,6 +12,16 @@
 
   <style>
     /* Custom CSS */
+    .rounded-icon-container {
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #ddd;  /* or any color you prefer */
+    }
+  
     /* Styles for the message container */
     #chat1 .message-container {
       display: flex;
@@ -240,11 +250,13 @@
           channelSelect.appendChild(option);
         });
         showReadyStatus();
+        const shortIntroMessage = "Hi there! I'm Melman, your go-to giraffe for all things bioimage analysis. Got questions or need help with BioImage.IO's model zoo? I'm your guy! 🦒";
+        appendRobotMessage(shortIntroMessage); // Append robot message to the message container
       }
       catch (e) {
         // If connection fails, show an error message in the status
         showErrorStatus('Failed to connect to the server');
-        alert("Failed to get bioimageio chatbot service")
+        alert("Failed to get BioImage.IO Chatbot service")
       }
       finally {
         $('.spinner').remove();
@@ -289,7 +301,9 @@
 
       function appendUserMessage(message) {
         let messageContainer = `<div class="message-container user-message">
-                                   <i class="fas fa-user"></i>
+                                  <div class="rounded-icon-container">
+                                   <i class="fas fa-user" style="margin-left: 10px;margin-bottom: 3px;"></i>
+                                  </div>
                                    <div class="message-content">${message}</div>
                                 </div>`;
         $('.message-holder').append(messageContainer);
@@ -307,8 +321,10 @@
         const htmlMessage = marked(message, { renderer:renderer });
 
         let messageContainer = `<div class="message-container robot-message">
-            <i class="fas fa-robot"></i>
-            <div class="message-content markdown-body">${htmlMessage}</div>
+          <div class="rounded-icon-container">
+            <img style="width: 20px;" src="https://bioimage.io/static/img/bioimage-io-icon.svg" alt="Melman the Giraffe" width="30" height="30">
+          </div>
+          <div class="message-content markdown-body">${htmlMessage}</div>
         </div>`;
 
         $('.message-holder').append(messageContainer);
