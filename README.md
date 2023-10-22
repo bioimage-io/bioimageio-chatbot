@@ -100,7 +100,7 @@ python -m bioimageio_chatbot start-server --host=0.0.0.0 --port=9000
 This will create a local server, and the BioImage.IO Chatbot is available at: http://127.0.0.1:9000/public/apps/bioimageio-chatbot-client/index
 
 Open the link in a browser and you will see:
-![screenshot for the chatbot](./docs/screenshot-hi.png)
+![screenshot for the chatbot](./docs/screenshots/screenshot-hi.png)
 
 Please not that the chatbot server may not be accessible for the users outside your local network.
 

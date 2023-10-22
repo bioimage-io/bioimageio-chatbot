@@ -2,8 +2,7 @@
 
 ## ChatBot interface
 
-Following installation guidelines from [README.mk](/README.md), the chat interface looks like (Supplementary Figure 1)
-User can input their profile as shown in Supplementary Figure 2. 
+Following installation guidelines from [README.mk](README.md), the chat interface looks like Supplementary Figure 1. User can input their profile as shown in Supplementary Figure 2. 
 As for today, our knowledge bases for the chatbot are drawn from documentation spanning below pivotal communities: bioimage.io, Imjoy, deepimageJ, ImageJ, bio.tools and scikit-image. A key feature of the implementation is the user's ability to specify a channel from which they prefer to retrieve information (Supplementary Figure 3). If the user designates a channel, the chatbot seamlessly sources information from that specific community. However, in cases where the channel is not specified, the chatbot utilizes an intelligent selection process guided by the schema-based agent to determine the most relevant channel based on the user's question. We will elaborate on the schema-based agent in the following, which plays a central role in this seamless and efficient retrieval process.
 
 This approach, combining the collaborative knowledge base from multiple communities with user-directed channel selection, empowers users from various domains to contribute to the chatbot's knowledge base, making it a versatile and invaluable resource for a continually expanding community of users.
@@ -37,39 +36,39 @@ Customization is a crucial element in our chatbot's design, especially in the dy
  # Examples 
 
 Supplementary Figure 1. The chat interface of BioImage.IO ChatBot.
-![BioImage.IO ChatBot](chat-interface.png)
+![BioImage.IO ChatBot](./screenshots/chat-interface.png)
 
 Supplementary Figure 2. Users can input their profile by clicking `Edit Profile` to personalized responses and `Save` to save their profile for future conversations. 
-![user-profile](user-profile.png).
+![user-profile](./screenshots/user-profile.png).
 
 Supplementary Figure 3. Users can select a specific channel from ‘Knowledge Base Channel’ to personalize the conversation.
-![channels](channels.png)
+![channels](./screenshots/channels.png)
 
 Supplementary Figure 4. Direct response for simple and easy questions.
-![direct-response](direct-response.png)
+![direct-response](./screenshots/direct-response.png)
 
 Supplementary Figure 5. Response by retrieving text information from the knowledge base. 
-![retrieval-text](retrieval-text.png)
+![retrieval-text](./screenshots/retrieval-text.png)
 
 
 Supplementary Figure 6. Response by generating code script and executing the script using the available model resource item to retrieve information for responding. 
-![script-gen-exe-retrieval](script-gen-exe-retrieval.png)
+![script-gen-exe-retrieval](./screenshots/script-gen-exe-retrieval.png)
 
 Supplementary Figure 7. Creating a chatbot role class named ‘CustomerServiceRole’ by inputting the fields of a role class. 
-![role_create](role_create.png)
+![role_create](./screenshots/role_create.png)
 
 
 Supplementary Figure 8. Integrate the user's original question with the conversation history and the user's profile into a single input `inputs`. The inputs along with the three schemas is passed to the schema agent via calling `role.aask()` enabling the agent to reformulate the questions and decide the appropriate response mode for answering the question. 
-![respond_to_user](respond_to_user.png)
+![respond_to_user](./screenshots/respond_to_user.png)
 
 Supplementary Figure 9. Customerization for user with bioimage analysis background. 
-![customization2_developer](customization2_developer.png)
+![customization2_developer](./screenshots/customization2_developer.png)
 
 Supplementary Figure 10. Customerization for user without any bioimage analysis background. 
-![customization2_developer](customization2_developer.png)
+![customization2_developer](./screenshots/customization2_developer.png)
 
 Supplementary Figure 11. Customerization when selecting specific channel ‘bio.tools’.
-![customization_biotool](customization_biotool.png)
+![customization_biotool](./screenshots/customization_biotool.png)
 
 
 ## Reference
