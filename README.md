@@ -26,6 +26,16 @@ You can visit the BioImage.IO Chatbot at [https://chat.bioimage.io](https://chat
 
 If you encounter any issues, please report them via [Github issues](https://github.com/bioimage-io/bioimageio-chatbot/issues).
 
+
+### Asking Questions
+
+To ask the chatbot a question, simply type your query and send it. The chatbot will analyze your question and provide a relevant response. You can ask questions related to bioimage analysis, software tools, models, and more.
+
+### Personalized Responses
+
+The chatbot uses your user profile information, such as your name, occupation, and background, to personalize its responses. This ensures that the information you receive is tailored to your specific needs.
+
+
 ## Setup the Chatbot locally
 
 If you want to run the chatbot server locally, you need to have an OpenAI API key. You can get one by signing up at [OpenAI](https://beta.openai.com/). Once you have your API key, you can install the chatbot package via pip and set the environment variables:
@@ -141,15 +151,6 @@ export OPENAI_API_KEY=sk-xxxxxxxx
 export BIOIMAGEIO_KNOWLEDGE_BASE_PATH=./bioimageio-knowledge-base
 python -m bioimageio_chatbot create-knowledge-base --output-dir=./bioimageio-knowledge-base
 ```
-
-
-### Asking Questions
-
-To ask the chatbot a question, simply type your query and send it. The chatbot will analyze your question and provide a relevant response. You can ask questions related to bioimage analysis, software tools, models, and more.
-
-### Personalized Responses
-
-The chatbot uses your user profile information, such as your name, occupation, and background, to personalize its responses. This ensures that the information you receive is tailored to your specific needs.
 
 ## Join Us as a Community Partner
 
