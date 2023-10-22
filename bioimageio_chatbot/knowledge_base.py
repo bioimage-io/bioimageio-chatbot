@@ -9,9 +9,47 @@ from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.docstore.document import Document
 import json
 import pickle
-from bioimageio_chatbot.utils import get_manifest
-from tqdm import tqdm
+from bioimageio_chatbot.utils import get_manifest, download_file
 
+KNOWLEDGE_BASE_URL = os.environ.get("BIOIMAGEIO_KNOWLEDGE_BASE_URL", "https://uk1s3.embassy.ebi.ac.uk/public-datasets/bioimageio-knowledge-base")
+
+
+def load_docs_store(db_path, collection_name):
+    # Each collection has two files [collection_name].faiss and [collection_name].pkl
+    # Check if it exists, otherwise, download from {KNOWLEDGE_BASE_URL}/[collection].faiss
+    if not os.path.exists(os.path.join(db_path, f"{collection_name}.faiss")):
+        print(f"Downloading {collection_name}.faiss from {KNOWLEDGE_BASE_URL}/{collection_name}.faiss")
+        download_file(f"{KNOWLEDGE_BASE_URL}/{collection_name}.faiss", os.path.join(db_path, f"{collection_name}.faiss"))
+    
+    if not os.path.exists(os.path.join(db_path, f"{collection_name}.pkl")):
+        print(f"Downloading {collection_name}.pkl from {KNOWLEDGE_BASE_URL}/{collection_name}.pkl")
+        download_file(f"{KNOWLEDGE_BASE_URL}/{collection_name}.pkl", os.path.join(db_path, f"{collection_name}.pkl"))
+
+    # Load from vector store
+    embeddings = OpenAIEmbeddings()
+    docs_store = FAISS.load_local(index_name=collection_name, folder_path=db_path, embeddings=embeddings)
+    return docs_store
+
+
+def load_knowledge_base(db_path):
+    collections = get_manifest()['collections']
+    docs_store_dict = {}
+    
+    for collection in collections:
+        channel_id = collection['id']
+        try:
+            docs_store = load_docs_store(db_path, channel_id)
+            length = len(docs_store.docstore._dict.keys())
+            assert length > 0, f"Please make sure the docs store {channel_id} is not empty."
+            print(f"Loaded {length} documents from {channel_id}")
+            docs_store_dict[channel_id] = docs_store
+        except Exception as e:
+            print(f"Failed to load docs store for {channel_id}. Error: {e}")
+
+    if len(docs_store_dict) == 0:
+        raise Exception("No docs store is loaded, please make sure the docs store is not empty.")
+
+    return docs_store_dict
 
 def extract_biotools_information(json_file_path):
     with open(json_file_path, 'r') as f:
@@ -72,19 +110,6 @@ def parse_docs(root_folder, md_separator=None, pdf_separator=None, chunk_size=10
                 chunk_list.extend(chunks)
                     
     return chunk_list
-
-def download_file(url, filename):
-    response = requests.get(url, stream=True)
-    file_size = int(response.headers.get('content-length', 0))
-
-    # Initialize the progress bar
-    progress = tqdm(response.iter_content(1024), f"Downloading {filename}", total=file_size, unit="B", unit_scale=True, unit_divisor=1024)
-    
-    with open(filename, 'wb') as f:
-        for data in progress:
-            # Update the progress bar
-            progress.update(len(data))
-            f.write(data)
 
 def download_docs(root_dir, url):
     os.makedirs(root_dir, exist_ok=True)

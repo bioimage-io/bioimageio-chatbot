@@ -3,6 +3,7 @@ import argparse
 import asyncio
 import subprocess
 import os
+from bioimageio_chatbot.knowledge_base import load_knowledge_base
 
 def start_server(args):
     print(sys.executable)
@@ -27,12 +28,27 @@ def create_knowledge_base(args):
     from bioimageio_chatbot.knowledge_base import create_vector_knowledge_base
     create_vector_knowledge_base(args.output_dir)
 
+def init(args):
+    knowledge_base_path = os.environ.get("BIOIMAGEIO_KNOWLEDGE_BASE_PATH", "./bioimageio-knowledge-base")
+    assert knowledge_base_path is not None, "Please set the BIOIMAGEIO_KNOWLEDGE_BASE_PATH environment variable to the path of the knowledge base."
+    if not os.path.exists(knowledge_base_path):
+        print(f"The knowledge base is not found at {knowledge_base_path}, will download it from {KNOWLEDGE_BASE_URL}")
+        os.makedirs(knowledge_base_path, exist_ok=True)
+    docs_store_dict = load_knowledge_base(knowledge_base_path)
+    
+    print("Databases loaded in the knowledge base:")
+    for key in docs_store_dict.keys():
+        print(f" - {key}")
 
 def main():
     parser = argparse.ArgumentParser(description="BioImage.IO Chatbot utility commands.")
     
     subparsers = parser.add_subparsers()
-    
+
+    # Init command
+    parser_init = subparsers.add_parser("init")
+    parser_init.set_defaults(func=init)
+
     # Start server command
     parser_start_server = subparsers.add_parser("start-server")
     parser_start_server.add_argument("--host", type=str, default="0.0.0.0")

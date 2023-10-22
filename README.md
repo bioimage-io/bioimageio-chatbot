@@ -26,19 +26,16 @@ You can visit the BioImage.IO Chatbot at [https://chat.bioimage.io](https://chat
 
 ## Setup the Chatbot locally
 
-If you want to run the chatbot server locally, you need to have an OpenAI API key. You can get one by signing up at [OpenAI](https://beta.openai.com/). Once you have your API key, you can run the chatbot using the following command:
+If you want to run the chatbot server locally, you need to have an OpenAI API key. You can get one by signing up at [OpenAI](https://beta.openai.com/). Once you have your API key, you can install the chatbot package via pip and set the environment variables:
 
 ```bash
 pip install bioimageio-chatbot
 ```
 
-You will also need to set the following environment variables:
 ```bash
-export OPENAI_API_KEY=sk-xxxxxxxx
-export BIOIMAGEIO_KNOWLEDGE_BASE_PATH=/path/to/bioimageio-knowledge-base  # default to ./bioimageio-knowledge-base 
+export OPENAI_API_KEY=sk-xxxxxxxx # Required
+export BIOIMAGEIO_KNOWLEDGE_BASE_PATH=/path/to/bioimageio-knowledge-base  # Optional, default to ./bioimageio-knowledge-base 
 ```
-
-For more detailed usage, please follow the instructions for the **Command-line Interface**.
 
 ### Command-line Interface
 
@@ -47,6 +44,25 @@ BioImage.IO Chatbot comes with a command-line interface to facilitate server man
 You can access the command-line interface by running `python -m bioimageio_chatbot` or the `bioimageio-chatbot` command.
 
 Below are the available commands and options:
+
+### Initialize Knowledge Base
+
+To initialize the knowledge base, use the `init` command:
+
+```bash
+python -m bioimageio_chatbot init
+```
+
+This will load the knowledge base from the location specified by the `BIOIMAGEIO_KNOWLEDGE_BASE_PATH` environment variable, or use the default path `./bioimageio-knowledge-base`. If the knowledge base is not found, it will be downloaded from the predefined URL (by default it uses https://uk1s3.embassy.ebi.ac.uk/public-datasets/bioimageio-knowledge-base can be override with `BIOIMAGEIO_KNOWLEDGE_BASE_URL`).
+
+**Example:**
+
+```bash
+export BIOIMAGEIO_KNOWLEDGE_BASE_PATH="./my_knowledge_base"
+python -m bioimageio_chatbot init
+```
+
+After running the `init` command, it will list the databases that are loaded into the knowledge base.
 
 #### Start Server
 

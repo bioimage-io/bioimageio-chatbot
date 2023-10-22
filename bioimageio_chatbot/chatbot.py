@@ -11,7 +11,9 @@ from typing import Any, Dict, List, Optional, Union
 import requests
 import sys
 import io
-from bioimageio_chatbot.utils import get_manifest
+from bioimageio_chatbot.knowledge_base import load_knowledge_base
+from bioimageio_chatbot.utils import get_manifest, download_file
+
 
 def load_model_info():
     response = requests.get("https://bioimage-io.github.io/collection-bioimage-io/collection.json")
@@ -165,23 +167,6 @@ def create_customer_service(db_path):
     customer_service = CustomerServiceRole()
     return customer_service
 
-def load_docs_store(db_path, collection_name):
-    # Load from vector store
-    embeddings = OpenAIEmbeddings()
-    docs_store = FAISS.load_local(index_name=collection_name, folder_path=db_path, embeddings=embeddings)
-    return docs_store
-
-def load_knowledge_base(db_path):
-    collections = get_manifest()['collections']
-    channel_ids = [collection['id'] for collection in collections]
-    docs_store_dict = {channel: load_docs_store(db_path, channel) for channel in channel_ids}
-    for name, docs_store in docs_store_dict.items():
-        length = len(docs_store.docstore._dict.keys())
-        assert  length > 0, f"Please make sure the docs store {name} is not empty."
-        print(f"Loaded {length} documents from {name}")
-
-    return docs_store_dict
-
 async def connect_server(server_url):
     token = await login({"server_url": server_url})
     server = await connect_to_server({"server_url": server_url, "token": token, "method_timeout": 100})
@@ -192,7 +177,9 @@ async def register_chat_service(server):
     collections = get_manifest()['collections']
     knowledge_base_path = os.environ.get("BIOIMAGEIO_KNOWLEDGE_BASE_PATH", "./bioimageio-knowledge-base")
     assert knowledge_base_path is not None, "Please set the BIOIMAGEIO_KNOWLEDGE_BASE_PATH environment variable to the path of the knowledge base."
-    assert os.path.exists(knowledge_base_path), f"The knowledge base path {knowledge_base_path} doesn't exist."
+    if not os.path.exists(knowledge_base_path):
+        print(f"The knowledge base is not found at {knowledge_base_path}, will download it from {KNOWLEDGE_BASE_URL}")
+        os.makedirs(knowledge_base_path, exist_ok=True)
 
     channel_id_by_name = {collection['name']: collection['id'] for collection in collections}
     customer_service = create_customer_service(knowledge_base_path)
