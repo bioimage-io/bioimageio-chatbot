@@ -162,16 +162,44 @@
 
   <script>
     $(document).ready(async function () {
+      let svc;
+      const shortIntroMessage = "Hi there! I'm Melman, your community knowledge base assistant for bioimage analysis. How can I assist you today?";
       // Manually toggle the collapse for profile options
       $('#edit-profile-btn').click(function () {
         $('#profileOptions').collapse('toggle');
       });
+
+      async function initializeService(){
+        showConnectingStatus();
+        try {
+          // get service_id from query string
+          const urlParams = new URLSearchParams(window.location.search);
+          const service_id = urlParams.get('service_id');
+          const server_url = urlParams.get('server_url');
+          const server = await hyphaWebsocketClient.connectToServer({
+            "server_url": server_url || "https://ai.imjoy.io"
+          })
+          const svc = await server.getService(service_id || "bioimageio-chatbot")
+          showReadyStatus();
+          appendRobotMessage(shortIntroMessage); // Append robot message to the message container
+          return svc;
+        }
+        catch (e) {
+          // If connection fails, show an error message in the status
+          showErrorStatus('Failed to connect to the server');
+          alert("Failed to get BioImage.IO Chatbot service")
+        }
+        finally {
+          $('.spinner').remove();
+        }
+      }
       // Reset the chat session and clear chat history
       function resetChat() {
         chat_history.length = 0; // Clear the chat history
         code = ''; // Reset code
         error_message = ''; // Reset error message
         $('.message-holder').empty(); // Clear the messages
+        initializeService();
       }
 
       $('#reset-btn').click(function () {
@@ -235,50 +263,28 @@
 
       $('.message-holder').append(spinner);
 
-      let svc;
-      showConnectingStatus();
-      try {
-        // get service_id from query string
-        const urlParams = new URLSearchParams(window.location.search);
-        const service_id = urlParams.get('service_id');
-        const server_url = urlParams.get('server_url');
-        const server = await hyphaWebsocketClient.connectToServer({
-          "server_url": server_url || "https://ai.imjoy.io"
-        })
-        svc = await server.getService(service_id || "bioimageio-chatbot")
-        const channels = svc.channels;
-        const channelSelect = document.getElementById('channelSelect');
+      
+      
+      svc = await initializeService();
+      const channels = svc.channels;
+      const channelSelect = document.getElementById('channelSelect');
 
-        // Clear any existing options
-        channelSelect.innerHTML = '<option value="" disabled selected>Select a Channel</option>';
+      // Clear any existing options
+      channelSelect.innerHTML = '<option value="" disabled selected>Select a Channel</option>';
 
-        channels.forEach((channel) => {
-          const option = document.createElement('option');
-          option.value = channel;
-          option.textContent = channel;
-          channelSelect.appendChild(option);
-        });
-        // add 'auto' channel
+      channels.forEach((channel) => {
         const option = document.createElement('option');
-        option.value = 'auto';
-        option.textContent = 'auto';
+        option.value = channel;
+        option.textContent = channel;
         channelSelect.appendChild(option);
-        channelSelect.value = 'auto';
-
-        showReadyStatus();
-        const shortIntroMessage = "Hi there! I'm Melman, your community knowledge base assistant for bioimage analysis. How can I assist you today?";
-        appendRobotMessage(shortIntroMessage); // Append robot message to the message container
-      }
-      catch (e) {
-        // If connection fails, show an error message in the status
-        showErrorStatus('Failed to connect to the server');
-        alert("Failed to get BioImage.IO Chatbot service")
-      }
-      finally {
-        $('.spinner').remove();
-      }
-
-
+      });
+      // add 'auto' channel
+      const option = document.createElement('option');
+      option.value = 'auto';
+      option.textContent = 'auto';
+      channelSelect.appendChild(option);
+      channelSelect.value = 'auto';
+  
       const chat_history = [];
       $('.send-btn').on('click', async function (e) {
         e.preventDefault();
