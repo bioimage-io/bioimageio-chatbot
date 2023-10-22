@@ -180,7 +180,7 @@ async def register_chat_service(server):
     knowledge_base_path = os.environ.get("BIOIMAGEIO_KNOWLEDGE_BASE_PATH", "./bioimageio-knowledge-base")
     assert knowledge_base_path is not None, "Please set the BIOIMAGEIO_KNOWLEDGE_BASE_PATH environment variable to the path of the knowledge base."
     if not os.path.exists(knowledge_base_path):
-        print(f"The knowledge base is not found at {knowledge_base_path}, will download it from {KNOWLEDGE_BASE_URL}")
+        print(f"The knowledge base is not found at {knowledge_base_path}, will download it automatically.")
         os.makedirs(knowledge_base_path, exist_ok=True)
 
     channel_id_by_name = {collection['name']: collection['id'] for collection in collections}
