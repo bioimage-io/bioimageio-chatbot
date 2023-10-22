@@ -127,7 +127,7 @@
         <img src="https://ai4life.eurobioimaging.eu/wp-content/uploads/2022/09/AI4Life-logo_giraffe-nodes-2048x946.png"
           alt="AI4Life Icon" style="height: 40px; margin-right: 10px">
         <br>
-        Please read <a href="https://github.com/bioimage-io/bioimageio-chatbot/blob/main/docs/DISCLAIMER.md" target="_blank">Disclaimer for BioImage.IO Chatbot</a> 
+        <a href="https://github.com/bioimage-io/bioimageio-chatbot/blob/main/docs/DISCLAIMER.md" target="_blank">Disclaimer for BioImage.IO Chatbot</a> 
         <!--  <p>BioImage.IO ChatBot is supported by the European Union's Horizon Europe Research and Innovation programme via the AI4Life project.</p> -->
       </div>
 
@@ -195,7 +195,7 @@
       textarea.addEventListener('input', autoResize, false);
       autoResize.call(textarea);
 
-
+      var renderer = new marked.Renderer();
       marked.setOptions({
         renderer: new marked.Renderer(),
         gfm: true,
@@ -205,6 +205,10 @@
         smartLists: true,
         smartypants: false
       });
+
+      renderer.link = function( href, title, text ) {
+        return '<a target="_blank" href="'+ href +'" title="' + title + '">' + text + '</a>';
+      }
 
       function autoResize() {
         this.style.height = 'auto';
@@ -301,7 +305,7 @@
       } */
       function appendRobotMessage(message) {
         // Convert the message to HTML using the marked library
-        const htmlMessage = marked(message);
+        const htmlMessage = marked(message, { renderer:renderer });
 
         let messageContainer = `<div class="message-container robot-message">
             <i class="fas fa-robot"></i>
