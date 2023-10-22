@@ -84,7 +84,7 @@ export OPENAI_API_KEY=sk-xxxxxxxx
 export BIOIMAGEIO_KNOWLEDGE_BASE_PATH=./bioimageio-knowledge-base
 python -m bioimageio_chatbot start-server --host=0.0.0.0 --port=9000
 ```
-This will create a local server, and the BioImage.IO Chatbot is available at: http://127.0.0.1:9000/public/apps/hypha-bot-client/index
+This will create a local server, and the BioImage.IO Chatbot is available at: http://127.0.0.1:9000/public/apps/bioimageio-chatbot-client/index
 
 Open the link in a browser and you will see:
 ![screenshot for the chatbot](./docs/screenshot-hi.png)
@@ -115,7 +115,7 @@ export BIOIMAGEIO_KNOWLEDGE_BASE_PATH=./bioimageio-knowledge-base
 python -m bioimageio_chatbot connect-server --server-url=https://ai.imjoy.io
 ```
 
-You will be asked to login with a hypha account (your github, google etc. account can be reused) then you will see a link to the chatbot like this: The BioImage.IO Chatbot is available at: https://ai.imjoy.io/github|xxxxxx/apps/hypha-bot-client/index
+You will be asked to login with a hypha account (your github, google etc. account can be reused) then you will see a link to the chatbot like this: The BioImage.IO Chatbot is available at: https://ai.imjoy.io/github|xxxxxx/apps/bioimageio-chatbot-client/index
 
 Leave your chatbot running and users inside or outside your network can access it from this URL.
 

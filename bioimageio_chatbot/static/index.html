@@ -221,7 +221,7 @@
         const server = await hyphaWebsocketClient.connectToServer({
           "server_url": server_url || "https://ai.imjoy.io"
         })
-        svc = await server.getService(service_id || "hypha-bot")
+        svc = await server.getService(service_id || "bioimageio-chatbot")
         const channels = svc.channels;
         const channelSelect = document.getElementById('channelSelect');
 
@@ -239,7 +239,7 @@
       catch (e) {
         // If connection fails, show an error message in the status
         showErrorStatus('Failed to connect to the server');
-        alert("Failed to get hypha bot service")
+        alert("Failed to get bioimageio chatbot service")
       }
       finally {
         $('.spinner').remove();

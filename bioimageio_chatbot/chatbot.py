@@ -201,8 +201,8 @@ async def register_chat_service(server):
         return response
 
     hypha_service_info = await server.register_service({
-        "name": "Hypha Bot",
-        "id": "hypha-bot",
+        "name": "BioImage.IO Chatbot",
+        "id": "bioimageio-chatbot",
         "config": {
             "visibility": "public",
             "require_context": True
@@ -214,7 +214,7 @@ async def register_chat_service(server):
     with open(os.path.join(os.path.dirname(__file__), "static/index.html"), "r") as f:
         index_html = f.read()
     index_html = index_html.replace("https://ai.imjoy.io", server.config['public_base_url'])
-    index_html = index_html.replace('"hypha-bot"', f'"{hypha_service_info["id"]}"')
+    index_html = index_html.replace('"bioimageio-chatbot"', f'"{hypha_service_info["id"]}"')
 
     async def index(event, context=None):
         return {
@@ -224,7 +224,7 @@ async def register_chat_service(server):
         }
     
     await server.register_service({
-        "id": "hypha-bot-client",
+        "id": "bioimageio-chatbot-client",
         "type": "functions",
         "config": {
             "visibility": "public",
@@ -234,7 +234,7 @@ async def register_chat_service(server):
     })
     server_url = server.config['public_base_url']
 
-    print(f"The BioImage.IO Chatbot is available at: {server_url}/{server.config['workspace']}/apps/hypha-bot-client/index")
+    print(f"The BioImage.IO Chatbot is available at: {server_url}/{server.config['workspace']}/apps/bioimageio-chatbot-client/index")
 
 if __name__ == "__main__":
     # asyncio.run(main())
