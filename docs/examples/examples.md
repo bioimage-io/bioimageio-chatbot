@@ -1,15 +1,9 @@
-# Supplementary Notes and Examples
+# Examples
 
-## LLM (Large Language Model)
+## ChatBot interface
 
-Large Language models, exemplified by ChatGPT, possess remarkable capabilities in natural language understanding and generation, making them attractive choices for chatbot development. These models can engage in coherent and contextually relevant conversations, providing informative interactions with users. However, these chatbots, driven by artificial intelligence, occasionally fail to deliver precise or accurate responses as they rely on pre-trained models that may not possess the domain-specific knowledge necessary for offering this precise information. For example, a language learning chatbot may lack familiarity with colloquial language, potentially missing words, sentences, or modern slang, hindering accurate language skill development in learners. Another limitation associated with these chatbots is hallucination, the potential for misunderstandings driven by the contextual nuances of a specific area or field. For instance, if a user asks a chatbot, entirely out of context, to explain "image registration," the query could be mistakenly interpreted as a request for information regarding event or course registration rather than the process of aligning or matching diverse images of the same biological specimen or region of interest. 
-
-## Knowledge Base Creation
-
-In response to the challenges existing in LLM models, we employed an augmented knowledge base to amplify the capabilities of our LLM-based chatbot. The rationale behind this choice is to provide a flexible systematic solution that addresses the intrinsic limitations inherent in LLM as well as to introduce the concept of knowledge base chatbot that avoids heavy fine-tuning and retraining effort. This augmentation significantly enhances the chatbot's ability to offer more precise, contextually accurate, and reliable responses to user queries.
-
-The construction of the knowledge base is both efficient and collaborative. We begin by downloading the documentation from a given URL, which could be a repository, a PDF, or any other form of documentation. To better organize and facilitate retrieval, we employ a specified splitter of regular expression patterns (regex splitter) to automatically segment the documentation into more manageable chunks for efficient and accurate retrieval. These segmented documentation chunks are then embedded and stored as vectors within the vector database. We use the FAISS based vector database in the implementation.
-
+Following installation guidelines from [README.mk](/README.md), the chat interface looks like (Supplementary Figure 1)
+User can input their profile as shown in Supplementary Figure 2. 
 As for today, our knowledge bases for the chatbot are drawn from documentation spanning below pivotal communities: bioimage.io, Imjoy, deepimageJ, ImageJ, bio.tools and scikit-image. A key feature of the implementation is the user's ability to specify a channel from which they prefer to retrieve information (Supplementary Figure 3). If the user designates a channel, the chatbot seamlessly sources information from that specific community. However, in cases where the channel is not specified, the chatbot utilizes an intelligent selection process guided by the schema-based agent to determine the most relevant channel based on the user's question. We will elaborate on the schema-based agent in the following, which plays a central role in this seamless and efficient retrieval process.
 
 This approach, combining the collaborative knowledge base from multiple communities with user-directed channel selection, empowers users from various domains to contribute to the chatbot's knowledge base, making it a versatile and invaluable resource for a continually expanding community of users.
