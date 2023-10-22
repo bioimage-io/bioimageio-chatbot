@@ -13,6 +13,7 @@ def start_server(args):
         "hypha.server",
         f"--host={args.host}",
         f"--port={args.port}",
+        f"--public-base-url={args.public_base_url}",
         "--startup-functions=bioimageio_chatbot.chatbot:register_chat_service"
     ]
     subprocess.run(command)
@@ -53,6 +54,7 @@ def main():
     parser_start_server = subparsers.add_parser("start-server")
     parser_start_server.add_argument("--host", type=str, default="0.0.0.0")
     parser_start_server.add_argument("--port", type=int, default=9000)
+    parser_start_server.add_argument("--public-base-url", type=str, default="http://127.0.0.1:9000")
     parser_start_server.set_defaults(func=start_server)
     
     # Connect server command
