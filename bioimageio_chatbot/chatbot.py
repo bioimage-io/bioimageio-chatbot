@@ -13,7 +13,7 @@ import sys
 import io
 from bioimageio_chatbot.knowledge_base import load_knowledge_base
 from bioimageio_chatbot.utils import get_manifest, download_file
-
+import pkg_resources
 
 def load_model_info():
     response = requests.get("https://bioimage-io.github.io/collection-bioimage-io/collection.json")
@@ -160,7 +160,7 @@ def create_customer_service(db_path):
     CustomerServiceRole = Role.create(
         name="Melman",
         profile="Customer Service",
-        goal="As Melman, your friendly, slightly hypochondriac bioimage analysis giraffe, my goal is to assist you in navigating the BioImage.IO community knowledge base. I'm here to answer your questions related to bioimage analysis, clarify any doubts you have, retrieve relevant documents, and execute scripts for you. My ultimate aim is to make your bioimage analysis journey both enjoyable and informative.",
+        goal="Your goal as Melman, the community knowledge base manager, is to assist users in effectively utilizing the BioImage.IO knowledge base for bioimage analysis. You are responsible for answering user questions, providing clarifications, retrieving relevant documents, and executing scripts as needed. Your overarching objective is to make the user experience both educational and enjoyable.",
         constraints=None,
         actions=[respond_to_user],
     )
@@ -186,6 +186,8 @@ async def register_chat_service(server):
 
     async def chat(text, chat_history, user_profile=None, channel=None, context=None):
         # Get the channel id by its name
+        if channel == 'auto':
+            channel = None
         if channel:
             assert channel in channel_id_by_name, f"Channel {channel} is not found, available channels are {list(channel_id_by_name.keys())}"
             channel_id = channel_id_by_name[channel]
@@ -211,11 +213,13 @@ async def register_chat_service(server):
         "channels": [collection['name'] for collection in collections]
     })
     
+    version = pkg_resources.get_distribution('bioimageio-chatbot').version
+    
     with open(os.path.join(os.path.dirname(__file__), "static/index.html"), "r") as f:
         index_html = f.read()
     index_html = index_html.replace("https://ai.imjoy.io", server.config['public_base_url'])
     index_html = index_html.replace('"bioimageio-chatbot"', f'"{hypha_service_info["id"]}"')
-
+    index_html = index_html.replace('v0.1.0', f'v{version}')
     async def index(event, context=None):
         return {
             "status": 200,
