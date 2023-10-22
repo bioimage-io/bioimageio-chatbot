@@ -65,7 +65,7 @@ To initialize the knowledge base, use the `init` command:
 python -m bioimageio_chatbot init
 ```
 
-This will load the knowledge base from the location specified by the `BIOIMAGEIO_KNOWLEDGE_BASE_PATH` environment variable, or use the default path `./bioimageio-knowledge-base`. If the knowledge base is not found, it will be downloaded from the predefined URL (by default it uses https://uk1s3.embassy.ebi.ac.uk/public-datasets/bioimageio-knowledge-base can be override with `BIOIMAGEIO_KNOWLEDGE_BASE_URL`).
+This will download the knowledge base to the location specified by the `BIOIMAGEIO_KNOWLEDGE_BASE_PATH` environment variable, or use the default path `./bioimageio-knowledge-base`. If the knowledge base is not found, it will be downloaded from the predefined URL (by default it uses https://uk1s3.embassy.ebi.ac.uk/public-datasets/bioimageio-knowledge-base can be override with `BIOIMAGEIO_KNOWLEDGE_BASE_URL`).
 
 **Example:**
 
