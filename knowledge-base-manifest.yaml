@@ -2,27 +2,38 @@ name: "BioImage.IO Knowledge Base"
 description: "A knowledge base for bioimage analysis models, tools, workflows etc."
 format_version: "0.1.0"
 collections:
-  - name: bio.tools
-    id: bio.tools
-    url: https://github.com/research-software-ecosystem/content/archive/refs/heads/master.zip
-    directory: data
-    description: A repository for research software tools with metadata.
-  - name: ImJoy
-    id: imjoy
-    url: https://github.com/imjoy-team/ImJoy/archive/refs/heads/master.zip
-    directory: docs
-    description: A plugin powered hybrid computing platform for deploying deep learning applications such as advanced image analysis tools.
   - name: BioImage.IO
     id: bioimage.io
-    url: https://github.com/bioimage-io/bioimage.io/archive/refs/heads/main.zip
+    source: https://github.com/bioimage-io/bioimage.io/archive/refs/heads/main.zip
     directory: docs
     description: A model repository for bioimage analysis.
+    base_url: https://bioimage.io/docs/#/
+  - name: imagej.net
+    id: imagej.net
+    source: https://github.com/imagej/imagej.github.io/archive/7bdb57db2f0c616a21742611f534bbe2fd215416.zip
+    directory: _pages
+    description: The ImageJ wiki with a lot of useful information about ImageJ, Fiji and related plugins and tools.
+    base_url: https://imagej.net
+  - name: bio.tools
+    id: bio.tools
+    source: https://github.com/research-software-ecosystem/content/archive/refs/heads/master.zip
+    directory: data
+    description: A repository for research software tools with metadata.
+    base_url: https://bio.tools
+  - name: ImJoy
+    id: imjoy
+    source: https://github.com/imjoy-team/ImJoy/archive/refs/heads/master.zip
+    directory: docs
+    description: A plugin powered hybrid computing platform for deploying deep learning applications such as advanced image analysis tools.
+    base_url: https://imjoy.io/docs/#/
   - name: deepImageJ
     id: deepimagej
-    url: https://s3.imjoy.io/public-datasets/deepimagej-plugin.wiki.zip
+    source: https://s3.imjoy.io/public-datasets/deepimagej-plugin.wiki.zip
     directory: "."
     description: The ImageJ plugin to run deep-learning models
-  # - name: scikit-image
-  #   id: scikit-image
-  #   url: https://raw.githubusercontent.com/oeway/hypha-knowledge-base/gh-pages/scikit-image-0.21.0.pdf
-  #   description: A collection of algorithms for image processing.
+    base_url: https://deepimagej.github.io/
+  - name: scikit-image
+    id: scikit-image
+    source: https://raw.githubusercontent.com/oeway/hypha-knowledge-base/gh-pages/scikit-image-0.21.0.pdf
+    description: A collection of algorithms for image processing.
+    base_url: https://scikit-image.org/docs/stable/

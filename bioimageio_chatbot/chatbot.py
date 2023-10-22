@@ -82,7 +82,7 @@ class DocumentSearchInput(BaseModel):
     user_question: str = Field(description="The user's original question.")
     relevant_context: List[DocWithScore] = Field(description="Context chunks from the documentation")
     user_info: str = Field(description="User info for personalize response.")
-
+    base_url: str = Field(description="The base url of the documentation, used for resolve relative URL in the document and produce markdown links.")
 
 class FinalResponse(BaseModel):
     """The final response to the user's question. If the retrieved context has low relevance score, or the question isn't relevant to the retried context, return 'I don't know'."""
@@ -105,6 +105,7 @@ class QuestionWithHistory(BaseModel):
 def create_customer_service(db_path):
     collections = get_manifest()['collections']
     docs_store_dict = load_knowledge_base(db_path)
+    collection_info_dict = {collection['id']: collection for collection in collections}
     resource_items = load_model_info()
     types = set()
     tags = set()
@@ -139,9 +140,10 @@ def create_customer_service(db_path):
             # Use the automatic channel selection if the user doesn't specify a channel
             selected_channel = question_with_history.channel_id or req.database_id
             docs_store = docs_store_dict[selected_channel]
+            collection_info = collection_info_dict[selected_channel]
             results_with_scores = await docs_store.asimilarity_search_with_relevance_scores(req.query, k=3)
             docs_with_score = [DocWithScore(doc=doc.page_content, score=score, metadata=doc.metadata) for doc, score in results_with_scores]
-            search_input = DocumentSearchInput(user_question=req.request, relevant_context=docs_with_score, user_info=req.user_info)
+            search_input = DocumentSearchInput(user_question=req.request, relevant_context=docs_with_score, user_info=req.user_info, base_url=collection_info.get('base_url'))
             response = await role.aask(search_input, FinalResponse)
             return response.response
         elif isinstance(req, ModelZooInfoScript):

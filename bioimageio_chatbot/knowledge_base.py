@@ -166,7 +166,7 @@ def create_vector_knowledge_base(output_dir=None, collections=None):
     
     embeddings = OpenAIEmbeddings()
     for collection in collections:
-        url = collection['url']
+        url = collection['source']
         cached_docs_file = os.path.join(output_dir, collection['id'] + "-docs.pickle")
         if os.path.exists(cached_docs_file):
             with open(cached_docs_file, "rb") as f:
