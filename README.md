@@ -10,6 +10,13 @@ Welcome to the BioImage.IO Chatbot user guide. This guide will help you get the 
 
 The BioImage.IO Chatbot is a versatile conversational agent designed to assist users in accessing information related to bioimage analysis. It leverages the power of Large Language Models (LLMs) and integrates user-specific data to provide contextually accurate and personalized responses. Whether you're a researcher, developer, or scientist, the chatbot is here to make your bioimage analysis journey smoother and more informative.
 
+## Usage Examples
+
+![screenshot for the chatbot](./docs/screenshots/screenshot-hi.png)
+
+[Here](docs/usage-example.md) you can find more usage example screenshots.
+
+
 ## Chatbot Features
 
 The BioImage.IO Chatbot offers the following features:
@@ -21,6 +28,7 @@ The BioImage.IO Chatbot offers the following features:
 * **Document Retrieval**: It can search through extensive documentation to provide detailed information on models, applications, datasets, and more. For example, the ChatBot is able to retrieve information from the [bio.tools](https://bio.tools), [ImageJ.net] (https://imagej.net/), [deepImageJ](https://deepimagej.github.io), [ImJoy](https://imjoy.io/#/) and [bioimage.io](https://bioimage.io). The full list of supported databases can be found in the [`knowledge-base-manifest.yaml`](knowledge-base-manifest.yaml) file.
 
 * **Query Structured Database by Script Execution**: The chatbot can generate Python scripts for complex queries in structured databases (e.g., csv, json file, SQL databases), helping you perform advanced tasks such as specific questions about the available models at [bioimage.io](https://bioimage.io).
+
 
 ## Using the Chatbot
 
@@ -101,12 +109,11 @@ python -m bioimageio_chatbot start-server --host=0.0.0.0 --port=9000
 ```
 This will create a local server, and the BioImage.IO Chatbot is available at: http://127.0.0.1:9000/public/apps/bioimageio-chatbot-client/index
 
-Open the link in a browser and you will see:
-![screenshot for the chatbot](./docs/screenshots/screenshot-hi.png)
+Open the link in a browser and you will see the chat interface.
 
 Please note that the chatbot server may not be accessible to users outside your local network.
 
-A user guide and technical overview can be found at [examples](./docs/technical-overview.md).
+A user guide and technical overview can be found [here](./docs/technical-overview.md).
 
 To be able to share your chatbot service over the internet (especially for the users outside your local network), you will need to expose your server publicly, otherwise, please see [Connect to Server](#connect-to-server)
 
