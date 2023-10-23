@@ -48,21 +48,6 @@ Three distinct response modes have been designed to optimize the chatbot's utili
     ![script-gen-exe-retrieval](./screenshots/script-gen-exe-retrieval.png)
     *Figure 8. Script generation and execution for advanced queries.*
 
-### Customization Examples
-
-Customization is vital, particularly in the dynamic field of bioimage analysis. We leverage the flexibility of our schema-based agent to accommodate users' diverse backgrounds (see Figures 9 and 10).
-
-![customization2_developer](./screenshots/customization2_developer.png)
-*Figure 9. Customization for users with a bioimage analysis background.*
-
-![customization2_developer](./screenshots/customization2_developer.png)
-*Figure 10. Customization for users without a bioimage analysis background.*
-
-Users can also specify a preferred channel for information retrieval (see Figure 11).
-
-![customization_biotool](./screenshots/customization_biotool.png)
-*Figure 11. Customization for channel selection.*
-
 ## References
 
 1. [FAISS](https://github.com/bioimage-io/bioimageio-chatbot)
