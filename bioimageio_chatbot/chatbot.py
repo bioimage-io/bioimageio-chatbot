@@ -86,9 +86,14 @@ class DocumentSearchInput(BaseModel):
     format: Optional[str] = Field(None, description="The format of the document.")
 
 class FinalResponse(BaseModel):
-    """The final response to the user's question. If the retrieved context has low relevance score, or the question isn't relevant to the retried context, return 'I don't know'."""
+    """The final response to the user's question. If the retrieved context has low relevance score, or the question isn't relevant to the retrieved context, return 'I don't know'."""
     response: str = Field(description="The answer to the user's question in markdown format.")
 
+class ChannelInfo(BaseModel):
+    """The selected channel of the user's question. If provided, try to stick to the selected channel when answering the user's question."""
+    id: str = Field(description="The channel id.")
+    name: str = Field(description="The channel name.")
+    description: str = Field(description="The channel description.")
 
 class UserProfile(BaseModel):
     """The user's profile. This will be used to personalize the response."""
@@ -101,7 +106,7 @@ class QuestionWithHistory(BaseModel):
     question: str = Field(description="The user's question.")
     chat_history: Optional[List[Dict[str, str]]] = Field(None, description="The chat history.")
     user_profile: Optional[UserProfile] = Field(None, description="The user's profile. You should use this to personalize the response based on the user's background and occupation.")
-    channel_id: Optional[str] = Field(None, description="The channel id of the user's question. This is used to limit the search scope to a specific channel, None means all the channels.")
+    channel_info: Optional[ChannelInfo] = Field(None, description="The selected channel of the user's question. If provided, try to stick to the selected channel when answering the user's question.")
 
 def create_customer_service(db_path):
     collections = get_manifest()['collections']
@@ -119,11 +124,11 @@ def create_customer_service(db_path):
     channels_info = "\n".join(f"""- `{collection['id']}`: {collection['description']}""" for collection in collections)
     resource_item_stats = f"""Each item contains the following fields: {list(resource_items[0].keys())}\nThe available resource types are: {types}\nSome example tags: {tags}\nHere is an example: {resource_items[0]}"""
     class DocumentRetrievalInput(BaseModel):
-        """Input for finding relevant documents from database."""
+        """Input for finding relevant documents from databases."""
         query: str = Field(description="Query used to retrieve related documents.")
         request: str = Field(description="User's request in details")
         user_info: str = Field(description="Brief user info summary for personalized response, including name, background etc.")
-        database_id: str = Field(description=f"Select a database for information retrieval. The available databases are:\n{channels_info}")
+        channel_id: str = Field(description=f"User selected database channel, or if not specified select one automatically. The available channels are:\n{channels_info}")
 
     class ModelZooInfoScript(BaseModel):
         """Create a Python Script to get information about details of models, applications and datasets etc."""
@@ -133,17 +138,23 @@ def create_customer_service(db_path):
 
     async def respond_to_user(question_with_history: QuestionWithHistory = None, role: Role = None) -> str:
         """Answer the user's question directly or retrieve relevant documents from the documentation, or create a Python Script to get information about details of models."""
-        inputs = [question_with_history.user_profile] + list(question_with_history.chat_history) + [question_with_history.question] 
-        req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, ModelZooInfoScript])
+        inputs = [question_with_history.user_profile] + list(question_with_history.chat_history) + [question_with_history.question]
+        # The channel info will be inserted at the beginning of the inputs
+        if question_with_history.channel_info:
+            inputs.insert(0, question_with_history.channel_info)
+        if not question_with_history.channel_info or question_with_history.channel_info.id == "bioimage.io":
+            req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, ModelZooInfoScript])
+        else:
+            req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput])
         if isinstance(req, DirectResponse):
             return req.response
         elif isinstance(req, DocumentRetrievalInput):
-            # Use the automatic channel selection if the user doesn't specify a channel
-            selected_channel = question_with_history.channel_id or req.database_id
-            docs_store = docs_store_dict[selected_channel]
-            collection_info = collection_info_dict[selected_channel]
+            docs_store = docs_store_dict[req.channel_id]
+            collection_info = collection_info_dict[req.channel_id]
+            print(f"Retrieving documents from database {req.channel_id} with query: {req.query}")
             results_with_scores = await docs_store.asimilarity_search_with_relevance_scores(req.query, k=3)
             docs_with_score = [DocWithScore(doc=doc.page_content, score=score, metadata=doc.metadata) for doc, score in results_with_scores]
+            print(f"Retrieved documents:\n{docs_with_score[0].doc[:20] + '...'} (score: {docs_with_score[0].score})\n{docs_with_score[1].doc[:20] + '...'} (score: {docs_with_score[1].score})\n{docs_with_score[2].doc[:20] + '...'} (score: {docs_with_score[2].score})")
             search_input = DocumentSearchInput(user_question=req.request, relevant_context=docs_with_score, user_info=req.user_info, base_url=collection_info.get('base_url'), format=collection_info.get('format'))
             response = await role.aask(search_input, FinalResponse)
             return response.response
@@ -163,7 +174,7 @@ def create_customer_service(db_path):
     CustomerServiceRole = Role.create(
         name="Melman",
         profile="Customer Service",
-        goal="Your goal as Melman, the community knowledge base manager, is to assist users in effectively utilizing the BioImage.IO knowledge base for bioimage analysis. You are responsible for answering user questions, providing clarifications, retrieving relevant documents, and executing scripts as needed. Your overarching objective is to make the user experience both educational and enjoyable.",
+        goal="Your goal as Melman from Madagascar, the community knowledge base manager, is to assist users in effectively utilizing the BioImage.IO knowledge base for bioimage analysis. You are responsible for answering user questions, providing clarifications, retrieving relevant documents, and executing scripts as needed. Your overarching objective is to make the user experience both educational and enjoyable.",
         constraints=None,
         actions=[respond_to_user],
     )
@@ -185,6 +196,7 @@ async def register_chat_service(server):
         os.makedirs(knowledge_base_path, exist_ok=True)
 
     channel_id_by_name = {collection['name']: collection['id'] for collection in collections}
+    description_by_id = {collection['id']: collection['description'] for collection in collections}
     customer_service = create_customer_service(knowledge_base_path)
 
     async def chat(text, chat_history, user_profile=None, channel=None, context=None):
@@ -196,9 +208,12 @@ async def register_chat_service(server):
             channel_id = channel_id_by_name[channel]
         else:
             channel_id = None
-        
+
+        channel_info = channel_id and {"id": channel_id, "name": channel, "description": description_by_id[channel_id]}
+        if channel_info:
+            channel_info = ChannelInfo.parse_obj(channel_info)
         # user_profile = {"name": "lulu", "occupation": "data scientist", "background": "machine learning and AI"}
-        m = QuestionWithHistory(question=text, chat_history=chat_history, user_profile=UserProfile.parse_obj(user_profile), channel_id=channel_id)
+        m = QuestionWithHistory(question=text, chat_history=chat_history, user_profile=UserProfile.parse_obj(user_profile),channel_info=channel_info)
         response = await customer_service.handle(Message(content=m.json(), instruct_content=m , role="User"))
         # get the content of the last response
         response = response[-1].content
