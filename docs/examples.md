@@ -2,8 +2,8 @@
 
 ## ChatBot interface
 
-Following installation guidelines from the [README](/README.md), the chat interface looks like (Supplementary Figure 1)
-User can input their profile as shown in Supplementary Figure 2. 
+Following installation guidelines from the [README](/README.md), the chat interface looks like Figure 1 [BioImage.IO-ChatBot].
+User can input their profile as shown in Figure 2 [user-profile]. 
 As for today, our knowledge bases for the chatbot are drawn from documentation spanning below pivotal communities: bioimage.io, Imjoy, deepimageJ, ImageJ, bio.tools and scikit-image. A key feature of the implementation is the user's ability to specify a channel from which they prefer to retrieve information (Supplementary Figure 3). If the user designates a channel, the chatbot seamlessly sources information from that specific community. However, in cases where the channel is not specified, the chatbot utilizes an intelligent selection process guided by the schema-based agent to determine the most relevant channel based on the user's question. We will elaborate on the schema-based agent in the following, which plays a central role in this seamless and efficient retrieval process.
 
 This approach, combining the collaborative knowledge base from multiple communities with user-directed channel selection, empowers users from various domains to contribute to the chatbot's knowledge base, making it a versatile and invaluable resource for a continually expanding community of users.
@@ -37,7 +37,7 @@ Customization is a crucial element in our chatbot's design, especially in the dy
  # Examples 
 
 Supplementary Figure 1. The chat interface of BioImage.IO ChatBot.
-![BioImage.IO ChatBot](./screenshots/chat-interface.png)
+![BioImage.IO-ChatBot](./screenshots/chat-interface.png)
 
 Supplementary Figure 2. Users can input their profile by clicking `Edit Profile` to personalized responses and `Save` to save their profile for future conversations. 
 ![user-profile](./screenshots/user-profile.png).
