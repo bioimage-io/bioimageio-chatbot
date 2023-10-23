@@ -1,4 +1,4 @@
-# Examples
+# Implementation details and example conversations
 
 ## ChatBot interface
 
