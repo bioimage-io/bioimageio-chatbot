@@ -310,14 +310,24 @@
         // Show 'Thinking...' status while waiting for the server's response
         showThinkingStatus();
 
-        code = await svc.chat(message, chat_history, user_profile, selectedChannel);
-        console.log(code)
-        chat_history.push({ role: 'user', content: message })
-        chat_history.push({ role: 'assistant', content: code })
-        // Remove spinner and set status back to 'Ready to chat' after finishing
-        $('.spinner').remove();
-        showReadyStatus();
-        appendRobotMessage(code); // Append robot message to the message container
+        try{
+          response = await svc.chat(message, chat_history, user_profile, selectedChannel);
+          console.log(response)
+          chat_history.push({ role: 'user', content: message })
+          chat_history.push({ role: 'assistant', content: response })
+          showReadyStatus();
+        }
+        catch(e){
+          // generate an error message to simulate how Melman from Madagascar would respond to an error
+          response = "Oh no! I'm sorry, I don't know how to answer that. I'm just a giraffe after all. Please try again.";
+          showErrorStatus(`The server failed to respond, please try again. Error: ${e}`);
+        }
+        finally{
+          // Remove spinner and set status back to 'Ready to chat' after finishing
+          $('.spinner').remove();
+          appendRobotMessage(response); // Append robot message to the message container
+        }
+        
       });
 
 
