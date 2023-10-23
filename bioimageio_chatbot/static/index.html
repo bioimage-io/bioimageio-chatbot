@@ -320,7 +320,8 @@
         catch(e){
           // generate an error message to simulate how Melman from Madagascar would respond to an error
           response = "Oh no! I'm sorry, I don't know how to answer that. I'm just a giraffe after all. Please try again.";
-          showErrorStatus(`The server failed to respond, please try again. Error: ${e}`);
+          showErrorStatus(`The server failed to respond, please try again.`);
+          console.error(e);
         }
         finally{
           // Remove spinner and set status back to 'Ready to chat' after finishing
