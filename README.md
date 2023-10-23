@@ -1,10 +1,8 @@
-# 🤖 BioImage.IO ChatBot
-
-<a href="https://zenodo.org/records/10032228" target="_blank"><img id="record-doi-badge" data-target="[data-modal='10.5281/zenodo.10032228']" src="https://zenodo.org/badge/DOI/10.5281/zenodo.10032228.svg" alt="10.5281/zenodo.10032228"></a>
+# 🦒 BioImage.IO ChatBot 🤖
 
 ## Your Personal Assistant in BioImage Analysis
 
-**📣New: [Preprint on Zenodo](https://zenodo.org/records/10032228)**
+**📣New: Preprint: <a href="https://zenodo.org/records/10032228" target="_blank"><img id="record-doi-badge" data-target="[data-modal='10.5281/zenodo.10032228']" src="https://zenodo.org/badge/DOI/10.5281/zenodo.10032228.svg" alt="10.5281/zenodo.10032228"></a>**
 
 Welcome to the BioImage.IO Chatbot user guide. This guide will help you get the most out of the chatbot, providing detailed information on how to interact with it and retrieve valuable insights related to bioimage analysis.
 
@@ -108,7 +106,7 @@ Open the link in a browser and you will see:
 
 Please note that the chatbot server may not be accessible to users outside your local network.
 
-More details about implementation and examples can be found at [examples](./docs/examples.md).
+A user guide and technical overview can be found at [examples](./docs/technical-overview.md).
 
 To be able to share your chatbot service over the internet (especially for the users outside your local network), you will need to expose your server publicly, otherwise, please see [Connect to Server](#connect-to-server)
 
@@ -158,6 +156,10 @@ export OPENAI_API_KEY=sk-xxxxxxxx
 export BIOIMAGEIO_KNOWLEDGE_BASE_PATH=./bioimageio-knowledge-base
 python -m bioimageio_chatbot create-knowledge-base --output-dir=./bioimageio-knowledge-base
 ```
+
+## Technical Overview
+
+Please read the [technical overview](./docs/technical-overview.md) for more details about the chatbot's design and implementation.
 
 ## Join Us as a Community Partner
 
