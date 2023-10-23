@@ -10,12 +10,11 @@ Welcome to the BioImage.IO Chatbot user guide. This guide will help you get the 
 
 The BioImage.IO Chatbot is a versatile conversational agent designed to assist users in accessing information related to bioimage analysis. It leverages the power of Large Language Models (LLMs) and integrates user-specific data to provide contextually accurate and personalized responses. Whether you're a researcher, developer, or scientist, the chatbot is here to make your bioimage analysis journey smoother and more informative.
 
-## Usage Examples
-
 ![screenshot for the chatbot](./docs/screenshots/screenshot-hi.png)
 
-[Here](docs/usage-example.md) you can find more usage example screenshots.
+## Usage and Examples
 
+[More usage guide and example screenshots](docs/usage-example.md).
 
 ## Chatbot Features
 
