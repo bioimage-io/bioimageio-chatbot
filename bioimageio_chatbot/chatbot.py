@@ -210,8 +210,10 @@ async def register_chat_service(server):
             channel_id = None
 
         channel_info = channel_id and {"id": channel_id, "name": channel, "description": description_by_id[channel_id]}
+        if channel_info:
+            channel_info = ChannelInfo.parse_obj(channel_info)
         # user_profile = {"name": "lulu", "occupation": "data scientist", "background": "machine learning and AI"}
-        m = QuestionWithHistory(question=text, chat_history=chat_history, user_profile=UserProfile.parse_obj(user_profile), channel_info=ChannelInfo.parse_obj(channel_info))
+        m = QuestionWithHistory(question=text, chat_history=chat_history, user_profile=UserProfile.parse_obj(user_profile),channel_info=channel_info)
         response = await customer_service.handle(Message(content=m.json(), instruct_content=m , role="User"))
         # get the content of the last response
         response = response[-1].content
