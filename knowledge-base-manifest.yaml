@@ -2,6 +2,13 @@ name: "BioImage.IO Knowledge Base"
 description: "A knowledge base for bioimage analysis models, tools, workflows etc."
 format_version: "0.1.0"
 collections:
+  - name: ilastik
+    id: ilastik
+    source: https://github.com/ilastik/ilastik.github.io/archive/30b5ccbde9b7ce100259480019662be89a5a1f32.zip
+    directory: documentation
+    description: ilastik - the interactive learning and segmentation toolkit, Leverage machine learning algorithms to easily segment, classify, track and count your cells or other experimental data
+    base_url: https://www.ilastik.org/documentation/
+    format: markdown
   - name: BioImage.IO
     id: bioimage.io
     source: https://github.com/bioimage-io/bioimage.io/archive/refs/heads/main.zip
@@ -22,7 +29,7 @@ collections:
     directory: data
     description: A repository for research software tools with metadata.
     base_url: https://bio.tools
-    format: json  
+    format: json 
   - name: ImJoy
     id: imjoy
     source: https://github.com/imjoy-team/ImJoy/archive/refs/heads/master.zip
