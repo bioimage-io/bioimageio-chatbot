@@ -1,6 +1,10 @@
 # 🤖 BioImage.IO ChatBot
 
+<a href="https://zenodo.org/records/10032228" target="_blank"><img id="record-doi-badge" data-target="[data-modal='10.5281/zenodo.10032228']" src="https://zenodo.org/badge/DOI/10.5281/zenodo.10032228.svg" alt="10.5281/zenodo.10032228"></a>
+
 ## Your Personal Assistant in BioImage Analysis
+
+**📣New: [Preprint on Zenodo](https://zenodo.org/records/10032228)**
 
 Welcome to the BioImage.IO Chatbot user guide. This guide will help you get the most out of the chatbot, providing detailed information on how to interact with it and retrieve valuable insights related to bioimage analysis.
 
@@ -165,6 +169,14 @@ If you are a tool developer or a database maintainer related to bioimage analysi
 If you have any questions, need assistance, or want to contribute to the chatbot's knowledge base, please do not hesitate to contact us via [Github issues](https://github.com/bioimage-io/bioimageio-chatbot/issues). Our team is here to help you get started and make valuable contributions.
 
 Thank you for your support and for helping make the BioImage.IO Chatbot more informative and useful to the community.
+
+## Cite Us
+
+If you use the BioImage.IO Chatbot in your research, please cite us:
+
+```
+Lei, W., Fuster-Barceló, C., Muñoz-Barrutia, A., & Ouyang, W. (2023). 🦒BioImage.IO Chatbot: A Personalized Assistant for BioImage Analysis Augmented by Community Knowledge Base (0.1.0). Zenodo. https://doi.org/10.5281/zenodo.10032228
+```
 
 ## Acknowledgements
 
