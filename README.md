@@ -104,6 +104,8 @@ Open the link in a browser and you will see:
 
 Please not that the chatbot server may not be accessible for the users outside your local network.
 
+More details and examples can be found at [examples](./docs/examples.md).
+
 To be able to share your chatbot service over the internet (especially for the users outside your local network), you will need to expose your server publicly, otherwise, please see [Connect to Server](#connect-to-server)
 
 #### Connect to Server
