@@ -29,7 +29,7 @@ If you have more technical questions, the chatbot is equipped to assist you effe
 
 
 ### Personalization: tailored Responses
-The BioImage.IO Chatbot it's designed to understand and cater to the unique background and needs of its users. Whether you're a biologist, bioimage analyst, or a developer, the chatbot tailors its responses to provide you with the most relevant and context-aware information.
+The BioImage.IO Chatbot is designed to understand and cater to the unique backgrounds and needs of its users. Whether you're a biologist, bioimage analyst, or developer, the chatbot tailors its responses to provide you with the most relevant and context-aware information.
 
 To illustrate this personalized approach, we have two screenshots of the chatbot answering the same question: "How can I analyze biological images?" In the first screenshot, we have Abby, a biologist, posing this query. In the second screenshot, it's Abby again, but this time, she identifies as a developer. As expected, the chatbot is able to provide different feedback to Abby based on her background and needs.
 
@@ -38,7 +38,7 @@ To illustrate this personalized approach, we have two screenshots of the chatbot
 
 ## Database Integration
 Our system harnesses knowledge from a variety of valuable sources, including established databases such as [ELIXIR bio.tools](https://bio.tools) and the [ImageJ Wiki](https://imagej.net/software/imagej2/), tool-specific documentation like [deepImageJ](https://deepimagej.github.io), [ilastik](https://www.ilastik.org), and [ImJoy](https://imjoy.io/#/), and structured databases such as the [BioImage Model Zoo repository](https://bioimage.io).
-In the chatbot's user interface, you'll find a list of theavailable knowledge base channels that the chatbot can access. s. You can choose to select a specific knowledge base channel or opt for the `auto` mode to query information from all integrated databases.
+In the chatbot's user interface, you'll find a list of the available knowledge base channels that the chatbot can access. s. You can choose to select a specific knowledge base channel or opt for the `auto` mode to query information from all integrated databases.
 
 ### Knowledge Base Channel Selection
 If you are interested in retrieving information from a specific database, you can ask a question and select the "Knowledge Base Channel" that you are more interested in. This way, the information provided will be exclusively from the channel of information you have selected.
@@ -68,7 +68,7 @@ The chatbot provides a detailed breakdown of the steps required to complete the 
 ### Retrieving Models
 The BioImage.IO Chatbot is a versatile tool that can generate and execute code in response to user queries. This means that when a user asks about specific models available in bioimage.io, the chatbot can fetch this information by generating a custom script.
 
-For instance, if a user inquires about the total number of models in the BioImage Model Zoo, the chatbot can effortlessly retrieve this information using a straightforward script. However, the questions can become more intricate. Users might want to know which models in bioimage.io are suitable for a particular tag or task (*i.e. segmentation*)or similar criteria. The chatbot is adept at handling these more complex queries, too.
+For instance, if a user inquires about the total number of models in the BioImage Model Zoo, the chatbot can effortlessly retrieve this information using a straightforward script. However, the questions can become more intricate. Users might want to know which models in bioimage.io are suitable for a particular tag or task (*i.e., segmentation*)or similar criteria. The chatbot is adept at handling these more complex queries, too.
 
 ![Model Queries](./screenshots/script-gen-exe-retrieval.png)
 
@@ -81,4 +81,4 @@ Explore more, learn more, and enjoy the benefits of BioImage.IO Chatbot!
 
 ## Additional Resources
 - For documentation, visit our [GitHub repository](https://github.com/bioimage-io/bioimageio-chatbot).
-- Have questions or need assistance? Contact us at through [GitHub Issues]((https://github.com/bioimage-io/bioimageio-chatbot/issues)).
+- Do you have questions or need assistance? Contact us through [GitHub Issues]((https://github.com/bioimage-io/bioimageio-chatbot/issues)).
