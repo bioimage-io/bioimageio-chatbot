@@ -50,7 +50,7 @@ Three distinct response modes have been designed to optimize the chatbot's utili
 
 ## References
 
-1. [FAISS](https://github.com/bioimage-io/bioimageio-chatbot)
+1. [FAISS](https://engineering.fb.com/2017/03/29/data-infrastructure/faiss-a-library-for-efficient-similarity-search/)
 2. [Bioimage.io](https://bioimage.io/docs/#/)
 3. [Imjoy](https://imjoy.io/docs/#/)
 4. [DeepImageJ](https://deepimagej.github.io/)
