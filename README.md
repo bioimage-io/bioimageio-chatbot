@@ -10,7 +10,7 @@ Welcome to the BioImage.IO Chatbot user guide. This guide will help you get the 
 
 🔍 We are currently looking for early testers. If you are interested, please check this form: https://forms.gle/Y4XHrzmkcCEAJGX19. We will get back to you!
 
-[Usage guide and example screenshots](docs/usage-example.md).
+Here you can find usage guide and more examples. [Usage guide and example screenshots](docs/usage-example.md).
 
 ## Introduction
 
