@@ -18,7 +18,7 @@ The BioImage.IO Chatbot is a versatile conversational agent designed to assist u
 
 🔍 We are currently looking for early testers. If you are interested, please check this form: https://forms.gle/Y4XHrzmkcCEAJGX19. We will get back to you!
 
-[More usage guide and example screenshots](docs/usage-example.md).
+[Usage guide and example screenshots](docs/usage-example.md).
 
 ## Chatbot Features
 
@@ -28,7 +28,7 @@ The BioImage.IO Chatbot offers the following features:
 
 * **Personalization**: By incorporating your background information, the chatbot tailors responses to meet your specific requirements.
 
-* **Document Retrieval**: It can search through extensive documentation to provide detailed information on models, applications, datasets, and more. For example, the ChatBot is able to retrieve information from the [bio.tools](https://bio.tools), [ImageJ.net] (https://imagej.net/), [deepImageJ](https://deepimagej.github.io), [ImJoy](https://imjoy.io/#/) and [bioimage.io](https://bioimage.io). The full list of supported databases can be found in the [`knowledge-base-manifest.yaml`](knowledge-base-manifest.yaml) file.
+* **Document Retrieval**: It can search through extensive documentation to provide detailed information on models, applications, datasets, and more. For example, the ChatBot is able to retrieve information from the [bio.tools](https://bio.tools), [ImageJ.net](https://imagej.net/), [deepImageJ](https://deepimagej.github.io), [ImJoy](https://imjoy.io/#/) and [bioimage.io](https://bioimage.io). The full list of supported databases can be found in the [`knowledge-base-manifest.yaml`](knowledge-base-manifest.yaml) file.
 
 * **Query Structured Database by Script Execution**: The chatbot can generate Python scripts for complex queries in structured databases (e.g., csv, json file, SQL databases), helping you perform advanced tasks such as specific questions about the available models at [bioimage.io](https://bioimage.io).
 
@@ -78,7 +78,7 @@ To initialize the knowledge base, use the `init` command:
 python -m bioimageio_chatbot init
 ```
 
-This will load the knowledge base from the location specified by the `BIOIMAGEIO_KNOWLEDGE_BASE_PATH` environment variable, or use the default path `./bioimageio-knowledge-base`. If the knowledge base is not found, it will be downloaded from the predefined URL (by default, it uses https://uk1s3.embassy.ebi.ac.uk/public-datasets/bioimageio-knowledge-base. It can be override with `BIOIMAGEIO_KNOWLEDGE_BASE_URL`).
+This will load the knowledge base from the location specified by the `BIOIMAGEIO_KNOWLEDGE_BASE_PATH` environment variable, or use the default path `./bioimageio-knowledge-base`. If the knowledge base is not found, it will be downloaded from the predefined URL (by default, it uses https://uk1s3.embassy.ebi.ac.uk/public-datasets/bioimageio-knowledge-base. It can be overridden with `BIOIMAGEIO_KNOWLEDGE_BASE_URL`).
 
 **Example:**
 
@@ -87,7 +87,7 @@ export BIOIMAGEIO_KNOWLEDGE_BASE_PATH="./my_knowledge_base"
 python -m bioimageio_chatbot init
 ```
 
-After running the `init` command, it will list the databases that are loaded into the knowledge base.
+After running the `init` command, it will list the databases loaded into the knowledge base.
 
 #### Start Server
 
@@ -112,13 +112,13 @@ python -m bioimageio_chatbot start-server --host=0.0.0.0 --port=9000
 ```
 This will create a local server, and the BioImage.IO Chatbot is available at: http://127.0.0.1:9000/public/apps/bioimageio-chatbot-client/index
 
-Open the link in a browser and you will see the chat interface.
+Open the link in a browser, and you will see the chat interface.
 
 Please note that the chatbot server may not be accessible to users outside your local network.
 
 A user guide and technical overview can be found [here](./docs/technical-overview.md).
 
-To be able to share your chatbot service over the internet (especially for the users outside your local network), you will need to expose your server publicly, otherwise, please see [Connect to Server](#connect-to-server)
+To be able to share your chatbot service over the internet (especially for users outside your local network), you will need to expose your server publicly. Please, see [Connect to Server](#connect-to-server)
 
 
 #### Connect to Server
@@ -143,7 +143,7 @@ export BIOIMAGEIO_KNOWLEDGE_BASE_PATH=./bioimageio-knowledge-base
 python -m bioimageio_chatbot connect-server --server-url=https://ai.imjoy.io
 ```
 
-First, you will be asked to log in with a hypha account. Either your github or google account can be reused. Then, the following message containing a link to the chatbot will be displayed: 'The BioImage.IO Chatbot is available at: https://ai.imjoy.io/github|xxxxxx/apps/bioimageio-chatbot-client/index'
+First, you will be asked to log in with a hypha account. Either your GitHub or Google account can be reused. Then, the following message containing a link to the chatbot will be displayed: 'The BioImage.IO Chatbot is available at: https://ai.imjoy.io/github|xxxxxx/apps/bioimageio-chatbot-client/index'
 
 Leave your chatbot running to enable users inside or outside your network to access it from this URL.
 
@@ -177,13 +177,13 @@ The BioImage.IO Chatbot is a community-driven project. We welcome contributions 
 
 For more information, please visit the [contribution guidelines](docs/CONTRIBUTING.md).
 
-If you are a tool developer or a database maintainer related to bioimage analysis, you can join us as a community partner. Please contact us via [Github issues](https://github.com/bioimage-io/bioimageio-chatbot/issues).
+If you are a tool developer or a database maintainer related to bioimage analysis, you can join us as a community partner. Please get in touch with us via [Github issues](https://github.com/bioimage-io/bioimageio-chatbot/issues).
 
 ## Contact Us
 
 If you have any questions, need assistance, or want to contribute to the chatbot's knowledge base, please do not hesitate to contact us via [Github issues](https://github.com/bioimage-io/bioimageio-chatbot/issues). Our team is here to help you get started and make valuable contributions.
 
-Thank you for your support and for helping make the BioImage.IO Chatbot more informative and useful to the community.
+Thanks for your support and helping make the BioImage.IO Chatbot more informative and useful to the community.
 
 ## Cite Us
 
@@ -199,4 +199,4 @@ We thank [AI4Life consortium](https://ai4life.eurobioimaging.eu/) for its crucia
 
 ![AI4Life](https://ai4life.eurobioimaging.eu/wp-content/uploads/2022/09/AI4Life-logo_giraffe-nodes-2048x946.png)
 
-AI4Life has received funding from the European Union’s Horizon Europe research and innovation programme under grant agreement number 101057970. Views and opinions expressed are however those of the author(s) only and do not necessarily reflect those of the European Union or the European Research Council Executive Agency. Neither the European Union nor the granting authority can be held responsible for them.
+AI4Life has received funding from the European Union’s Horizon Europe research and innovation programme under grant agreement number 101057970. Views and opinions expressed are, however those of the author(s) only and do not necessarily reflect those of the European Union or the European Research Council Executive Agency. Neither the European Union nor the granting authority can be held responsible for them.
