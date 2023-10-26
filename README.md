@@ -6,7 +6,7 @@
 
 Welcome to the BioImage.IO Chatbot user guide. This guide will help you get the most out of the chatbot, providing detailed information on how to interact with it and retrieve valuable insights related to bioimage analysis.
 
-**👇 SignUp Here!!**
+**👇 Want to Try the Chatbot? Sign Up Here!!**
 
 🔍 We are currently looking for early testers. If you are interested, please check this form: https://forms.gle/fEnj68Rxut1VUX1Y8. We will get back to you!
 
