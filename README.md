@@ -1,4 +1,4 @@
-# 🦒 BioImage.IO ChatBot 🤖
+# 🦒 BioImage.IO Chatbot 🤖
 
 ## Your Personal Assistant in BioImage Analysis
 
@@ -62,7 +62,7 @@ export OPENAI_API_KEY=sk-xxxxxxxx # Required
 export BIOIMAGEIO_KNOWLEDGE_BASE_PATH=/path/to/bioimageio-knowledge-base  # Optional, default to ./bioimageio-knowledge-base 
 ```
 
-### Command-line Interface
+## Command-line Interface
 
 BioImage.IO Chatbot comes with a command-line interface to facilitate server management, connection to external servers, and knowledge base creation.
 
@@ -166,6 +166,53 @@ export OPENAI_API_KEY=sk-xxxxxxxx
 export BIOIMAGEIO_KNOWLEDGE_BASE_PATH=./bioimageio-knowledge-base
 python -m bioimageio_chatbot create-knowledge-base --output-dir=./bioimageio-knowledge-base
 ```
+
+
+### Running the BioImage.IO Chatbot in a Docker Container
+
+#### Step 1: Build the Docker Image
+
+To run the BioImage.IO Chatbot using a Docker container, follow these steps. First, build the Docker image by running the following command in your terminal:
+
+```bash
+docker build -t bioimageio-chatbot:lastest .
+```
+
+If you prefer to use a pre-built Docker image from Docker Hub, you can pull the image using the following command:
+
+```bash
+docker pull alalulu/bioimageio-chatbot:latest
+```
+
+
+#### Step 2: Start the Chatbot Server
+
+After building the Docker image, you can start the chatbot server with the following command:
+
+```bash
+docker run -e OPENAI_API_KEY=sk-xxxxxxxxxxxxx -e BIOIMAGEIO_KNOWLEDGE_BASE_PATH=/knowledge-base -p 3000:9000 -v /path/to/local/knowledge-base:/knowledge-base bioimageio-chatbot:latest python -m bioimageio_chatbot start-server --host=0.0.0.0 --port=9000 --public-base-url=http://localhost:3000
+```
+
+Replace the placeholders in the command with the following values:
+
+- `sk-xxxxxxxxxxxxx`: Your OpenAI API key.
+- `/path/to/local/knowledge-base`: The local path to your knowledge base folder.
+- `bioimageio-chatbot:v0.1.18`: The name and version tag of your Docker image.
+
+#### Step 3: Access the Chatbot
+
+The BioImage.IO Chatbot is now running in the Docker container. You can access it locally in your web browser by visiting:
+
+```
+http://localhost:3000/public/apps/bioimageio-chatbot-client/index
+```
+
+Make sure to replace `3000` with the host port you specified in the `docker run` command.
+
+
+Enjoy using the BioImage.IO Chatbot!
+
+
 
 ## Technical Overview
 
