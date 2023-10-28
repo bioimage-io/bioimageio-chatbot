@@ -67,7 +67,7 @@
       border-radius: 50%;
       width: 20px;
       height: 20px;
-      animation: spin 2s linear infinite;
+      animation: spin 1s linear infinite;
       margin-right: 10px;
       margin-bottom: 10px;
     }
@@ -166,6 +166,7 @@
   <script>
     $(document).ready(async function () {
       let svc;
+      const spinner = `<div class="spinner"></div>`; // Spinner HTML
       const shortIntroMessage = "Hi there! I'm Melman, your community knowledge base assistant for bioimage analysis. How can I assist you today?";
       // Manually toggle the collapse for profile options
       $('#edit-profile-btn').click(function () {
@@ -174,6 +175,7 @@
 
       async function initializeService(){
         showConnectingStatus();
+        $('.message-holder').append(spinner);
         try {
           // get service_id from query string
           const urlParams = new URLSearchParams(window.location.search);
@@ -236,7 +238,6 @@
         // Collapse the profile options after saving
         $('#profileOptions').collapse('hide');
       });
-      var spinner = `<div class="spinner"></div>`; // Spinner HTML
       var code;
       var error_message;
       // Add this event listener to automatically resize the textarea based on its content
@@ -309,7 +310,6 @@
         $('.message').val('').focus();
 
         appendUserMessage(message); // Append user message to the message container
-        $('.message-holder').append(spinner); // Append spinner while waiting for the server's response
         // Show 'Thinking...' status while waiting for the server's response
         showThinkingStatus();
         $('.message-holder').append(`
@@ -317,8 +317,11 @@
           <div class="rounded-icon-container">
             <i class="fas fa-robot" style="margin-left: 0px;margin-top: -2px;"></i>
           </div>
-          <div id="progress-message-content" class="markdown-body message-content">
-            <h1>Thinking...</h1>
+          
+          <div  class="markdown-body message-content">
+            <h1><div class="spinner" style='display: inline-block;width:25px;height:25px;margin:4px'></div>Thinking...</h1>
+            <div id="progress-message-content">
+            </div>
           </div>
         </div>`);
         let accumulatedArgs = ""
@@ -331,7 +334,7 @@
               accumulatedArgs = message.arguments
             }
             content = // `<details> <summary>${message.name}</summary>`+
-              "# Thinking...\n\n**Generating response for " + message.name + "...**" +
+              "**Generating response for " + message.name + "...**" +
               "\n" + accumulatedArgs + "\n\n";
               // + "</details>";
             $('#progress-message-content').html(marked(content, { renderer:renderer }));
