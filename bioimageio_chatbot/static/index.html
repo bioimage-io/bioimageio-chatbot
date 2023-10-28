@@ -12,6 +12,9 @@
 
   <style>
     /* Custom CSS */
+    .markdown-body {
+      max-width: calc(100% - 40px);
+    }
     .rounded-icon-container {
         margin-left:2px;
         margin-right:2px;
@@ -50,7 +53,7 @@
       background-color: #f2f2f2;
       padding: 14px;
       border-radius: 10px;
-      max-width: 70%;
+      max-width: 90%;
       word-break: break-word;
     }
 
@@ -263,8 +266,8 @@
 
       $('.message-holder').append(spinner);
 
-      
-      
+
+
       svc = await initializeService();
       const channels = svc.channels;
       const channelSelect = document.getElementById('channelSelect');
@@ -309,9 +312,33 @@
         $('.message-holder').append(spinner); // Append spinner while waiting for the server's response
         // Show 'Thinking...' status while waiting for the server's response
         showThinkingStatus();
-
+        $('.message-holder').append(`
+        <div id="progress-message-container" class="message-container robot-message">
+          <div class="rounded-icon-container">
+            <i class="fas fa-robot" style="margin-left: 0px;margin-top: -2px;"></i>
+          </div>
+          <div id="progress-message-content" class="markdown-body message-content">
+            <h1>Thinking...</h1>
+          </div>
+        </div>`);
+        let accumulatedArgs = ""
+        function statusCallback(message){
+          if(message.type === 'function_call'){
+            if(message.status === 'in_progress'){
+              accumulatedArgs += message.arguments
+            }
+            else{
+              accumulatedArgs = message.arguments
+            }
+            content = // `<details> <summary>${message.name}</summary>`+
+              "# Thinking...\n\n**Generating response for " + message.name + "...**" +
+              "\n" + accumulatedArgs + "\n\n";
+              // + "</details>";
+            $('#progress-message-content').html(marked(content, { renderer:renderer }));
+          }
+        }
         try{
-          response = await svc.chat(message, chat_history, user_profile, selectedChannel);
+          response = await svc.chat(message, chat_history, user_profile, selectedChannel, statusCallback);
           console.log(response)
           chat_history.push({ role: 'user', content: message })
           chat_history.push({ role: 'assistant', content: response })
@@ -326,6 +353,7 @@
         finally{
           // Remove spinner and set status back to 'Ready to chat' after finishing
           $('.spinner').remove();
+          $('#progress-message-container').remove();
           appendRobotMessage(response); // Append robot message to the message container
         }
         
