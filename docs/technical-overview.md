@@ -1,11 +1,11 @@
-# Design and Functionality of BioImage.IO ChatBot: A User Guide and Technical Overview
+# Design and Functionality of BioImage.IO Chatbot: A User Guide and Technical Overview
 
-## ChatBot Interface
+## Chatbot Interface
 
 After following the installation guidelines from the [README](/README.md), the chat interface will resemble Figure 1.
 
-![BioImage.IO-ChatBot](./screenshots/chat-interface.png)
-*Figure 1. The chat interface of the BioImage.IO ChatBot.*
+![BioImage.IO-Chatbot](./screenshots/chat-interface.png)
+*Figure 1. The chat interface of the BioImage.IO Chatbot.*
 
 Users can input their profiles as depicted in Figure 2. 
 ![user-profile](./screenshots/user-profile.png)
