@@ -203,7 +203,17 @@ async def register_chat_service(server):
     async def chat(text, chat_history, user_profile=None, channel=None, status_callback=None, context=None):
         event_bus = EventBus()
         # Listen to the `stream` event
-        event_bus.on("stream", status_callback)
+        async def stream_callback(message):
+            if message["type"] == "function_call":
+                if message["status"] == "in_progress":
+                    print(message["arguments"], end="")
+                else:
+                    print(message["name"], message["status"], message["arguments"])
+            elif message["type"] == "text":
+                print(message["content"])
+            await status_callback(message)
+
+        event_bus.on("stream", stream_callback)
         customer_service.set_event_bus(event_bus)
         # Get the channel id by its name
         if channel == 'auto':
@@ -225,7 +235,7 @@ async def register_chat_service(server):
             response = response[-1].content
             print(f"\nUser: {text}\nBot: {response}")
         except Exception as e:
-            event_bus.off("stream", status_callback)
+            event_bus.off("stream", stream_callback)
             raise e
         return response
 
