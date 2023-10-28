@@ -5,6 +5,7 @@ from imjoy_rpc.hypha import login, connect_to_server
 from pydantic import BaseModel, Field
 from schema_agents.role import Role
 from schema_agents.schema import Message
+from schema_agents.utils import EventBus
 from langchain.vectorstores import FAISS
 from langchain.embeddings.openai import OpenAIEmbeddings
 from typing import Any, Dict, List, Optional, Union
@@ -199,7 +200,11 @@ async def register_chat_service(server):
     description_by_id = {collection['id']: collection['description'] for collection in collections}
     customer_service = create_customer_service(knowledge_base_path)
 
-    async def chat(text, chat_history, user_profile=None, channel=None, context=None):
+    async def chat(text, chat_history, user_profile=None, channel=None, status_callback=None, context=None):
+        event_bus = EventBus()
+        # Listen to the `stream` event
+        event_bus.on("stream", status_callback)
+        customer_service.set_event_bus(event_bus)
         # Get the channel id by its name
         if channel == 'auto':
             channel = None
@@ -214,10 +219,14 @@ async def register_chat_service(server):
             channel_info = ChannelInfo.parse_obj(channel_info)
         # user_profile = {"name": "lulu", "occupation": "data scientist", "background": "machine learning and AI"}
         m = QuestionWithHistory(question=text, chat_history=chat_history, user_profile=UserProfile.parse_obj(user_profile),channel_info=channel_info)
-        response = await customer_service.handle(Message(content=m.json(), instruct_content=m , role="User"))
-        # get the content of the last response
-        response = response[-1].content
-        print(f"\nUser: {text}\nBot: {response}")
+        try:
+            response = await customer_service.handle(Message(content=m.json(), instruct_content=m , role="User"))
+            # get the content of the last response
+            response = response[-1].content
+            print(f"\nUser: {text}\nBot: {response}")
+        except Exception as e:
+            event_bus.off("stream", status_callback)
+            raise e
         return response
 
     hypha_service_info = await server.register_service({
