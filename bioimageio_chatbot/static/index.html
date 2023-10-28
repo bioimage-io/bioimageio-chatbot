@@ -4,12 +4,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>BioImage.IO ChatBot</title>
+  <title>BioImage.IO Chatbot</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <!-- Add the Font Awesome library -->
   <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css"
     integrity="sha384-DyZ88mC6Up2uqS4h/KRgHuoeGwBcD4Ng9SiP4dIRy0EXTlnuz47vAwmeGwVChigm" crossorigin="anonymous" />
-
+  <link rel="icon" type="image/x-icon" href="https://bioimage.io/static/icons/favicon.ico">
   <style>
     /* Custom CSS */
     .markdown-body {
@@ -96,7 +96,7 @@
       <div class="card-header">
         <img src="https://bioimage.io/static/img/bioimage-io-icon.svg" alt="BioImage.IO Icon"
           style="height: 24px; margin-right: 10px">
-        BioImage.IO ChatBot
+        BioImage.IO Chatbot
       </div>
 
       <div class="card-body">
@@ -174,8 +174,8 @@
       });
 
       async function initializeService(){
-        showConnectingStatus();
         $('.message-holder').append(spinner);
+        showConnectingStatus();
         try {
           // get service_id from query string
           const urlParams = new URLSearchParams(window.location.search);
@@ -264,11 +264,6 @@
         this.style.height = 'auto';
         this.style.height = (this.scrollHeight) + 'px';
       }
-
-      $('.message-holder').append(spinner);
-
-
-
       svc = await initializeService();
       const channels = svc.channels;
       const channelSelect = document.getElementById('channelSelect');

@@ -28,7 +28,7 @@ The BioImage.IO Chatbot offers the following features:
 
 * **Personalization**: By incorporating your background information, the chatbot tailors responses to meet your specific requirements.
 
-* **Document Retrieval**: It can search through extensive documentation to provide detailed information on models, applications, datasets, and more. For example, the ChatBot is able to retrieve information from the [bio.tools](https://bio.tools), [ImageJ.net](https://imagej.net/), [deepImageJ](https://deepimagej.github.io), [ImJoy](https://imjoy.io/#/) and [bioimage.io](https://bioimage.io). The full list of supported databases can be found in the [`knowledge-base-manifest.yaml`](knowledge-base-manifest.yaml) file.
+* **Document Retrieval**: It can search through extensive documentation to provide detailed information on models, applications, datasets, and more. For example, the Chatbot is able to retrieve information from the [bio.tools](https://bio.tools), [ImageJ.net](https://imagej.net/), [deepImageJ](https://deepimagej.github.io), [ImJoy](https://imjoy.io/#/) and [bioimage.io](https://bioimage.io). The full list of supported databases can be found in the [`knowledge-base-manifest.yaml`](knowledge-base-manifest.yaml) file.
 
 * **Query Structured Database by Script Execution**: The chatbot can generate Python scripts for complex queries in structured databases (e.g., csv, json file, SQL databases), helping you perform advanced tasks such as specific questions about the available models at [bioimage.io](https://bioimage.io).
 

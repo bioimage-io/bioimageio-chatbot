@@ -1,4 +1,4 @@
-# BioImage.IO ChatBot Usage Example Guide
+# BioImage.IO Chatbot Usage Example Guide
 
 ## Introduction
 Welcome to the world of BioImage.IO Chatbot, a revolutionary conversational assistant designed exclusively for the bioimage community. Our chatbot is more than just a virtual conversationalist; it's a sophisticated AI-powered tool that offers personalized, context-aware responses by drawing from a diverse array of databases, tool-specific documentation, and structured data sources.
