@@ -103,8 +103,8 @@
       <div class="card-body">
         <div class="message-holder"></div>
         <div class="form-outline">
+          <label class="form-label" for="textAreaExample" id="status-text">Type your message and press enter</label>
           <textarea class="form-control message" id="textAreaExample"></textarea>
-          <label class="form-label" for="textAreaExample" id="status-text">Type your message</label>
         </div>
         <button type="button" class="btn btn-primary mt-3 send-btn"><i class="fas fa-paper-plane"></i>Send</button>
 
@@ -393,12 +393,12 @@
       }
       // Function to show the status as 'Thinking...'
       function showThinkingStatus() {
-        updateStatus('Thinking...');
+        updateStatus('...');
       }
 
       // Function to show the status as 'Ready to chat'
       function showReadyStatus() {
-        updateStatus('Ready to chat');
+        updateStatus('Ready to chat! Type your message and press enter!');
       }
 
       // Function to show the error message in the status
