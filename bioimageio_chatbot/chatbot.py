@@ -209,9 +209,10 @@ async def register_chat_service(server):
                     print(message["arguments"], end="")
                 else:
                     print(message["name"], message["status"], message["arguments"])
+                await status_callback(message)
             elif message["type"] == "text":
                 print(message["content"])
-            await status_callback(message)
+                await status_callback(message)
 
         event_bus.on("stream", stream_callback)
         customer_service.set_event_bus(event_bus)

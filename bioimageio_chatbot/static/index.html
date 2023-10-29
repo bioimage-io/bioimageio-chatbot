@@ -73,6 +73,7 @@
     }
 
     #chat1 textarea {
+      height: 20px;
       resize: none;
       overflow: hidden;
     }
@@ -105,15 +106,15 @@
           <textarea class="form-control message" id="textAreaExample"></textarea>
           <label class="form-label" for="textAreaExample" id="status-text">Type your message</label>
         </div>
-        <button type="button" class="btn btn-primary mt-3 send-btn">Send</button>
+        <button type="button" class="btn btn-primary mt-3 send-btn"><i class="fas fa-paper-plane"></i>Send</button>
 
         <!-- Add an "Edit Profile" button to toggle the profile options -->
         <button type="button" class="btn btn-info mt-3" id="edit-profile-btn">
-          Edit Profile
+          <i class="fas fa-pen"></i>Edit Profile
         </button>
         <!-- Add a "Reset" button to restart the session -->
         <button type="button" class="btn btn-secondary mt-3" id="reset-btn">
-          Reset
+          <i class="fas fa-sync-alt"></i>Reset
         </button>
 
         <!-- Profile options initially collapsed -->
@@ -242,7 +243,6 @@
       var error_message;
       // Add this event listener to automatically resize the textarea based on its content
       var textarea = document.getElementById('textAreaExample');
-
       textarea.addEventListener('input', autoResize, false);
       autoResize.call(textarea);
 
@@ -261,7 +261,6 @@
       }
 
       function autoResize() {
-        this.style.height = 'auto';
         this.style.height = (this.scrollHeight) + 'px';
       }
       svc = await initializeService();
@@ -285,16 +284,14 @@
       channelSelect.value = 'auto';
   
       const chat_history = [];
-      $('.send-btn').on('click', async function (e) {
+
+      async function sendMessage(e) {
         e.preventDefault();
         const message = $('.message').val();
         const userName = $('#userNameInput').val();
         const userOccupation = $('#userOccupationInput').val();
         const userBackground = $('#userBackgroundInput').val();
         const selectedChannel = $('#channelSelect').val(); // Get the selected channel
-
-
-
         // Create a user_profile object with name, occupation, and background
         let user_profile = {
           name: userName,
@@ -314,7 +311,7 @@
           </div>
           
           <div  class="markdown-body message-content">
-            <h1><div class="spinner" style='display: inline-block;width:25px;height:25px;margin:4px'></div>Thinking...</h1>
+            <h3><div class="spinner" style='display: inline-block;width:25px;height:25px;margin-bottom:-4px;'></div>🤔Thinking...</h3>
             <div id="progress-message-content">
             </div>
           </div>
@@ -330,7 +327,7 @@
             }
             content = // `<details> <summary>${message.name}</summary>`+
               "**Generating response for " + message.name + "...**" +
-              "\n" + accumulatedArgs + "\n\n";
+              "\n" + accumulatedArgs.replace(/\\n/g, '\n') + "\n\n";
               // + "</details>";
             $('#progress-message-content').html(marked(content, { renderer:renderer }));
           }
@@ -353,10 +350,8 @@
           $('.spinner').remove();
           $('#progress-message-container').remove();
           appendRobotMessage(response); // Append robot message to the message container
-        }
-        
-      });
-
+        } 
+      }
 
       function appendUserMessage(message) {
         let messageContainer = `<div class="message-container user-message">
@@ -410,6 +405,19 @@
       function showErrorStatus(errorMessage) {
         updateStatus('Error: ' + errorMessage);
       }
+
+      $("#textAreaExample").on("keydown", function (event) {
+        if (event.key === "Enter") {
+          event.preventDefault(); // Prevent the default new line behavior
+          if (event.shiftKey) {
+            textarea.value += "\n"; // Add a new line when Shift is held
+          } else {
+            sendMessage(event); // Send the message when Enter is pressed
+          }
+        }
+      });
+
+      $('.send-btn').on('click', sendMessage);
     });
   </script>
   <!-- https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.3.0/github-markdown.min.css -->
