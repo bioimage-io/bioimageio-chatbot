@@ -172,14 +172,13 @@ def create_customer_service(db_path):
             ), FinalResponse)
             return response.response
         
-    CustomerServiceRole = Role.create(
+    customer_service = Role(
         name="Melman",
         profile="Customer Service",
         goal="Your goal as Melman from Madagascar, the community knowledge base manager, is to assist users in effectively utilizing the BioImage.IO knowledge base for bioimage analysis. You are responsible for answering user questions, providing clarifications, retrieving relevant documents, and executing scripts as needed. Your overarching objective is to make the user experience both educational and enjoyable.",
         constraints=None,
         actions=[respond_to_user],
     )
-    customer_service = CustomerServiceRole()
     return customer_service
 
 async def connect_server(server_url):
@@ -201,21 +200,15 @@ async def register_chat_service(server):
     customer_service = create_customer_service(knowledge_base_path)
 
     async def chat(text, chat_history, user_profile=None, channel=None, status_callback=None, context=None):
-        event_bus = EventBus()
         # Listen to the `stream` event
         async def stream_callback(message):
-            if message["type"] == "function_call":
-                if message["status"] == "in_progress":
-                    print(message["arguments"], end="")
-                else:
-                    print(message["name"], message["status"], message["arguments"])
-                await status_callback(message)
-            elif message["type"] == "text":
-                print(message["content"])
+            if message["type"] in ["function_call", "text"]:
                 await status_callback(message)
 
+        event_bus = customer_service.get_event_bus()
+        event_bus.register_default_events()
         event_bus.on("stream", stream_callback)
-        customer_service.set_event_bus(event_bus)
+        
         # Get the channel id by its name
         if channel == 'auto':
             channel = None
@@ -234,10 +227,12 @@ async def register_chat_service(server):
             response = await customer_service.handle(Message(content=m.json(), instruct_content=m , role="User"))
             # get the content of the last response
             response = response[-1].content
-            print(f"\nUser: {text}\nBot: {response}")
+            print(f"\nUser: {text}\nChatbot: {response}")
         except Exception as e:
             event_bus.off("stream", stream_callback)
             raise e
+        else:
+            event_bus.off("stream", stream_callback)
         return response
 
     hypha_service_info = await server.register_service({
