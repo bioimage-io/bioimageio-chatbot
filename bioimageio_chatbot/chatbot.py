@@ -224,7 +224,7 @@ async def register_chat_service(server):
         # user_profile = {"name": "lulu", "occupation": "data scientist", "background": "machine learning and AI"}
         m = QuestionWithHistory(question=text, chat_history=chat_history, user_profile=UserProfile.parse_obj(user_profile),channel_info=channel_info)
         try:
-            response = await customer_service.handle(Message(content=m.json(), instruct_content=m , role="User"))
+            response = await customer_service.handle(Message(content=m.json(), data=m , role="User"))
             # get the content of the last response
             response = response[-1].content
             print(f"\nUser: {text}\nChatbot: {response}")
