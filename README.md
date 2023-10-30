@@ -1,16 +1,14 @@
 # 🦒 BioImage.IO Chatbot 🤖
 
-## Your Personal Assistant in BioImage Analysis
-
 **📣New Preprint: <a href="https://zenodo.org/records/10032228" target="_blank"><img id="record-doi-badge" data-target="[data-modal='10.5281/zenodo.10032228']" src="https://zenodo.org/badge/DOI/10.5281/zenodo.10032228.svg" alt="10.5281/zenodo.10032228"></a>**
 
+**👇 Want to Try the Chatbot? [Sign Up Here!](https://forms.gle/fEnj68Rxut1VUX1Y8)**
+
+🔍 We are currently looking for early testers. If you are interested, please sign up using [this form](https://forms.gle/fEnj68Rxut1VUX1Y8). We will get back to you soon!
+
+## Your Personal Assistant in BioImage Analysis
+
 Welcome to the BioImage.IO Chatbot user guide. This guide will help you get the most out of the chatbot, providing detailed information on how to interact with it and retrieve valuable insights related to bioimage analysis.
-
-**👇 Want to Try the Chatbot? Sign Up Here!!**
-
-🔍 We are currently looking for early testers. If you are interested, please check this form: https://forms.gle/fEnj68Rxut1VUX1Y8. We will get back to you!
-
-Here you can find usage guide and more examples. [Usage guide and example screenshots](docs/usage-example.md).
 
 ## Introduction
 
@@ -19,6 +17,8 @@ The BioImage.IO Chatbot is a versatile conversational agent designed to assist u
 
 ![screenshot for the chatbot](./docs/screenshots/chatbot-animation.gif)
 
+
+Here you can find usage guide and more examples: [Usage guide and example screenshots](docs/usage-example.md).
 
 ## Chatbot Features
 
