@@ -10,11 +10,11 @@ The BioImage.IO Chatbot relies on a comprehensive knowledge base to provide accu
 
 You can contribute to the chatbot's knowledge base by adding new databases or information.
 
-We use the [`knowledge-base-manifest.yaml` file](knowledge-base-manifest.yaml) to keep track of the databases and their details.
+We use the [`knowledge-base-manifest.yaml`](../knowledge-base-manifest.yaml) file to keep track of the databases and their details.
 
 Follow these steps to contribute to the BioImage.IO Chatbot:
 
-1. Take a look at the [`knowledge-base-manifest.yaml` file](knowledge-base-manifest.yaml) to see the databases that are currently integrated with the chatbot.
+1. Take a look at the [`knowledge-base-manifest.yaml`](../knowledge-base-manifest.yaml) file to see the databases that are currently integrated with the chatbot.
 2. Prepare your database by organising your information to ensure it is accurate, relevant, and structured in a manner that can be easily retrived. See the database requirements above.
 3. Fork this repository and edit the manifest to include the details of your database, including the name, URL and description.
 4. You can submit your contribution with a Pull Request (PR) with the updated manifest. Our team will review and integrate the changes.
