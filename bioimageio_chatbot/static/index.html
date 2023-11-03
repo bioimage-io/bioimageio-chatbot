@@ -81,6 +81,27 @@
       overflow: hidden;
     }
 
+
+    .feedback-buttons {
+      margin-top: 10px;
+    }
+    
+    .feedback-button {
+      margin-right: 10px;
+      padding: 5px 10px;
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      display: inline-block; /* Initially, both buttons are visible */
+    }
+    
+    .feedback-button:hover {
+      background-color: #0056b3;
+    }
+    
+    
     @keyframes spin {
       0% {
         transform: rotate(0deg);
@@ -382,8 +403,12 @@
             <img style="width: 20px;" src="https://bioimage.io/static/img/bioimage-io-icon.svg" alt="Melman the Giraffe" width="30" height="30">
           </div>
           <div class="message-content markdown-body">${htmlMessage}</div>
+          <div class="feedback-buttons">
+            <button class="feedback-button like-button">Like</button>
+            <button class="feedback-button unlike-button">Unlike</button>
+          </div>
         </div>`;
-
+      
         $('.message-holder').append(messageContainer);
       }
       // Function to update the status text
@@ -408,6 +433,33 @@
       function showErrorStatus(errorMessage) {
         updateStatus('Error: ' + errorMessage);
       }
+
+      function showFeedbackWindow() {
+        const feedbackMessage = prompt('Provide us feedback:', '');
+        if (feedbackMessage !== null) {
+          const feedbackType = $(this).hasClass('like-button') ? 'like' : 'unlike';
+          const feedbackData = {
+            type: feedbackType,
+            message: feedbackMessage,
+          };
+      
+          // Call the 'svc.like_button()' function to send the feedback data
+          svc.like(feedbackData);
+      
+          // Hide the unclicked button
+          const otherButton = $(this).hasClass('like-button')
+          ? $('.unlike-button', $(this).parent())
+          : $('.like-button', $(this).parent());
+        otherButton.hide();
+
+        // Disable the clicked button
+        $(this).prop('disabled', true).off('click');
+        }
+      }      
+      
+      // Attach a click event handler to the 'like' and 'unlike' buttons
+      $('.message-holder').on('click', '.feedback-button', showFeedbackWindow);
+      
 
       $("#textAreaExample").on("keydown", function (event) {
         if (event.key === "Enter") {
