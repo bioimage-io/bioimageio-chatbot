@@ -182,7 +182,7 @@ def create_customer_service(db_path):
     return customer_service
 
 async def connect_server(server_url):
-    token = await login({"server_url": server_url})
+    token = None # await login({"server_url": server_url})
     server = await connect_to_server({"server_url": server_url, "token": token, "method_timeout": 100})
     await register_chat_service(server)
     
@@ -199,6 +199,9 @@ async def register_chat_service(server):
     description_by_id = {collection['id']: collection['description'] for collection in collections}
     customer_service = create_customer_service(knowledge_base_path)
 
+    async def like(like, context=None):
+        print(f"UserFeedback: {like}")
+        
     async def chat(text, chat_history, user_profile=None, channel=None, status_callback=None, context=None):
         # Listen to the `stream` event
         async def stream_callback(message):
@@ -243,6 +246,7 @@ async def register_chat_service(server):
             "require_context": True
         },
         "chat": chat,
+        "like": like,
         "channels": [collection['name'] for collection in collections]
     })
     
@@ -275,7 +279,7 @@ async def register_chat_service(server):
 
 if __name__ == "__main__":
     # asyncio.run(main())
-    server_url = "https://ai.imjoy.io"
+    server_url = "https://chat.bioimage.io"
     loop = asyncio.get_event_loop()
     loop.create_task(connect_server(server_url))
     loop.run_forever()
