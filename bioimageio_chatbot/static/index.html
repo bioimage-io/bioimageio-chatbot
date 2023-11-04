@@ -83,11 +83,12 @@
 
 
     .feedback-buttons {
+      display: flex;
       margin-top: 10px;
     }
     
     .feedback-button {
-      margin-right: 10px;
+      margin-right: 2px;
       padding: 5px 10px;
       background-color: #007bff;
       color: #fff;
@@ -100,7 +101,9 @@
     .feedback-button:hover {
       background-color: #0056b3;
     }
-    
+    .feedback-button:last-child {
+      margin-right: 0; /* Remove margin for the last button */
+    }
     
     @keyframes spin {
       0% {
@@ -403,12 +406,13 @@
             <img style="width: 20px;" src="https://bioimage.io/static/img/bioimage-io-icon.svg" alt="Melman the Giraffe" width="30" height="30">
           </div>
           <div class="message-content markdown-body">${htmlMessage}</div>
-          <div class="feedback-buttons">
-            <button class="feedback-button like-button">Like</button>
-            <button class="feedback-button unlike-button">Unlike</button>
-          </div>
+        </div>
+        <div class="feedback-buttons" style="margin-left: 35px; margin-top: -6px;"> <!-- Add margin-top here -->
+          <button class="feedback-button like-button"><i class="fas fa-thumbs-up"></i></button>
+          <button class="feedback-button unlike-button"><i class="fas fa-thumbs-down"></i></button>
         </div>`;
-      
+        
+        
         $('.message-holder').append(messageContainer);
       }
       // Function to update the status text
