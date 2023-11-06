@@ -132,6 +132,13 @@
 
 
 <body>
+  <div id="login-container">
+    <h1>Login to BioImage.IO Chatbot</h1>
+    <button id="login-button">Login</button>
+  </div>
+
+  <div id="app-container" style="display: none;">
+
   <div class="container mt-5">
     <div class="card" id="chat1">
       <div class="card-header">
@@ -196,11 +203,11 @@
       <a href="https://badge.fury.io/py/bioimageio-chatbot" target="_blank"><img src="https://badge.fury.io/py/bioimageio-chatbot.svg" alt="PyPI version" height="18"></a>
     </div>
   </div>
-
+</div>
 
 
   <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/imjoy-rpc@0.5.6/dist/hypha-rpc-websocket.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/imjoy-rpc@0.5.46/dist/hypha-rpc-websocket.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/2.1.3/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
 
@@ -209,6 +216,54 @@
       let svc;
       const spinner = `<div class="spinner"></div>`; // Spinner HTML
       const shortIntroMessage = "Hi there! I'm Melman, your community knowledge base assistant for bioimage analysis. How can I assist you today?";
+      // Function to show the login screen
+  function showLoginScreen() {
+    $('#login-container').show();
+    $('#app-container').hide();
+  }
+
+  // Function to show the app interface
+  function showAppInterface() {
+    $('#login-container').hide();
+    $('#app-container').show();
+  }
+
+  // Function to handle the login callback
+  function login_callback(context) {
+    window.open(context.login_url)
+  }
+  // Attach a click event handler to the login button
+  $('#login-button').on('click', async function () {
+    // Hide the login screen and show the spinner while logging in
+    showLoginScreen();
+    $('.login-button').hide();
+    $('.login-spinner').show();
+
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const server_url = urlParams.get('server_url');
+      // Call the login function to get the token
+      token = await hyphaWebsocketClient.login({
+        "server_url": server_url || "https://ai.imjoy.io",
+        "login_callback": login_callback,
+      });
+
+      // If the login is successful, proceed to initialize the service
+      svc = await initializeService();
+
+      // Show the app interface
+      showAppInterface();
+    } catch (e) {
+      // Handle login error
+      console.error("Login failed:", e);
+
+      // Show an error message and allow the user to try again
+      $('#login-error-message').text("Login failed. Please try again.");
+      $('.login-spinner').hide();
+      $('.login-button').show();
+    }
+  });
+      
       // Manually toggle the collapse for profile options
       $('#edit-profile-btn').click(function () {
         $('#profileOptions').collapse('toggle');
@@ -223,9 +278,22 @@
           const service_id = urlParams.get('service_id');
           const server_url = urlParams.get('server_url');
           const server = await hyphaWebsocketClient.connectToServer({
-            "server_url": server_url || "https://ai.imjoy.io"
+            "server_url": server_url || "https://ai.imjoy.io",
+            "token": token,
           })
           const svc = await server.getService(service_id || "bioimageio-chatbot")
+          const channels = svc.channels;
+          const channelSelect = document.getElementById('channelSelect');
+
+          // Clear any existing options
+          channelSelect.innerHTML = '<option value="" disabled selected>Select a Channel</option>';
+
+          channels.forEach((channel) => {
+            const option = document.createElement('option');
+            option.value = channel;
+            option.textContent = channel;
+            channelSelect.appendChild(option);
+          });
           showReadyStatus();
           appendRobotMessage(shortIntroMessage, "message-0"); // Append robot message to the message container
           return svc;
@@ -304,19 +372,8 @@
       function autoResize() {
         this.style.height = (this.scrollHeight) + 'px';
       }
-      svc = await initializeService();
-      const channels = svc.channels;
-      const channelSelect = document.getElementById('channelSelect');
-
-      // Clear any existing options
-      channelSelect.innerHTML = '<option value="" disabled selected>Select a Channel</option>';
-
-      channels.forEach((channel) => {
-        const option = document.createElement('option');
-        option.value = channel;
-        option.textContent = channel;
-        channelSelect.appendChild(option);
-      });
+      //svc = await initializeService();
+      
       // add 'auto' channel
       const option = document.createElement('option');
       option.value = 'auto';
