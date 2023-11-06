@@ -188,7 +188,7 @@ def save_chat_history(session_id, chat_history, context):
     os.makedirs("chat_sessions", exist_ok=True)
 
     # Create a chat_log.json file inside the session folder
-    chat_log_path = os.path.join("chat_sessions", f"{session_id}.json")
+    chat_log_path = os.path.join("chat_sessions", f"{session_id}-chatlogs.json")
 
     chat_his_dict = {'conversations':chat_history, 'timestamp': str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), 'user': context['user']}
     # Serialize the chat history to a json string
@@ -198,7 +198,7 @@ def save_chat_history(session_id, chat_history, context):
     with open(chat_log_path, 'w', encoding='utf-8') as file:
         file.write(chat_history_json)
         
-        
+    
 async def connect_server(server_url):
     token = None # await login({"server_url": server_url})
     server = await connect_to_server({"server_url": server_url, "token": token, "method_timeout": 100})
@@ -269,7 +269,7 @@ async def register_chat_service(server):
             "require_context": True
         },
         "chat": chat,
-        "like": report,
+        "report": report,
         "channels": [collection['name'] for collection in collections]
     })
     
