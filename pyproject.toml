@@ -13,6 +13,7 @@ dependencies = [
   "pypdf",
   "hypha",
   "tqdm",
+  "aiofiles",
 ]
 
 [tool.setuptools]

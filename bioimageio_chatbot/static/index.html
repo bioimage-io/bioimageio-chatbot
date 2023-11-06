@@ -97,9 +97,22 @@
       cursor: pointer;
       display: inline-block; /* Initially, both buttons are visible */
     }
+    .small-grey-button {
+      font-size: 14px; /* Adjust the font size as needed */
+      color: #ffc107ad; /* Change the color to grey or any other desired shade */
+      background-color: transparent; /* Set the background to transparent */
+      border: none; /* Remove the border */
+      padding: 0; /* Remove padding to make it smaller */
+    }
     
+    .small-grey-button i {
+      font-size: 16px; /* Adjust the icon size as needed */
+      margin-right: 5px; /* Add space between the icon and text (if any) */
+    }
+    
+
     .feedback-button:hover {
-      background-color: #0056b3;
+      background-color: #dee2e6;
     }
     .feedback-button:last-child {
       margin-right: 0; /* Remove margin for the last button */
@@ -414,8 +427,8 @@
           <div class="message-content markdown-body">${htmlMessage}</div>
         </div>
         <div class="feedback-buttons"  id="${messageId}" style="margin-left: 35px; margin-top: -6px;"> <!-- Add margin-top here -->
-          <button class="feedback-button like-button"><i class="fas fa-thumbs-up"></i></button>
-          <button class="feedback-button unlike-button"><i class="fas fa-thumbs-down"></i></button>
+          <button class="feedback-button like-button small-grey-button"><i class="fas fa-thumbs-up"></i></button>
+          <button class="feedback-button unlike-button small-grey-button"><i class="fas fa-thumbs-down"></i></button>
         </div>`;
         
         
@@ -461,7 +474,9 @@
       // Call the function to generate a session ID
 
       function showFeedbackWindow() {
-        const feedbackMessage = prompt('Provide us feedback:', '');
+        // Show a prompt to collect user feedback
+        const feedbackMessage = prompt('Please share your thoughts about this response, thank you!', '');
+
         if (feedbackMessage !== null) {
           const feedbackType = $(this).hasClass('like-button') ? 'like' : 'unlike';
           
