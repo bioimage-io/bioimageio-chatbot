@@ -214,7 +214,7 @@
           })
           const svc = await server.getService(service_id || "bioimageio-chatbot")
           showReadyStatus();
-          appendRobotMessage(shortIntroMessage); // Append robot message to the message container
+          appendRobotMessage(shortIntroMessage, "message-0"); // Append robot message to the message container
           return svc;
         }
         catch (e) {
@@ -381,7 +381,8 @@
           // Remove spinner and set status back to 'Ready to chat' after finishing
           $('.spinner').remove();
           $('#progress-message-container').remove();
-          appendRobotMessage(response); // Append robot message to the message container
+          
+          appendRobotMessage(response, "message-"+chat_history.length); // Append robot message to the message container
         } 
       }
 
@@ -402,7 +403,7 @@
                                 </div>`;
         $('.message-holder').append(messageContainer);
       } */
-      function appendRobotMessage(message) {
+      function appendRobotMessage(message, messageId) {
         // Convert the message to HTML using the marked library
         const htmlMessage = marked(message, { renderer:renderer });
 
@@ -412,7 +413,7 @@
           </div>
           <div class="message-content markdown-body">${htmlMessage}</div>
         </div>
-        <div class="feedback-buttons" style="margin-left: 35px; margin-top: -6px;"> <!-- Add margin-top here -->
+        <div class="feedback-buttons"  id="${messageId}" style="margin-left: 35px; margin-top: -6px;"> <!-- Add margin-top here -->
           <button class="feedback-button like-button"><i class="fas fa-thumbs-up"></i></button>
           <button class="feedback-button unlike-button"><i class="fas fa-thumbs-down"></i></button>
         </div>`;
@@ -463,9 +464,18 @@
         const feedbackMessage = prompt('Provide us feedback:', '');
         if (feedbackMessage !== null) {
           const feedbackType = $(this).hasClass('like-button') ? 'like' : 'unlike';
+          
+          // get the messageId
+          const messageId = $(this).parent().attr('id'); 
+          // remove message- from the messageId and convert to integer
+          const messageIndex = parseInt(messageId.replace('message-', ''));
+          // get the chat history until messageIndex
+          const chatMessages = chat_history.slice(0, messageIndex + 1);
           const feedbackData = {
             type: feedbackType,
-            message: feedbackMessage,
+            feedback: feedbackMessage,
+            messages: chatMessages,
+            session_id: sessionId
           };
       
           // Call the 'svc.report()' function to send the feedback data
