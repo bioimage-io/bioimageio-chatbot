@@ -228,6 +228,7 @@
       }
       // Reset the chat session and clear chat history
       function resetChat() {
+        sessionId = generateSessionID(); // Generate a new session ID
         chat_history.length = 0; // Clear the chat history
         code = ''; // Reset code
         error_message = ''; // Reset error message
@@ -312,6 +313,10 @@
   
       const chat_history = [];
 
+      let sessionId = generateSessionID();
+      console.log("Session ID:", sessionId);
+
+
       async function sendMessage(e) {
         e.preventDefault();
         const message = $('.message').val();
@@ -360,7 +365,7 @@
           }
         }
         try{
-          response = await svc.chat(message, chat_history, user_profile, selectedChannel, statusCallback);
+          response = await svc.chat(message, chat_history, user_profile, selectedChannel, statusCallback, sessionId);
           console.log(response)
           chat_history.push({ role: 'user', content: message })
           chat_history.push({ role: 'assistant', content: response })
@@ -438,6 +443,22 @@
         updateStatus('Error: ' + errorMessage);
       }
 
+      // Function to generate session id
+      function generateSessionID() {
+        // Create a timestamp to ensure uniqueness
+        const timestamp = new Date().getTime();
+  
+        // Generate a random number to add randomness
+        const random = Math.random();
+  
+        // Combine timestamp and random number to create the session ID
+        const sessionID = `${timestamp}-${random}`;
+  
+        return sessionID;
+      }
+  
+      // Call the function to generate a session ID
+
       function showFeedbackWindow() {
         const feedbackMessage = prompt('Provide us feedback:', '');
         if (feedbackMessage !== null) {
@@ -447,8 +468,8 @@
             message: feedbackMessage,
           };
       
-          // Call the 'svc.like_button()' function to send the feedback data
-          svc.like(feedbackData);
+          // Call the 'svc.report()' function to send the feedback data
+          svc.report(feedbackData);
       
           // Hide the unclicked button
           const otherButton = $(this).hasClass('like-button')
@@ -459,7 +480,7 @@
         // Disable the clicked button
         $(this).prop('disabled', true).off('click');
         }
-      }      
+      }  
       
       // Attach a click event handler to the 'like' and 'unlike' buttons
       $('.message-holder').on('click', '.feedback-button', showFeedbackWindow);
