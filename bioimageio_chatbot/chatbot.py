@@ -197,7 +197,7 @@ def save_chat_history(session_id, chat_history, context):
     # Write the serialized chat history to the json file
     with open(chat_log_path, 'w', encoding='utf-8') as file:
         file.write(chat_history_json)
-        
+
     
 async def connect_server(server_url):
     token = None # await login({"server_url": server_url})
