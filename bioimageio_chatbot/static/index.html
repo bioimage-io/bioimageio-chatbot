@@ -117,6 +117,23 @@
     .feedback-button:last-child {
       margin-right: 0; /* Remove margin for the last button */
     }
+
+    /* Add consistent styling for the login card */
+    #login-card {
+      margin: 0 auto; /* Center the card horizontally */
+      max-width: 400px; /* Adjust the width as needed */
+    }
+
+    /* Style the login button similar to the chat send button */
+    #login-button {
+      width: 100%;
+    }
+
+    /* Apply consistent styling to the chat container */
+    #chat1 {
+      margin: 0 auto; /* Center the chat container horizontally */
+      max-width: 600px; /* Adjust the width as needed */
+    }
     
     @keyframes spin {
       0% {
@@ -132,9 +149,18 @@
 
 
 <body>
-  <div id="login-container">
-    <h1>Login to BioImage.IO Chatbot</h1>
-    <button id="login-button">Login</button>
+  <div id="login-container" class="container mt-5">
+    <div class="card" id="login-card">
+      <div class="card-header">
+        <img src="https://bioimage.io/static/img/bioimage-io-icon.svg" alt="BioImage.IO Icon"
+          style="height: 24px; margin-right: 10px">
+        BioImage.IO Chatbot
+      </div>
+      <div class="card-body">
+        <h2 class="text-center">Welcome to BioImage.IO Chatbot</h2>
+        <button id="login-button" class="btn btn-primary">Login</button>
+      </div>
+    </div>
   </div>
 
   <div id="app-container" style="display: none;">
