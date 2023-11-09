@@ -24,6 +24,9 @@ The Chatbot may provide links to external websites or resources for your conveni
 
 User interactions with the Chatbot may be stored for analysis and improvement of the service. All data will be handled in accordance with our Privacy Policy.
 
+## Privacy Policy
+The personal data you may provide will be used to disseminate information pertaining to the execution of the Horizon Europe Funded AI4Life project (Grant number: 101057970). In accordance with the Grant Agreement, your data will be retained during the project and deleted when it has ended as soon as the retention period established by the EC is over. If you would like to update or delete your data during the course of the project, please contact us using [this form](https://oeway.typeform.com/to/K3j2tJt7?typeform-source=bioimage.io).
+
 ## Modifications
 
 We reserve the right to modify this disclaimer at any time, effective upon posting of an updated version on this website. Continued use of the Chatbot after any such changes shall constitute your consent to such changes.
