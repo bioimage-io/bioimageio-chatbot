@@ -1,5 +1,9 @@
 import asyncio
 import os
+import json
+import datetime
+import secrets
+import aiofiles
 from imjoy_rpc.hypha import login, connect_to_server
 
 from pydantic import BaseModel, Field
@@ -181,8 +185,23 @@ def create_customer_service(db_path):
     )
     return customer_service
 
+async def save_chat_history(filename, chat_his_dict):
+    # Create a folder with the session ID as the name
+    os.makedirs("chat_sessions", exist_ok=True)
+
+    # Create a chat_log.json file inside the session folder
+    chat_log_path = os.path.join("chat_sessions", f"{filename}.json")
+    
+    # Serialize the chat history to a json string
+    chat_history_json = json.dumps(chat_his_dict)
+
+    # Write the serialized chat history to the json file
+    async with aiofiles.open(chat_log_path, mode='w', encoding='utf-8') as f:
+        await f.write(chat_history_json)
+
+    
 async def connect_server(server_url):
-    token = await login({"server_url": server_url})
+    token = None # await login({"server_url": server_url})
     server = await connect_to_server({"server_url": server_url, "token": token, "method_timeout": 100})
     await register_chat_service(server)
     
@@ -199,7 +218,19 @@ async def register_chat_service(server):
     description_by_id = {collection['id']: collection['description'] for collection in collections}
     customer_service = create_customer_service(knowledge_base_path)
 
-    async def chat(text, chat_history, user_profile=None, channel=None, status_callback=None, context=None):
+    async def report(user_report, context=None):
+        chat_his_dict = {'type':user_report['type'],
+                         'feedback':user_report['feedback'],
+                         'conversations':user_report['messages'], 
+                         'session_id':user_report['session_id'], 
+                        'timestamp': str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), 
+                        'user': context['user']}
+        session_id = user_report['session_id'] + secrets.token_hex(4)
+        filename = f"report-{session_id}.json"
+        await save_chat_history(filename, chat_his_dict)
+        print(f"User report saved to {filename}")
+        
+    async def chat(text, chat_history, user_profile=None, channel=None, status_callback=None, session_id=None, context=None):
         # Listen to the `stream` event
         async def stream_callback(message):
             if message["type"] in ["function_call", "text"]:
@@ -233,6 +264,16 @@ async def register_chat_service(server):
             raise e
         else:
             event_bus.off("stream", stream_callback)
+            
+        if session_id:
+            chat_history.append({ 'role': 'user', 'content': text })
+            chat_history.append({ 'role': 'assistant', 'content': response })
+            chat_his_dict = {'conversations':chat_history, 
+                     'timestamp': str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), 
+                     'user': context['user']}
+            filename = f"chatlogs-{session_id}.json"
+            await save_chat_history(filename, chat_his_dict)
+            print(f"Chat history saved to {filename}")
         return response
 
     hypha_service_info = await server.register_service({
@@ -243,6 +284,7 @@ async def register_chat_service(server):
             "require_context": True
         },
         "chat": chat,
+        "report": report,
         "channels": [collection['name'] for collection in collections]
     })
     

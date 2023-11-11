@@ -81,6 +81,94 @@
       overflow: hidden;
     }
 
+
+    .feedback-buttons {
+      display: flex;
+      margin-top: 10px;
+    }
+    
+    .feedback-button {
+      margin-right: 2px;
+      padding: 5px 10px;
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      display: inline-block; /* Initially, both buttons are visible */
+    }
+    .small-grey-button {
+      font-size: 14px; /* Adjust the font size as needed */
+      color: #ffc107ad; /* Change the color to grey or any other desired shade */
+      background-color: transparent; /* Set the background to transparent */
+      border: none; /* Remove the border */
+      padding: 0; /* Remove padding to make it smaller */
+    }
+    
+    .small-grey-button i {
+      font-size: 16px; /* Adjust the icon size as needed */
+      margin-right: 5px; /* Add space between the icon and text (if any) */
+    }
+    
+
+    .feedback-button:hover {
+      background-color: #dee2e6;
+    }
+    .feedback-button:last-child {
+      margin-right: 0; /* Remove margin for the last button */
+    }
+
+    .announcement-banner {
+      background-color: #fff;
+      color: #000;
+      text-align: center;
+      padding: 15px;
+      margin-top: 20px; /* Adjust margin as needed */
+      border: 2px solid #007bff; /* Prominent border color */
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Add a subtle shadow for prominence */
+    }
+
+    .announcement-banner__text {
+      font-size: 18px; /* Adjust font size as needed */
+    }
+
+    .announcement-banner__text a {
+      color: #007bff;
+    }
+
+    .announcement-banner__controls {
+      margin-top: 10px;
+    }
+
+    .announcement-button {
+      margin-right: 10px;
+    }
+
+    .announcement-banner {
+      display: none;
+      /* other styles remain unchanged */
+    }
+
+    /* Add consistent styling for the login card */
+    #login-card {
+      margin: 0 auto; /* Center the card horizontally */
+      max-width: 400px; /* Adjust the width as needed */
+    }
+
+    /* Style the login button similar to the chat send button */
+    #login-button {
+      width: 100%;
+    }
+
+    /* Apply consistent styling to the chat container */
+    #chat1 {
+      margin: 0 auto; /* Center the chat container horizontally */
+      max-width: 600px; /* Adjust the width as needed */
+    }
+
+
+    
     @keyframes spin {
       0% {
         transform: rotate(0deg);
@@ -95,6 +183,39 @@
 
 
 <body>
+  <div class="announcement-banner">
+    <div class="announcement-banner__text">
+      Thank you for trying out the BioImage.IO Chatbot! 
+      
+      <p>Please provide feedback by clicking 
+      <button class="feedback-button like-button small-grey-button">
+        <i class="fas fa-thumbs-up"></i> 
+      </button>
+      or 
+      <button class="feedback-button unlike-button small-grey-button">
+        <i class="fas fa-thumbs-down"></i> 
+      </button> for each response, or by clicking the 'Feedback' button below.</p>
+    </div>
+  </div>
+
+
+  <div id="login-container" class="container mt-5">
+    <div class="card" id="login-card">
+      <div class="card-header">
+        <img src="https://bioimage.io/static/img/bioimage-io-icon.svg" alt="BioImage.IO Icon"
+          style="height: 24px; margin-right: 10px">
+        BioImage.IO Chatbot
+      </div>
+      <div class="card-body">
+        <h2 class="text-center">Welcome to BioImage.IO Chatbot</h2>
+        <button id="login-button" class="btn btn-primary">Login</button>
+      </div>
+    </div>
+  </div>
+
+
+  <div id="app-container" style="display: none;">
+
   <div class="container mt-5">
     <div class="card" id="chat1">
       <div class="card-header">
@@ -119,6 +240,10 @@
         <button type="button" class="btn btn-secondary mt-3" id="reset-btn">
           <i class="fas fa-sync-alt"></i>Reset
         </button>
+        <!-- Add the "Feedback" button -->
+      <button type="button" class="btn btn-info mt-3" id="feedback-btn">
+        <i class="fas fa-comment"></i> Feedback
+      </button>
 
         <!-- Profile options initially collapsed -->
         <div id="profileOptions" class="collapse">
@@ -130,6 +255,16 @@
             Save
           </button>
         </div>
+
+        <!-- Feedback form initially collapsed -->
+        <div id="feedback-form" class="collapse">
+          <textarea class="form-control mt-3" id="generalFeedback" placeholder="Tell us your experience about Bioimage.IO chatbot..." rows="3"></textarea>
+          <!-- Save Feedback button -->
+          <button type="button" class="btn btn-success mt-3" id="save-feedback-btn">
+            Submit Feedback
+          </button>
+        </div>
+
 
         <!-- Add the "Channels" dropdown menu -->
         <div class="form-outline btn-info mt-3">
@@ -159,19 +294,70 @@
       <a href="https://badge.fury.io/py/bioimageio-chatbot" target="_blank"><img src="https://badge.fury.io/py/bioimageio-chatbot.svg" alt="PyPI version" height="18"></a>
     </div>
   </div>
-
+</div>
 
 
   <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/imjoy-rpc@0.5.6/dist/hypha-rpc-websocket.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/imjoy-rpc@0.5.46/dist/hypha-rpc-websocket.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/2.1.3/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
+
+  
 
   <script>
     $(document).ready(async function () {
       let svc;
       const spinner = `<div class="spinner"></div>`; // Spinner HTML
       const shortIntroMessage = "Hi there! I'm Melman, your community knowledge base assistant for bioimage analysis. How can I assist you today?";
+      // Function to show the login screen
+  function showLoginScreen() {
+    $('#login-container').show();
+    $('#app-container').hide();
+  }
+
+  // Function to show the app interface
+  function showAppInterface() {
+    $('#login-container').hide();
+    $('#app-container').show();
+    $('.announcement-banner').show();
+  }
+
+  // Function to handle the login callback
+  function login_callback(context) {
+    window.open(context.login_url)
+  }
+  // Attach a click event handler to the login button
+  $('#login-button').on('click', async function () {
+    // Hide the login screen and show the spinner while logging in
+    showLoginScreen();
+    $('.login-button').hide();
+    $('.login-spinner').show();
+
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const server_url = urlParams.get('server_url');
+      // Call the login function to get the token
+      token = await hyphaWebsocketClient.login({
+        "server_url": server_url || "https://ai.imjoy.io",
+        "login_callback": login_callback,
+      });
+
+      // If the login is successful, proceed to initialize the service
+      svc = await initializeService();
+
+      // Show the app interface
+      showAppInterface();
+    } catch (e) {
+      // Handle login error
+      console.error("Login failed:", e);
+
+      // Show an error message and allow the user to try again
+      $('#login-error-message').text("Login failed. Please try again.");
+      $('.login-spinner').hide();
+      $('.login-button').show();
+    }
+  });
+      
       // Manually toggle the collapse for profile options
       $('#edit-profile-btn').click(function () {
         $('#profileOptions').collapse('toggle');
@@ -186,11 +372,24 @@
           const service_id = urlParams.get('service_id');
           const server_url = urlParams.get('server_url');
           const server = await hyphaWebsocketClient.connectToServer({
-            "server_url": server_url || "https://ai.imjoy.io"
+            "server_url": server_url || "https://ai.imjoy.io",
+            "token": token,
           })
           const svc = await server.getService(service_id || "bioimageio-chatbot")
+          const channels = svc.channels;
+          const channelSelect = document.getElementById('channelSelect');
+
+          // Clear any existing options
+          channelSelect.innerHTML = '<option value="" disabled selected>Select a Channel</option>';
+
+          channels.forEach((channel) => {
+            const option = document.createElement('option');
+            option.value = channel;
+            option.textContent = channel;
+            channelSelect.appendChild(option);
+          });
           showReadyStatus();
-          appendRobotMessage(shortIntroMessage); // Append robot message to the message container
+          appendRobotMessage(shortIntroMessage, "message-0"); // Append robot message to the message container
           return svc;
         }
         catch (e) {
@@ -204,6 +403,7 @@
       }
       // Reset the chat session and clear chat history
       function resetChat() {
+        sessionId = generateSessionID(); // Generate a new session ID
         chat_history.length = 0; // Clear the chat history
         code = ''; // Reset code
         error_message = ''; // Reset error message
@@ -266,19 +466,8 @@
       function autoResize() {
         this.style.height = (this.scrollHeight) + 'px';
       }
-      svc = await initializeService();
-      const channels = svc.channels;
-      const channelSelect = document.getElementById('channelSelect');
-
-      // Clear any existing options
-      channelSelect.innerHTML = '<option value="" disabled selected>Select a Channel</option>';
-
-      channels.forEach((channel) => {
-        const option = document.createElement('option');
-        option.value = channel;
-        option.textContent = channel;
-        channelSelect.appendChild(option);
-      });
+      //svc = await initializeService();
+      
       // add 'auto' channel
       const option = document.createElement('option');
       option.value = 'auto';
@@ -287,6 +476,10 @@
       channelSelect.value = 'auto';
   
       const chat_history = [];
+
+      let sessionId = generateSessionID();
+      console.log("Session ID:", sessionId);
+
 
       async function sendMessage(e) {
         e.preventDefault();
@@ -336,7 +529,7 @@
           }
         }
         try{
-          response = await svc.chat(message, chat_history, user_profile, selectedChannel, statusCallback);
+          response = await svc.chat(message, chat_history, user_profile, selectedChannel, statusCallback, sessionId);
           console.log(response)
           chat_history.push({ role: 'user', content: message })
           chat_history.push({ role: 'assistant', content: response })
@@ -352,7 +545,8 @@
           // Remove spinner and set status back to 'Ready to chat' after finishing
           $('.spinner').remove();
           $('#progress-message-container').remove();
-          appendRobotMessage(response); // Append robot message to the message container
+          
+          appendRobotMessage(response, "message-"+chat_history.length); // Append robot message to the message container
         } 
       }
 
@@ -366,14 +560,7 @@
         $('.message-holder').append(messageContainer);
       }
 
-      /* function appendRobotMessage(message) {
-        let messageContainer = `<div class="message-container robot-message">
-                                   <i class="fas fa-robot"></i>
-                                   <div class="message-content">${message}</div>
-                                </div>`;
-        $('.message-holder').append(messageContainer);
-      } */
-      function appendRobotMessage(message) {
+      function appendRobotMessage(message, messageId) {
         // Convert the message to HTML using the marked library
         const htmlMessage = marked(message, { renderer:renderer });
 
@@ -382,8 +569,13 @@
             <img style="width: 20px;" src="https://bioimage.io/static/img/bioimage-io-icon.svg" alt="Melman the Giraffe" width="30" height="30">
           </div>
           <div class="message-content markdown-body">${htmlMessage}</div>
+        </div>
+        <div class="feedback-buttons"  id="${messageId}" style="margin-left: 35px; margin-top: -6px;"> <!-- Add margin-top here -->
+          <button class="feedback-button like-button small-grey-button"><i class="fas fa-thumbs-up"></i></button>
+          <button class="feedback-button unlike-button small-grey-button"><i class="fas fa-thumbs-down"></i></button>
         </div>`;
-
+        
+        
         $('.message-holder').append(messageContainer);
       }
       // Function to update the status text
@@ -409,6 +601,60 @@
         updateStatus('Error: ' + errorMessage);
       }
 
+      // Function to generate session id
+      function generateSessionID() {
+        // Create a timestamp to ensure uniqueness
+        const timestamp = new Date().getTime();
+  
+        // Generate a random number to add randomness
+        const random = Math.random();
+  
+        // Combine timestamp and random number to create the session ID
+        const sessionID = `${timestamp}-${random}`;
+  
+        return sessionID;
+      }
+  
+      // Call the function to generate a session ID
+
+      function showFeedbackWindow() {
+        // Show a prompt to collect user feedback
+        const feedbackMessage = prompt('Please share your thoughts about this response, thank you!', '');
+
+        if (feedbackMessage !== null) {
+          const feedbackType = $(this).hasClass('like-button') ? 'like' : 'unlike';
+          
+          // get the messageId
+          const messageId = $(this).parent().attr('id'); 
+          // remove message- from the messageId and convert to integer
+          const messageIndex = parseInt(messageId.replace('message-', ''));
+          // get the chat history until messageIndex
+          const chatMessages = chat_history.slice(0, messageIndex + 1);
+          const feedbackData = {
+            type: feedbackType,
+            feedback: feedbackMessage,
+            messages: chatMessages,
+            session_id: sessionId
+          };
+      
+          // Call the 'svc.report()' function to send the feedback data
+          svc.report(feedbackData);
+      
+          // Hide the unclicked button
+          const otherButton = $(this).hasClass('like-button')
+          ? $('.unlike-button', $(this).parent())
+          : $('.like-button', $(this).parent());
+        otherButton.hide();
+
+        // Disable the clicked button
+        $(this).prop('disabled', true).off('click');
+        }
+      }  
+      
+      // Attach a click event handler to the 'like' and 'unlike' buttons
+      $('.message-holder').on('click', '.feedback-button', showFeedbackWindow);
+      
+      
       $("#textAreaExample").on("keydown", function (event) {
         if (event.key === "Enter") {
           event.preventDefault(); // Prevent the default new line behavior
@@ -421,7 +667,46 @@
       });
 
       $('.send-btn').on('click', sendMessage);
+    
+
+
+    // Add a click event handler for the "Feedback" button
+    $('#feedback-btn').click(function () {
+      // Show the feedback form
+      $('#feedback-form').collapse('toggle');
+
+      // Set the initial height of the textarea dynamically to show three lines
+      const lineHeight = 20; // You may need to adjust this based on your font size
+      $('#generalFeedback').css('height', (lineHeight * 5) + 'px');
     });
+
+    // Add a click event handler for the "Save Feedback" button
+    $('#save-feedback-btn').click(function () {
+      // Get the general feedback message from the textarea
+      const generalFeedback = $('#generalFeedback').val();
+
+      // Create a feedbackData object
+      const feedbackData = {
+        type: 'general', // Set the type to 'general feedback'
+        feedback: generalFeedback,
+        messages: chat_history, // Include chat history
+        session_id: sessionId
+      };
+
+      // Call the 'svc.report()' function to send the feedback data
+      svc.report(feedbackData);
+
+      // Clear the input field
+      $('#generalFeedback').val('');
+
+      // Collapse the feedback form
+      $('#feedback-form').collapse('hide');
+    });
+
+  });
+
+    
+
   </script>
   <!-- https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.3.0/github-markdown.min.css -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.3.0/github-markdown-light.css" />

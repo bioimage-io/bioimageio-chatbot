@@ -13,6 +13,7 @@ build/
 develop-eggs/
 data/
 dist/
+chat_sessions/
 
 downloads/
 eggs/
