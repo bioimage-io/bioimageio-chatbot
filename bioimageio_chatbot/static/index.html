@@ -145,6 +145,11 @@
       margin-right: 10px;
     }
 
+    .announcement-banner {
+      display: none;
+      /* other styles remain unchanged */
+    }
+
     /* Add consistent styling for the login card */
     #login-card {
       margin: 0 auto; /* Center the card horizontally */
@@ -161,6 +166,8 @@
       margin: 0 auto; /* Center the chat container horizontally */
       max-width: 600px; /* Adjust the width as needed */
     }
+
+
     
     @keyframes spin {
       0% {
@@ -178,17 +185,16 @@
 <body>
   <div class="announcement-banner">
     <div class="announcement-banner__text">
-      Be the first to try our new chatbot! Join as a beta tester and provide valuable feedback.
-      <a class="button-text color-blue-medium display-inline-flex material-button" href="https://forms.gle/3mL5mV6amHT8PPZC6" target="_blank">Join as Beta Tester
-        <svg class="gap-left-200 icon" fill="black" width="18px" height="18px" role="img" aria-label="External link" viewBox="0 0 24 24">
-          <path fill="none" d="M0 0h24v24H0z"></path>
-          <path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"></path>
-        </svg>
-      </a>
-    </div>
-    <div class="announcement-banner__controls">
-      <button class="announcement-button btn btn-primary" storage-value="accepts" data-banner-close-btn="">Agree</button>
-      <button class="announcement-button btn btn-primary" storage-value="rejects" data-banner-close-btn="">No Thanks</button>
+      Thank you for trying out the BioImage.IO Chatbot! 
+      
+      <p>Please provide feedback by clicking 
+      <button class="feedback-button like-button small-grey-button">
+        <i class="fas fa-thumbs-up"></i> 
+      </button>
+      or 
+      <button class="feedback-button unlike-button small-grey-button">
+        <i class="fas fa-thumbs-down"></i> 
+      </button> for each response, or by clicking the 'Feedback' button below.</p>
     </div>
   </div>
 
@@ -234,6 +240,10 @@
         <button type="button" class="btn btn-secondary mt-3" id="reset-btn">
           <i class="fas fa-sync-alt"></i>Reset
         </button>
+        <!-- Add the "Feedback" button -->
+      <button type="button" class="btn btn-info mt-3" id="feedback-btn">
+        <i class="fas fa-comment"></i> Feedback
+      </button>
 
         <!-- Profile options initially collapsed -->
         <div id="profileOptions" class="collapse">
@@ -245,6 +255,16 @@
             Save
           </button>
         </div>
+
+        <!-- Feedback form initially collapsed -->
+        <div id="feedback-form" class="collapse">
+          <textarea class="form-control mt-3" id="generalFeedback" placeholder="Tell us your experience about Bioimage.IO chatbot..." rows="3"></textarea>
+          <!-- Save Feedback button -->
+          <button type="button" class="btn btn-success mt-3" id="save-feedback-btn">
+            Send Feedback
+          </button>
+        </div>
+
 
         <!-- Add the "Channels" dropdown menu -->
         <div class="form-outline btn-info mt-3">
@@ -299,6 +319,7 @@
   function showAppInterface() {
     $('#login-container').hide();
     $('#app-container').show();
+    $('.announcement-banner').show();
   }
 
   // Function to handle the login callback
@@ -539,13 +560,6 @@
         $('.message-holder').append(messageContainer);
       }
 
-      /* function appendRobotMessage(message) {
-        let messageContainer = `<div class="message-container robot-message">
-                                   <i class="fas fa-robot"></i>
-                                   <div class="message-content">${message}</div>
-                                </div>`;
-        $('.message-holder').append(messageContainer);
-      } */
       function appendRobotMessage(message, messageId) {
         // Convert the message to HTML using the marked library
         const htmlMessage = marked(message, { renderer:renderer });
@@ -640,7 +654,7 @@
       // Attach a click event handler to the 'like' and 'unlike' buttons
       $('.message-holder').on('click', '.feedback-button', showFeedbackWindow);
       
-
+      
       $("#textAreaExample").on("keydown", function (event) {
         if (event.key === "Enter") {
           event.preventDefault(); // Prevent the default new line behavior
@@ -653,7 +667,46 @@
       });
 
       $('.send-btn').on('click', sendMessage);
+    
+
+
+    // Add a click event handler for the "Feedback" button
+    $('#feedback-btn').click(function () {
+      // Show the feedback form
+      $('#feedback-form').collapse('toggle');
+
+      // Set the initial height of the textarea dynamically to show three lines
+      const lineHeight = 20; // You may need to adjust this based on your font size
+      $('#generalFeedback').css('height', (lineHeight * 5) + 'px');
     });
+
+    // Add a click event handler for the "Save Feedback" button
+    $('#save-feedback-btn').click(function () {
+      // Get the general feedback message from the textarea
+      const generalFeedback = $('#generalFeedback').val();
+
+      // Create a feedbackData object
+      const feedbackData = {
+        type: 'general feedback', // Set the type to 'general feedback'
+        feedback: generalFeedback,
+        messages: chat_history, // Include chat history
+        session_id: sessionId
+      };
+
+      // Call the 'svc.report()' function to send the feedback data
+      svc.report(feedbackData);
+
+      // Clear the input field
+      $('#generalFeedback').val('');
+
+      // Collapse the feedback form
+      $('#feedback-form').collapse('hide');
+    });
+
+  });
+
+    
+
   </script>
   <!-- https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.3.0/github-markdown.min.css -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.3.0/github-markdown-light.css" />
