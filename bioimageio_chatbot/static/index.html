@@ -118,6 +118,33 @@
       margin-right: 0; /* Remove margin for the last button */
     }
 
+    .announcement-banner {
+      background-color: #fff;
+      color: #000;
+      text-align: center;
+      padding: 15px;
+      margin-top: 20px; /* Adjust margin as needed */
+      border: 2px solid #007bff; /* Prominent border color */
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Add a subtle shadow for prominence */
+    }
+
+    .announcement-banner__text {
+      font-size: 18px; /* Adjust font size as needed */
+    }
+
+    .announcement-banner__text a {
+      color: #007bff;
+    }
+
+    .announcement-banner__controls {
+      margin-top: 10px;
+    }
+
+    .announcement-button {
+      margin-right: 10px;
+    }
+
     /* Add consistent styling for the login card */
     #login-card {
       margin: 0 auto; /* Center the card horizontally */
@@ -149,6 +176,23 @@
 
 
 <body>
+  <div class="announcement-banner">
+    <div class="announcement-banner__text">
+      Be the first to try our new chatbot! Join as a beta tester and provide valuable feedback.
+      <a class="button-text color-blue-medium display-inline-flex material-button" href="https://forms.gle/3mL5mV6amHT8PPZC6" target="_blank">Join as Beta Tester
+        <svg class="gap-left-200 icon" fill="black" width="18px" height="18px" role="img" aria-label="External link" viewBox="0 0 24 24">
+          <path fill="none" d="M0 0h24v24H0z"></path>
+          <path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"></path>
+        </svg>
+      </a>
+    </div>
+    <div class="announcement-banner__controls">
+      <button class="announcement-button btn btn-primary" storage-value="accepts" data-banner-close-btn="">Agree</button>
+      <button class="announcement-button btn btn-primary" storage-value="rejects" data-banner-close-btn="">No Thanks</button>
+    </div>
+  </div>
+
+
   <div id="login-container" class="container mt-5">
     <div class="card" id="login-card">
       <div class="card-header">
@@ -162,6 +206,7 @@
       </div>
     </div>
   </div>
+
 
   <div id="app-container" style="display: none;">
 
@@ -236,6 +281,8 @@
   <script src="https://cdn.jsdelivr.net/npm/imjoy-rpc@0.5.46/dist/hypha-rpc-websocket.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/2.1.3/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
+
+  
 
   <script>
     $(document).ready(async function () {
