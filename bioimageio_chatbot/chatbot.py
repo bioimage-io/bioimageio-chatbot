@@ -186,11 +186,9 @@ def create_customer_service(db_path):
     return customer_service
 
 async def save_chat_history(filename, chat_his_dict):
-    # Create a folder with the session ID as the name
-    os.makedirs("chat_sessions", exist_ok=True)
-
+    chat_session_path = os.environ.get("BIOIMAGEIO_CHAT_SESSION_PATH", "./chat_sessions")
     # Create a chat_log.json file inside the session folder
-    chat_log_path = os.path.join("chat_sessions", f"{filename}.json")
+    chat_log_path = os.path.join(chat_session_path, f"{filename}.json")
     
     # Serialize the chat history to a json string
     chat_history_json = json.dumps(chat_his_dict)
@@ -214,6 +212,12 @@ async def register_chat_service(server):
         print(f"The knowledge base is not found at {knowledge_base_path}, will download it automatically.")
         os.makedirs(knowledge_base_path, exist_ok=True)
 
+    chat_session_path = os.environ.get("BIOIMAGEIO_CHAT_SESSION_PATH", "./chat_sessions")
+    assert chat_session_path is not None, "Please set the BIOIMAGEIO_CHAT_SESSION_PATH environment variable to the path of the chat session folder."
+    if not os.path.exists(chat_session_path):
+        print(f"The chat session folder is not found at {chat_session_path}, will create one now.")
+        os.makedirs(chat_session_path, exist_ok=True)
+    
     channel_id_by_name = {collection['name']: collection['id'] for collection in collections}
     description_by_id = {collection['id']: collection['description'] for collection in collections}
     customer_service = create_customer_service(knowledge_base_path)
