@@ -261,7 +261,7 @@
           <textarea class="form-control mt-3" id="generalFeedback" placeholder="Tell us your experience about Bioimage.IO chatbot..." rows="3"></textarea>
           <!-- Save Feedback button -->
           <button type="button" class="btn btn-success mt-3" id="save-feedback-btn">
-            Send Feedback
+            Submit Feedback
           </button>
         </div>
 
@@ -687,7 +687,7 @@
 
       // Create a feedbackData object
       const feedbackData = {
-        type: 'general feedback', // Set the type to 'general feedback'
+        type: 'general', // Set the type to 'general feedback'
         feedback: generalFeedback,
         messages: chat_history, // Include chat history
         session_id: sessionId
