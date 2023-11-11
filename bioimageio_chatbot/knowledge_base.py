@@ -158,7 +158,7 @@ def download_docs(root_dir, url):
 def create_vector_knowledge_base(output_dir=None, collections=None):
     """Create a vector knowledge base from the downloaded documents"""
     if output_dir is None:
-        output_dir = os.environ.get("BIOIMAGEIO_KNOWLEDGE_BASE", "./bioimageio-knowledge-base")
+        output_dir = os.environ.get("BIOIMAGEIO_KNOWLEDGE_BASE_PATH", "./bioimageio-knowledge-base")
     os.makedirs(output_dir, exist_ok=True)
     
     if not collections:
