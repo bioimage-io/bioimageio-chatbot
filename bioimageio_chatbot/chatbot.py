@@ -185,11 +185,7 @@ def create_customer_service(db_path):
     )
     return customer_service
 
-async def save_chat_history(filename, chat_his_dict):
-    chat_session_path = os.environ.get("BIOIMAGEIO_CHAT_SESSION_PATH", "./chat_sessions")
-    # Create a chat_log.json file inside the session folder
-    chat_log_path = os.path.join(chat_session_path, f"{filename}.json")
-    
+async def save_chat_history(chat_log_path, chat_his_dict):    
     # Serialize the chat history to a json string
     chat_history_json = json.dumps(chat_his_dict)
 
@@ -231,7 +227,9 @@ async def register_chat_service(server):
                         'user': context['user']}
         session_id = user_report['session_id'] + secrets.token_hex(4)
         filename = f"report-{session_id}.json"
-        await save_chat_history(filename, chat_his_dict)
+        # Create a chat_log.json file inside the session folder
+        chat_log_path = os.path.join(chat_session_path, f"{filename}.json")
+        await save_chat_history(chat_log_path, chat_his_dict)
         print(f"User report saved to {filename}")
         
     async def chat(text, chat_history, user_profile=None, channel=None, status_callback=None, session_id=None, context=None):
