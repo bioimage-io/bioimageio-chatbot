@@ -209,8 +209,10 @@
         BioImage.IO Chatbot
       </div>
       <div class="card-body">
-        <h2 class="text-center">Welcome to BioImage.IO Chatbot</h2>
+        <h3 class="text-center">Welcome to BioImage.IO Chatbot</h3>
         <button id="login-button" class="btn btn-primary">Login</button>
+        <br>
+        You may need to <a href="https://forms.gle/fEnj68Rxut1VUX1Y8" target="_blank">sign up here</a>
       </div>
     </div>
   </div>
@@ -303,63 +305,68 @@
   <script src="https://cdn.jsdelivr.net/npm/imjoy-rpc@0.5.46/dist/hypha-rpc-websocket.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/2.1.3/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
-
-  
-
   <script>
     $(document).ready(async function () {
       let svc;
       const spinner = `<div class="spinner"></div>`; // Spinner HTML
       const shortIntroMessage = "Hi there! I'm Melman, your community knowledge base assistant for bioimage analysis. How can I assist you today?";
       // Function to show the login screen
-  function showLoginScreen() {
-    $('#login-container').show();
-    $('#app-container').hide();
-  }
+      function showLoginScreen() {
+        $('#login-container').show();
+        $('#app-container').hide();
+      }
 
-  // Function to show the app interface
-  function showAppInterface() {
-    $('#login-container').hide();
-    $('#app-container').show();
-    $('.announcement-banner').show();
-  }
+      // Function to show the app interface
+      function showAppInterface() {
+        $('#login-container').hide();
+        $('#app-container').show();
+        $('.announcement-banner').show();
+      }
 
-  // Function to handle the login callback
-  function login_callback(context) {
-    window.open(context.login_url)
-  }
-  // Attach a click event handler to the login button
-  $('#login-button').on('click', async function () {
-    // Hide the login screen and show the spinner while logging in
-    showLoginScreen();
-    $('.login-button').hide();
-    $('.login-spinner').show();
+      // Function to handle the login callback
+      function login_callback(context) {
+        window.open(context.login_url)
+      }
 
-    try {
-      const urlParams = new URLSearchParams(window.location.search);
-      const server_url = urlParams.get('server_url');
-      // Call the login function to get the token
-      token = await hyphaWebsocketClient.login({
-        "server_url": server_url || "https://ai.imjoy.io",
-        "login_callback": login_callback,
+      // Attach a click event handler to the login button
+      $('#login-button').on('click', async function () {
+        // Hide the login screen and show the spinner while logging in
+        $('.login-button').hide();
+        $('.login-spinner').show();
+
+        try {
+          const urlParams = new URLSearchParams(window.location.search);
+          const server_url = urlParams.get('server_url');
+          // Call the login function to get the token
+          token = await hyphaWebsocketClient.login({
+            "server_url": server_url || "https://ai.imjoy.io",
+            "login_callback": login_callback,
+          });
+
+          // If the login is successful, proceed to initialize the service
+          svc = await initializeService();
+
+          // Show the app interface
+          showAppInterface();
+        } catch (e) {
+          // Handle login error
+          console.error("Login failed:", e);
+
+          // Show an error message and allow the user to try again
+          $('#login-error-message').text("Login failed. Please try again.");
+          $('.login-spinner').hide();
+          $('.login-button').show();
+        }
       });
 
-      // If the login is successful, proceed to initialize the service
-      svc = await initializeService();
-
-      // Show the app interface
-      showAppInterface();
-    } catch (e) {
-      // Handle login error
-      console.error("Login failed:", e);
-
-      // Show an error message and allow the user to try again
-      $('#login-error-message').text("Login failed. Please try again.");
-      $('.login-spinner').hide();
-      $('.login-button').show();
-    }
-  });
-      
+      const login_required = "LOGIN_REQUIRED";
+      if(login_required !== "false"){
+        showLoginScreen();
+      }
+      else{
+        svc = await initializeService();
+        showAppInterface();
+      }
       // Manually toggle the collapse for profile options
       $('#edit-profile-btn').click(function () {
         $('#profileOptions').collapse('toggle');
@@ -378,6 +385,7 @@
             "token": token,
           })
           const svc = await server.getService(service_id || "bioimageio-chatbot")
+          await svc.ping()
           const channels = svc.channels;
           const channelSelect = document.getElementById('channelSelect');
 
@@ -396,8 +404,9 @@
         }
         catch (e) {
           // If connection fails, show an error message in the status
-          showErrorStatus('Failed to connect to the server');
-          alert("Failed to get BioImage.IO Chatbot service")
+          showErrorStatus(`Failed to connect to the server. ${e}`);
+          alert(`Failed to connect to BioImage.IO Chatbot server. ${e}`)
+          throw e;
         }
         finally {
           $('.spinner').remove();
@@ -539,8 +548,8 @@
         }
         catch(e){
           // generate an error message to simulate how Melman from Madagascar would respond to an error
-          response = "Oh no! I'm sorry, I don't know how to answer that. I'm just a giraffe after all. Please try again.";
-          showErrorStatus(`The server failed to respond, please try again.`);
+          response = "Oh no! I'm sorry, I don't know how to answer that. Please try again.";
+          showErrorStatus(`The server failed to respond, please try again. ${e}`);
           console.error(e);
         }
         finally{
@@ -619,7 +628,7 @@
   
       // Call the function to generate a session ID
 
-      function showFeedbackWindow() {
+      async function showFeedbackWindow() {
         // Show a prompt to collect user feedback
         const feedbackMessage = prompt('Please share your thoughts about this response, thank you!', '');
 
@@ -640,8 +649,14 @@
           };
       
           // Call the 'svc.report()' function to send the feedback data
-          svc.report(feedbackData);
-      
+          try{
+            await svc.report(feedbackData);
+          }
+          catch(e){
+            console.error(e);
+            alert(`Failed to send feedback, error: ${e}`);
+            return;
+          }
           // Hide the unclicked button
           const otherButton = $(this).hasClass('like-button')
           ? $('.unlike-button', $(this).parent())
@@ -683,7 +698,7 @@
     });
 
     // Add a click event handler for the "Save Feedback" button
-    $('#save-feedback-btn').click(function () {
+    $('#save-feedback-btn').click(async function () {
       // Get the general feedback message from the textarea
       const generalFeedback = $('#generalFeedback').val();
 
@@ -696,7 +711,14 @@
       };
 
       // Call the 'svc.report()' function to send the feedback data
-      svc.report(feedbackData);
+      try{
+        await svc.report(feedbackData);
+        return;
+      }
+      catch(e){
+        console.error(e);
+        alert(`Failed to send feedback, error: ${e}`);
+      }
 
       // Clear the input field
       $('#generalFeedback').val('');
@@ -706,9 +728,6 @@
     });
 
   });
-
-    
-
   </script>
   <!-- https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.3.0/github-markdown.min.css -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.3.0/github-markdown-light.css" />

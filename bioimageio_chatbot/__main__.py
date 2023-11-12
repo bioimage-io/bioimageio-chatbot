@@ -6,7 +6,8 @@ import os
 from bioimageio_chatbot.knowledge_base import load_knowledge_base
 
 def start_server(args):
-    print(sys.executable)
+    if args.login_required:
+        os.environ["BIOIMAGEIO_LOGIN_REQUIRED"] = "true"
     command = [
         sys.executable,
         "-m",
@@ -20,6 +21,8 @@ def start_server(args):
 
 def connect_server(args):
     from bioimageio_chatbot.chatbot import connect_server
+    if args.login_required:
+        os.environ["BIOIMAGEIO_LOGIN_REQUIRED"] = "true"
     server_url = args.server_url
     loop = asyncio.get_event_loop()
     loop.create_task(connect_server(server_url))
@@ -55,11 +58,13 @@ def main():
     parser_start_server.add_argument("--host", type=str, default="0.0.0.0")
     parser_start_server.add_argument("--port", type=int, default=9000)
     parser_start_server.add_argument("--public-base-url", type=str, default="")
+    parser_start_server.add_argument("--login-required", action="store_true")
     parser_start_server.set_defaults(func=start_server)
     
     # Connect server command
     parser_connect_server = subparsers.add_parser("connect-server")
     parser_connect_server.add_argument("--server-url", default="https://ai.imjoy.io")
+    parser_connect_server.add_argument("--login-required", action="store_true")
     parser_connect_server.set_defaults(func=connect_server)
     
     # Create knowledge base command
