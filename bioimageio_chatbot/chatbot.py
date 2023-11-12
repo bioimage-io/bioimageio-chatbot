@@ -9,15 +9,12 @@ from imjoy_rpc.hypha import login, connect_to_server
 from pydantic import BaseModel, Field
 from schema_agents.role import Role
 from schema_agents.schema import Message
-from schema_agents.utils import EventBus
-from langchain.vectorstores import FAISS
-from langchain.embeddings.openai import OpenAIEmbeddings
 from typing import Any, Dict, List, Optional, Union
 import requests
 import sys
 import io
 from bioimageio_chatbot.knowledge_base import load_knowledge_base
-from bioimageio_chatbot.utils import get_manifest, download_file
+from bioimageio_chatbot.utils import get_manifest
 import pkg_resources
 
 def load_model_info():
@@ -195,13 +192,19 @@ async def save_chat_history(chat_log_full_path, chat_his_dict):
 
     
 async def connect_server(server_url):
-    token = None # await login({"server_url": server_url})
+    """Connect to the server and register the chat service."""
+    login_required = os.environ.get("BIOIMAGEIO_LOGIN_REQUIRED", "false")
+    if login_required:
+        token = await login({"server_url": server_url})
+    else:
+        token = None
     server = await connect_to_server({"server_url": server_url, "token": token, "method_timeout": 100})
     await register_chat_service(server)
     
 async def register_chat_service(server):
     """Hypha startup function."""
     collections = get_manifest()['collections']
+    login_required = os.environ.get("BIOIMAGEIO_LOGIN_REQUIRED", "false")
     knowledge_base_path = os.environ.get("BIOIMAGEIO_KNOWLEDGE_BASE_PATH", "./bioimageio-knowledge-base")
     assert knowledge_base_path is not None, "Please set the BIOIMAGEIO_KNOWLEDGE_BASE_PATH environment variable to the path of the knowledge base."
     if not os.path.exists(knowledge_base_path):
@@ -218,13 +221,36 @@ async def register_chat_service(server):
     description_by_id = {collection['id']: collection['description'] for collection in collections}
     customer_service = create_customer_service(knowledge_base_path)
 
+    def load_authorized_emails():
+        if login_required:
+            authorized_users_path = os.environ.get("BIOIMAGEIO_AUTHORIZED_USERS_PATH")
+            if authorized_users_path:
+                assert os.path.exists(authorized_users_path), f"The authorized users file is not found at {authorized_users_path}"
+                with open(authorized_users_path, "r") as f:
+                    authorized_users = json.load(f)["users"]
+                authorized_emails = [user["email"] for user in authorized_users if "email" in user]
+            else:
+                authorized_emails = None
+        else:
+            authorized_emails = None
+        return authorized_emails
+
+    authorized_emails = load_authorized_emails()
+    def check_permission(user):
+        if authorized_emails is None or user["email"] in authorized_emails:
+            return True
+        else:
+            return False
+        
     async def report(user_report, context=None):
+        if login_required and context and context.get("user"):
+            assert check_permission(context.get("user")), "You don't have permission to report the chat history."
         chat_his_dict = {'type':user_report['type'],
                          'feedback':user_report['feedback'],
                          'conversations':user_report['messages'], 
                          'session_id':user_report['session_id'], 
                         'timestamp': str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), 
-                        'user': context['user']}
+                        'user': context.get('user')}
         session_id = user_report['session_id'] + secrets.token_hex(4)
         filename = f"report-{session_id}.json"
         # Create a chat_log.json file inside the session folder
@@ -233,6 +259,8 @@ async def register_chat_service(server):
         print(f"User report saved to {filename}")
         
     async def chat(text, chat_history, user_profile=None, channel=None, status_callback=None, session_id=None, context=None):
+        if login_required and context and context.get("user"):
+            assert check_permission(context.get("user")), "You don't have permission to use the chatbot, please sign up and wait for approval"
         # Listen to the `stream` event
         async def stream_callback(message):
             if message["type"] in ["function_call", "text"]:
@@ -266,18 +294,23 @@ async def register_chat_service(server):
             raise e
         else:
             event_bus.off("stream", stream_callback)
-            
+
         if session_id:
             chat_history.append({ 'role': 'user', 'content': text })
             chat_history.append({ 'role': 'assistant', 'content': response })
             chat_his_dict = {'conversations':chat_history, 
                      'timestamp': str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), 
-                     'user': context['user']}
+                     'user': context.get('user')}
             filename = f"chatlogs-{session_id}.json"
             chat_log_full_path = os.path.join(chat_logs_path, filename)
             await save_chat_history(chat_log_full_path, chat_his_dict)
             print(f"Chat history saved to {filename}")
         return response
+
+    async def ping(context=None):
+        if login_required and context and context.get("user"):
+            assert check_permission(context.get("user")), "You don't have permission to use the chatbot, please sign up and wait for approval"
+        return "pong"
 
     hypha_service_info = await server.register_service({
         "name": "BioImage.IO Chatbot",
@@ -286,6 +319,7 @@ async def register_chat_service(server):
             "visibility": "public",
             "require_context": True
         },
+        "ping": ping,
         "chat": chat,
         "report": report,
         "channels": [collection['name'] for collection in collections]
@@ -298,6 +332,7 @@ async def register_chat_service(server):
     index_html = index_html.replace("https://ai.imjoy.io", server.config['public_base_url'] or f"http://127.0.0.1:{server.config['port']}")
     index_html = index_html.replace('"bioimageio-chatbot"', f'"{hypha_service_info["id"]}"')
     index_html = index_html.replace('v0.1.0', f'v{version}')
+    index_html = index_html.replace("LOGIN_REQUIRED", login_required)
     async def index(event, context=None):
         return {
             "status": 200,
