@@ -149,3 +149,5 @@ cython_debug/
 logs/
 bioimageio-knowledge-base/
 .DS_Store
+chat_logs
+authorized_users.json
