@@ -103,6 +103,7 @@ python -m bioimageio_chatbot start-server [--host HOST] [--port PORT] [--public-
 - `--host`: The host address to run the server on (default: `0.0.0.0`)
 - `--port`: The port number to run the server on (default: `9000`)
 - `--public-base-url`: The public base URL of the server (default: `http://127.0.0.1:9000`)
+- `--login-required`: Whether to require users to log in before accessing the chatbot (default: false)
 
 **Example:**
 
@@ -135,6 +136,7 @@ python -m bioimageio_chatbot connect-server [--server-url SERVER_URL]
 **Options:**
 
 - `--server-url`: The URL of the external BioEngine server to connect to (default: `https://ai.imjoy.io`)
+- `--login-required`: Whether to require users to log in before accessing the chatbot (default: false)
 
 **Example:**
 
@@ -147,6 +149,20 @@ python -m bioimageio_chatbot connect-server --server-url=https://ai.imjoy.io
 First, you will be asked to log in with a hypha account. Either your GitHub or Google account can be reused. Then, the following message containing a link to the chatbot will be displayed: 'The BioImage.IO Chatbot is available at: https://ai.imjoy.io/github|xxxxxx/apps/bioimageio-chatbot-client/index'
 
 Leave your chatbot running to enable users inside or outside your network to access it from this URL.
+
+#### User Management
+
+If you set `--login-required` when running `start-server` or `connect-server`, users will be required to log in before accessing the chatbot. The chatbot will then collect the user's GitHub or Google account information and store it its logs for future analysis.
+
+You can also provide an optional environment variable `BIOIMAGEIO_AUTHORIZED_USERS_PATH` for the chatbot to load a list of authorized users. The file should be a JSON file containing a list of GitHub or Google account names. For example:
+
+```json
+{
+    "users": [
+        {"email": "user1@email.org"}
+    ]
+}
+```
 
 #### Create Knowledge Base
 
