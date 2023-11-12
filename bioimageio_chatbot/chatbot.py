@@ -228,7 +228,7 @@ async def register_chat_service(server):
         session_id = user_report['session_id'] + secrets.token_hex(4)
         filename = f"report-{session_id}.json"
         # Create a chat_log.json file inside the session folder
-        chat_log_full_path = os.path.join(chat_logs_path, f"{filename}.json")
+        chat_log_full_path = os.path.join(chat_logs_path, filename)
         await save_chat_history(chat_log_full_path, chat_his_dict)
         print(f"User report saved to {filename}")
         
@@ -274,7 +274,7 @@ async def register_chat_service(server):
                      'timestamp': str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), 
                      'user': context['user']}
             filename = f"chatlogs-{session_id}.json"
-            chat_log_full_path = os.path.join(chat_logs_path, f"{filename}.json")
+            chat_log_full_path = os.path.join(chat_logs_path, filename)
             await save_chat_history(chat_log_full_path, chat_his_dict)
             print(f"Chat history saved to {filename}")
         return response
