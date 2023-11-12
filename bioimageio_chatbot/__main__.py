@@ -54,7 +54,7 @@ def main():
     parser_start_server = subparsers.add_parser("start-server")
     parser_start_server.add_argument("--host", type=str, default="0.0.0.0")
     parser_start_server.add_argument("--port", type=int, default=9000)
-    parser_start_server.add_argument("--public-base-url", type=str, default="http://127.0.0.1:9000")
+    parser_start_server.add_argument("--public-base-url", type=str, default="")
     parser_start_server.set_defaults(func=start_server)
     
     # Connect server command

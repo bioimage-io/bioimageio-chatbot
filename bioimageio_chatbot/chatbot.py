@@ -292,7 +292,7 @@ async def register_chat_service(server):
     
     with open(os.path.join(os.path.dirname(__file__), "static/index.html"), "r") as f:
         index_html = f.read()
-    index_html = index_html.replace("https://ai.imjoy.io", server.config['public_base_url'])
+    index_html = index_html.replace("https://ai.imjoy.io", server.config['public_base_url'] or f"http://127.0.0.1:{server.config['port']}")
     index_html = index_html.replace('"bioimageio-chatbot"', f'"{hypha_service_info["id"]}"')
     index_html = index_html.replace('v0.1.0', f'v{version}')
     async def index(event, context=None):
