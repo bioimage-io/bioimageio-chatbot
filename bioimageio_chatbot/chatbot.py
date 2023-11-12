@@ -185,18 +185,12 @@ def create_customer_service(db_path):
     )
     return customer_service
 
-async def save_chat_history(filename, chat_his_dict):
-    # Create a folder with the session ID as the name
-    os.makedirs("chat_sessions", exist_ok=True)
-
-    # Create a chat_log.json file inside the session folder
-    chat_log_path = os.path.join("chat_sessions", f"{filename}.json")
-    
+async def save_chat_history(chat_log_full_path, chat_his_dict):    
     # Serialize the chat history to a json string
     chat_history_json = json.dumps(chat_his_dict)
 
     # Write the serialized chat history to the json file
-    async with aiofiles.open(chat_log_path, mode='w', encoding='utf-8') as f:
+    async with aiofiles.open(chat_log_full_path, mode='w', encoding='utf-8') as f:
         await f.write(chat_history_json)
 
     
@@ -214,6 +208,12 @@ async def register_chat_service(server):
         print(f"The knowledge base is not found at {knowledge_base_path}, will download it automatically.")
         os.makedirs(knowledge_base_path, exist_ok=True)
 
+    chat_logs_path = os.environ.get("BIOIMAGEIO_CHAT_LOGS_PATH", "./chat_logs")
+    assert chat_logs_path is not None, "Please set the BIOIMAGEIO_CHAT_LOGS_PATH environment variable to the path of the chat logs folder."
+    if not os.path.exists(chat_logs_path):
+        print(f"The chat session folder is not found at {chat_logs_path}, will create one now.")
+        os.makedirs(chat_logs_path, exist_ok=True)
+    
     channel_id_by_name = {collection['name']: collection['id'] for collection in collections}
     description_by_id = {collection['id']: collection['description'] for collection in collections}
     customer_service = create_customer_service(knowledge_base_path)
@@ -227,7 +227,9 @@ async def register_chat_service(server):
                         'user': context['user']}
         session_id = user_report['session_id'] + secrets.token_hex(4)
         filename = f"report-{session_id}.json"
-        await save_chat_history(filename, chat_his_dict)
+        # Create a chat_log.json file inside the session folder
+        chat_log_full_path = os.path.join(chat_logs_path, f"{filename}.json")
+        await save_chat_history(chat_log_full_path, chat_his_dict)
         print(f"User report saved to {filename}")
         
     async def chat(text, chat_history, user_profile=None, channel=None, status_callback=None, session_id=None, context=None):
@@ -272,7 +274,8 @@ async def register_chat_service(server):
                      'timestamp': str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), 
                      'user': context['user']}
             filename = f"chatlogs-{session_id}.json"
-            await save_chat_history(filename, chat_his_dict)
+            chat_log_full_path = os.path.join(chat_logs_path, f"{filename}.json")
+            await save_chat_history(chat_log_full_path, chat_his_dict)
             print(f"Chat history saved to {filename}")
         return response
 
