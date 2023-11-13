@@ -138,6 +138,7 @@ def download_docs(root_dir, url):
         print(f"Downloaded and unzipped {url} to {result_folder}")
     elif filename.endswith(".pdf"):
         result_folder = os.path.join(target_directory, ".".join(filename.split(".")[:-1]))
+        os.makedirs(result_folder, exist_ok=True)
         print(f"Downloading {url} to {result_folder}")
         pdf_file_path = os.path.join(result_folder, filename)
         download_file(url, pdf_file_path)
@@ -150,7 +151,9 @@ def download_docs(root_dir, url):
         raise Exception("Downloaded folder is empty")
     elif len(os.listdir(result_folder)) == 1:
         # strip the folder name of the unzipped repo
-        return os.path.join(result_folder, os.listdir(result_folder)[0])
+        r_dir = os.path.join(result_folder, os.listdir(result_folder)[0])
+        if os.path.isdir(r_dir):
+            return r_dir
     # get the folder name of the unzipped repo
     return result_folder
 
