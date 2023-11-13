@@ -718,11 +718,11 @@
       // Call the 'svc.report()' function to send the feedback data
       try{
         await svc.report(feedbackData);
-        return;
       }
       catch(e){
         console.error(e);
         alert(`Failed to send feedback, error: ${e}`);
+        return;
       }
 
       // Clear the input field
@@ -730,6 +730,8 @@
 
       // Collapse the feedback form
       $('#feedback-form').collapse('hide');
+
+      alert("Thank you for your feedback!");
     });
 
   });
