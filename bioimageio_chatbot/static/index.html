@@ -64,7 +64,7 @@
       background-color: #dff9fb;
     }
 
-    #chat1 .spinner {
+    .spinner {
       border: 4px solid #f3f3f3;
       border-top: 4px solid #3498db;
       border-radius: 50%;
@@ -208,11 +208,12 @@
           style="height: 24px; margin-right: 10px">
         BioImage.IO Chatbot
       </div>
-      <div class="card-body">
+      <div class="card-body" style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
         <h3 class="text-center">Welcome to BioImage.IO Chatbot</h3>
         <button id="login-button" class="btn btn-primary">Login</button>
+        <div class="login-spinner spinner" style="display:none"></div>
         <br>
-        You may need to <a href="https://forms.gle/fEnj68Rxut1VUX1Y8" target="_blank">sign up here</a>
+        <a href="https://forms.gle/fEnj68Rxut1VUX1Y8" target="_blank">sign up here</a>
       </div>
     </div>
   </div>
