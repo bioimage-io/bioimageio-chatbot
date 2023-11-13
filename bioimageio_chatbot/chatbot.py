@@ -92,7 +92,7 @@ class FinalResponse(BaseModel):
     response: str = Field(description="The answer to the user's question in markdown format.")
 
 class ChannelInfo(BaseModel):
-    """The selected channel of the user's question. If provided, try to stick to the selected channel when answering the user's question."""
+    """The selected channel of the user's question. If provided, stick to the selected channel when answering the user's question."""
     id: str = Field(description="The channel id.")
     name: str = Field(description="The channel name.")
     description: str = Field(description="The channel description.")
@@ -108,7 +108,7 @@ class QuestionWithHistory(BaseModel):
     question: str = Field(description="The user's question.")
     chat_history: Optional[List[Dict[str, str]]] = Field(None, description="The chat history.")
     user_profile: Optional[UserProfile] = Field(None, description="The user's profile. You should use this to personalize the response based on the user's background and occupation.")
-    channel_info: Optional[ChannelInfo] = Field(None, description="The selected channel of the user's question. If provided, try to stick to the selected channel when answering the user's question.")
+    channel_info: Optional[ChannelInfo] = Field(None, description="The selected channel of the user's question. If provided, stick to the selected channel when answering the user's question.")
 
 def create_customer_service(db_path):
     collections = get_manifest()['collections']
@@ -130,7 +130,7 @@ def create_customer_service(db_path):
         query: str = Field(description="Query used to retrieve related documents.")
         request: str = Field(description="User's request in details")
         user_info: str = Field(description="Brief user info summary for personalized response, including name, background etc.")
-        channel_id: str = Field(description=f"User selected database channel, or if not specified select one automatically. The available channels are:\n{channels_info}")
+        channel_id: str = Field(description=f"It MUST be the same as the user provided channel_id, and if not specified select one automatically. The available channels are:\n{channels_info}")
 
     class ModelZooInfoScript(BaseModel):
         """Create a Python Script to get information about details of models, applications and datasets etc."""
@@ -145,9 +145,17 @@ def create_customer_service(db_path):
         if question_with_history.channel_info:
             inputs.insert(0, question_with_history.channel_info)
         if not question_with_history.channel_info or question_with_history.channel_info.id == "bioimage.io":
-            req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, ModelZooInfoScript])
+            try:
+                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, ModelZooInfoScript])
+            except Exception as e:
+                # try again
+                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, ModelZooInfoScript])
         else:
-            req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput])
+            try:
+                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput])
+            except Exception as e:
+                # try again
+                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput])
         if isinstance(req, DirectResponse):
             return req.response
         elif isinstance(req, DocumentRetrievalInput):
@@ -220,7 +228,10 @@ async def register_chat_service(server):
     channel_id_by_name = {collection['name']: collection['id'] for collection in collections}
     description_by_id = {collection['id']: collection['description'] for collection in collections}
     customer_service = create_customer_service(knowledge_base_path)
-
+    
+    event_bus = customer_service.get_event_bus()
+    event_bus.register_default_events()
+        
     def load_authorized_emails():
         if login_required:
             authorized_users_path = os.environ.get("BIOIMAGEIO_AUTHORIZED_USERS_PATH")
@@ -266,8 +277,7 @@ async def register_chat_service(server):
             if message["type"] in ["function_call", "text"]:
                 await status_callback(message)
 
-        event_bus = customer_service.get_event_bus()
-        event_bus.register_default_events()
+        
         event_bus.on("stream", stream_callback)
         
         # Get the channel id by its name
