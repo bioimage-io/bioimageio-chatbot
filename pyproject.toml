@@ -3,7 +3,7 @@ requires = ["setuptools", "wheel"]
 
 [project]
 name = "bioimageio-chatbot"
-version = "0.1.29"
+version = "0.1.30"
 readme = "README.md"
 description = "Your Personal Assistant in BioImage Analysis."
 dependencies = [
@@ -14,6 +14,7 @@ dependencies = [
   "hypha",
   "tqdm",
   "aiofiles",
+  "langchain>=0.0.335",
 ]
 
 [tool.setuptools]

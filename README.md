@@ -60,6 +60,7 @@ pip install bioimageio-chatbot
 ```bash
 export OPENAI_API_KEY=sk-xxxxxxxx # Required
 export BIOIMAGEIO_KNOWLEDGE_BASE_PATH=/path/to/bioimageio-knowledge-base  # Optional, default to ./bioimageio-knowledge-base 
+export BIOIMAGEIO_CHAT_LOGS_PATH=./chat-logs # Optional, default to ./chat-logs
 ```
 
 ## Command-line Interface
@@ -103,13 +104,14 @@ python -m bioimageio_chatbot start-server [--host HOST] [--port PORT] [--public-
 - `--host`: The host address to run the server on (default: `0.0.0.0`)
 - `--port`: The port number to run the server on (default: `9000`)
 - `--public-base-url`: The public base URL of the server (default: `http://127.0.0.1:9000`)
-- `--login-required`: Whether to require users to log in before accessing the chatbot (default: false)
+- `--login-required`: Whether to require users to log in before accessing the chatbot (default to not require login)
 
 **Example:**
 
 ```bash
 export OPENAI_API_KEY=sk-xxxxxxxx
 export BIOIMAGEIO_KNOWLEDGE_BASE_PATH=./bioimageio-knowledge-base
+export BIOIMAGEIO_CHAT_LOGS_PATH=./chat-logs
 python -m bioimageio_chatbot start-server --host=0.0.0.0 --port=9000
 ```
 This will create a local server, and the BioImage.IO Chatbot is available at: http://127.0.0.1:9000/public/apps/bioimageio-chatbot-client/index
@@ -136,13 +138,14 @@ python -m bioimageio_chatbot connect-server [--server-url SERVER_URL]
 **Options:**
 
 - `--server-url`: The URL of the external BioEngine server to connect to (default: `https://ai.imjoy.io`)
-- `--login-required`: Whether to require users to log in before accessing the chatbot (default: false)
+- `--login-required`: Whether to require users to log in before accessing the chatbot (default to not require login)
 
 **Example:**
 
 ```bash
 export OPENAI_API_KEY=sk-xxxxxxxx
 export BIOIMAGEIO_KNOWLEDGE_BASE_PATH=./bioimageio-knowledge-base
+export BIOIMAGEIO_CHAT_LOGS_PATH=./chat-logs
 python -m bioimageio_chatbot connect-server --server-url=https://ai.imjoy.io
 ```
 

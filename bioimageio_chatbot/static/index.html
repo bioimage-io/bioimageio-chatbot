@@ -400,6 +400,14 @@
             option.textContent = channel;
             channelSelect.appendChild(option);
           });
+
+          // add 'auto' channel
+          const option = document.createElement('option');
+          option.value = 'auto';
+          option.textContent = 'auto';
+          channelSelect.appendChild(option);
+          channelSelect.value = 'auto';
+
           showReadyStatus();
           appendRobotMessage(shortIntroMessage, "message-0"); // Append robot message to the message container
           return svc;
@@ -480,14 +488,7 @@
         this.style.height = (this.scrollHeight) + 'px';
       }
       //svc = await initializeService();
-      
-      // add 'auto' channel
-      const option = document.createElement('option');
-      option.value = 'auto';
-      option.textContent = 'auto';
-      channelSelect.appendChild(option);
-      channelSelect.value = 'auto';
-  
+        
       const chat_history = [];
 
       let sessionId = generateSessionID();
