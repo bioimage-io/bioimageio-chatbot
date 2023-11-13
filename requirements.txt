@@ -5,3 +5,4 @@ pypdf
 hypha
 tqdm
 aiofiles
+langchain==0.0.335
