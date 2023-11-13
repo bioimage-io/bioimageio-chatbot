@@ -4,47 +4,27 @@ Thank you for participating in the beta testing phase of the BioImage.IO Chatbot
 
 ## Prerequisites
 
-1. **Email Account:** Ensure that you login to the BioImage.IO Chatbot with the email account that you provided on the google form.
+1. Please Read the [Disclaimer for BioImage.IO Chatbot](./DISCLAIMER.md).
+2. **Login with Your Email Account:** First, please create an account [here](https://ai.imjoy.io/public/apps/hypha-login/), please make sure you used the same email address that you provided in the [Sign up google form](https://forms.gle/fEnj68Rxut1VUX1Y8). Then login to the chatbot via the linked provided in the email we sent you. If you have any issues with the login, please contact us.
 
 ## Beta Testing Steps
 
 1. **Access the Chatbot:**
-   - Visit the BioImage.IO Chatbot on GitHub: [BioImage.IO Chatbot Repository](https://github.com/bioimage-io/bioimageio-chatbot)
    - Explore the example usage guide: [Usage Example Guide](https://github.com/bioimage-io/bioimageio-chatbot/blob/main/docs/Usage_example.md)
-   - Access the BioImage.IO Chatbot through the link provided by email.
+   - Access the BioImage.IO Chatbot through the link we provided via email.
 
 2. **Testing Scenarios:**
+   - Try to edit your profile which mostly suitable for you.
    - Test the chatbot with various scenarios relevant to your field (biologist, developer, etc.).
    - Try different knowledge base channels and observe the responses.
 
-3. **Report Issues:**
-   - If you encounter any bugs, issues, or unexpected behavior, please report them on the GitHub repository.
-   - Use the [Issues](https://github.com/bioimage-io/bioimageio-chatbot/issues) section to create a new issue.
+3. **Provide Feedback:**
+   - For a specific chatbot response, you can also like/dislike a response from the BioImage.IO Chatbot by clicking the thumbs up/down button under each message. Then, a pop up will appear for you to provide feedback on the response.
+   - For general feedback, please use the "Feedback" button on the bottom of the chatbot interface. Feel free to comment on the current chat session, or provide general feedbacks or ideas. E.g. we would be happy to hear about your experience and ideas on how to improve the chatbot.
+   - If you encounter any bugs, issues, or unexpected behavior, please use the [Github issues](https://github.com/bioimage-io/bioimageio-chatbot/issues) section to create a new issue.
 
-4. **Provide Feedback:**
-   - It is important to us that you provide feedback through the [Google Form](https://forms.gle/3mL5mV6amHT8PPZC6). This will help us improve the chatbot.
-   - You can also like/dislike a response from the BioImage.IO Chatbot by clicking the thumbs up/down button. Then, a pop up will appear for you to provide feedback on the response.
-
-5. **Community Contributions:**
+4. **Community Contributions:**
    - If you have data sources or documentation relevant to the chatbot, feel free to propose community contributions.
-
-## Bug reporting
-
-When reporting an issue, consider using the following template:
-
-```markdown
-### Issue/Feedback Title:
-[Concise and descriptive title]
-
-### Description:
-- **Steps to Reproduce (if applicable):**
-  1. [Step 1]
-  2. [Step 2]
-  3. [Step 3]
-- **Expected Behavior:**
-- **Actual Behavior:**
-- **Additional Comments:**
-```
 
 ## Conclusion
 
