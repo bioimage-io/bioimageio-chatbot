@@ -193,7 +193,7 @@ async def save_chat_history(chat_log_full_path, chat_his_dict):
     
 async def connect_server(server_url):
     """Connect to the server and register the chat service."""
-    login_required = os.environ.get("BIOIMAGEIO_LOGIN_REQUIRED", "false")
+    login_required = os.environ.get("BIOIMAGEIO_LOGIN_REQUIRED") == "true"
     if login_required:
         token = await login({"server_url": server_url})
     else:
@@ -204,7 +204,7 @@ async def connect_server(server_url):
 async def register_chat_service(server):
     """Hypha startup function."""
     collections = get_manifest()['collections']
-    login_required = os.environ.get("BIOIMAGEIO_LOGIN_REQUIRED", "false")
+    login_required = os.environ.get("BIOIMAGEIO_LOGIN_REQUIRED") == "true"
     knowledge_base_path = os.environ.get("BIOIMAGEIO_KNOWLEDGE_BASE_PATH", "./bioimageio-knowledge-base")
     assert knowledge_base_path is not None, "Please set the BIOIMAGEIO_KNOWLEDGE_BASE_PATH environment variable to the path of the knowledge base."
     if not os.path.exists(knowledge_base_path):
@@ -220,6 +220,8 @@ async def register_chat_service(server):
     channel_id_by_name = {collection['name']: collection['id'] for collection in collections}
     description_by_id = {collection['id']: collection['description'] for collection in collections}
     customer_service = create_customer_service(knowledge_base_path)
+    event_bus = customer_service.get_event_bus()
+    event_bus.register_default_events()
 
     def load_authorized_emails():
         if login_required:
@@ -261,13 +263,13 @@ async def register_chat_service(server):
     async def chat(text, chat_history, user_profile=None, channel=None, status_callback=None, session_id=None, context=None):
         if login_required and context and context.get("user"):
             assert check_permission(context.get("user")), "You don't have permission to use the chatbot, please sign up and wait for approval"
+        session_id = session_id or secrets.token_hex(8)
         # Listen to the `stream` event
         async def stream_callback(message):
             if message["type"] in ["function_call", "text"]:
-                await status_callback(message)
+                if message["session_id"] == session_id:
+                    await status_callback(message)
 
-        event_bus = customer_service.get_event_bus()
-        event_bus.register_default_events()
         event_bus.on("stream", stream_callback)
         
         # Get the channel id by its name
@@ -285,7 +287,7 @@ async def register_chat_service(server):
         # user_profile = {"name": "lulu", "occupation": "data scientist", "background": "machine learning and AI"}
         m = QuestionWithHistory(question=text, chat_history=chat_history, user_profile=UserProfile.parse_obj(user_profile),channel_info=channel_info)
         try:
-            response = await customer_service.handle(Message(content=m.json(), data=m , role="User"))
+            response = await customer_service.handle(Message(content=m.json(), data=m , role="User"), session_id=session_id)
             # get the content of the last response
             response = response[-1].content
             print(f"\nUser: {text}\nChatbot: {response}")
@@ -332,7 +334,7 @@ async def register_chat_service(server):
     index_html = index_html.replace("https://ai.imjoy.io", server.config['public_base_url'] or f"http://127.0.0.1:{server.config['port']}")
     index_html = index_html.replace('"bioimageio-chatbot"', f'"{hypha_service_info["id"]}"')
     index_html = index_html.replace('v0.1.0', f'v{version}')
-    index_html = index_html.replace("LOGIN_REQUIRED", login_required)
+    index_html = index_html.replace("LOGIN_REQUIRED", "true" if login_required else "false")
     async def index(event, context=None):
         return {
             "status": 200,
