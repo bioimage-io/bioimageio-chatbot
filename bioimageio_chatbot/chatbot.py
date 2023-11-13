@@ -67,7 +67,7 @@ class ModelZooInfoScriptResults(BaseModel):
     stdout: str = Field(description="The output from stdout.")
     stderr: str = Field(description="The output from stderr.")
     request: str = Field(description="User's request in details")
-    user_info: str = Field(description="User info for personalize response.")
+    user_info: Optional[str] = Field("", description="User info for personalize response.")
 
 class DirectResponse(BaseModel):
     """Direct response to a user's question."""
@@ -83,7 +83,7 @@ class DocumentSearchInput(BaseModel):
     """Results of document retrieval from documentation."""
     user_question: str = Field(description="The user's original question.")
     relevant_context: List[DocWithScore] = Field(description="Context chunks from the documentation")
-    user_info: str = Field(description="User info for personalize response.")
+    user_info: Optional[str] = Field("", description="User info for personalize response.")
     base_url: Optional[str] = Field(None, description="The base url of the documentation, used for resolve relative URL in the document and produce markdown links.")
     format: Optional[str] = Field(None, description="The format of the document.")
 
@@ -129,14 +129,14 @@ def create_customer_service(db_path):
         """Input for finding relevant documents from databases."""
         query: str = Field(description="Query used to retrieve related documents.")
         request: str = Field(description="User's request in details")
-        user_info: str = Field(description="Brief user info summary for personalized response, including name, background etc.")
+        user_info: Optional[str] = Field("", description="Brief user info summary for personalized response, including name, background etc.")
         channel_id: str = Field(description=f"It MUST be the same as the user provided channel_id, and if not specified select one automatically. The available channels are:\n{channels_info}")
 
     class ModelZooInfoScript(BaseModel):
         """Create a Python Script to get information about details of models, applications and datasets etc."""
         script: str = Field(description="The script to be executed, the script use a predefined local variable `resources` which contains a list of dictionaries with all the resources in the model zoo (including models, applications, datasets etc.), the response to the query should be printed to the stdout. Details about the `resources`:\n" + resource_item_stats)
         request: str = Field(description="User's request in details")
-        user_info: str = Field(description="Brief user info summary for personalized response, including name, background etc.")
+        user_info: Optional[str] = Field("", description="Brief user info summary for personalized response, including name, background etc.")
 
     async def respond_to_user(question_with_history: QuestionWithHistory = None, role: Role = None) -> str:
         """Answer the user's question directly or retrieve relevant documents from the documentation, or create a Python Script to get information about details of models."""
