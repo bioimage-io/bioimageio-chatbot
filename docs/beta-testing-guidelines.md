@@ -10,7 +10,7 @@ Thank you for participating in the beta testing phase of the BioImage.IO Chatbot
 ## Beta Testing Steps
 
 1. **Access the Chatbot:**
-   - Explore the example usage guide: [Usage Example Guide](https://github.com/bioimage-io/bioimageio-chatbot/blob/main/docs/Usage_example.md)
+   - Explore the example usage guide: [Usage Example Guide](https://github.com/bioimage-io/bioimageio-chatbot/blob/main/docs/usage_example.md)
    - Access the BioImage.IO Chatbot through the link we provided via email.
 
 2. **Testing Scenarios:**
