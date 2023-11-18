@@ -275,9 +275,9 @@ async def register_chat_service(server):
         session_id = session_id or secrets.token_hex(8)
         # Listen to the `stream` event
         async def stream_callback(message):
-            if message["type"] in ["function_call", "text"]:
-                if message["session_id"] == session_id:
-                    await status_callback(message)
+            if message.type in ["function_call", "text"]:
+                if message.session.id == session_id:
+                    await status_callback(message.dict())
 
         event_bus.on("stream", stream_callback)
         
@@ -296,7 +296,7 @@ async def register_chat_service(server):
         # user_profile = {"name": "lulu", "occupation": "data scientist", "background": "machine learning and AI"}
         m = QuestionWithHistory(question=text, chat_history=chat_history, user_profile=UserProfile.parse_obj(user_profile),channel_info=channel_info)
         try:
-            response = await customer_service.handle(Message(content=m.json(), data=m , role="User"), session_id=session_id)
+            response = await customer_service.handle(Message(content=m.json(), data=m , role="User", session_id=session_id))
             # get the content of the last response
             response = response[-1].content
             print(f"\nUser: {text}\nChatbot: {response}")
