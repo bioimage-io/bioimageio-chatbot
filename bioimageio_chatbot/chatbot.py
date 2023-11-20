@@ -127,12 +127,18 @@ def create_customer_service(db_path):
     
     channels_info = "\n".join(f"""- `{collection['id']}`: {collection['description']}""" for collection in collections)
     resource_item_stats = f"""Each item contains the following fields: {list(resource_items[0].keys())}\nThe available resource types are: {types}\nSome example tags: {tags}\nHere is an example: {resource_items[0]}"""
+    class ChannelQuery(BaseModel):
+        """A query to a specific channel."""
+        query: str = Field(description="Query to be used for retrieving relevant documents at specific channel.")
+        channel_id: str = Field(description=f"Channel id used for retrieving. It MUST be the same as the user provided channel_id, and if not specified select one based on the query automatically. The available channels are:\n{channels_info}")
+    
+    
     class DocumentRetrievalInput(BaseModel):
         """Input for finding relevant documents from databases."""
-        query: str = Field(description="Query to be used for retrieving relevant documents at different channel.")
+        query_channel: List[ChannelQuery] = Field(description="A list of queries to be used for retrieving relevant documents in one or more channels.")
         request: str = Field(description="User's request in details")
         user_info: str = Field(description="Brief user info summary for personalized response, including name, background etc.")
-        channel_id: List[str] = Field(description=f"List of channels used for retrieving. It MUST be the same as the user provided channel_id, and if not specified select one or several based on the query automatically. The available channels are:\n{channels_info}")
+        # channel_id: List[str] = Field(description=f"List of channels used for retrieving. It MUST be the same as the user provided channel_id, and if not specified select one or several based on the query automatically. The available channels are:\n{channels_info}")
 
     class ModelZooInfoScript(BaseModel):
         """Create a Python Script to get information about details of models, applications and datasets etc."""
@@ -161,21 +167,18 @@ def create_customer_service(db_path):
         if isinstance(req, DirectResponse):
             return req.response
         elif isinstance(req, DocumentRetrievalInput):
-            if len(req.channel_id) == 1:
+            if len(req.query_channel) == 1:
                 retrieval_k = 3
             else:
-                retrieval_k = 1
+                retrieval_k = 2
             docs_with_score = []
             # enumerate req.channel_id
-            for i, channel_id in enumerate(req.channel_id):
-                query = req.query
-                docs_store = docs_store_dict[channel_id]
-                collection_info = collection_info_dict[channel_id]
-                print(f"Retrieving documents from database {channel_id} with query: {query}")
-                results_with_scores = await docs_store.asimilarity_search_with_relevance_scores(query, k=retrieval_k)
-                docs_with_score.append([DocWithScore(doc=doc.page_content, score=score, metadata=doc.metadata, base_url=collection_info.get('base_url'), format=collection_info.get('format')) for doc, score in results_with_scores])
-            # flat the list
-            docs_with_score = [item for sublist in docs_with_score for item in sublist]
+            for query_channel in req.query_channel:
+                docs_store = docs_store_dict[query_channel.channel_id]
+                collection_info = collection_info_dict[query_channel.channel_id]
+                print(f"Retrieving documents from database {query_channel.channel_id} with query: {query_channel.query}")
+                results_with_scores = await docs_store.asimilarity_search_with_relevance_scores(query_channel.query, k=retrieval_k)
+                docs_with_score.extend([DocWithScore(doc=doc.page_content, score=score, metadata=doc.metadata, base_url=collection_info.get('base_url'), format=collection_info.get('format')) for doc, score in results_with_scores])
             print(f"Retrieved documents:\n{docs_with_score[0].doc[:20] + '...'} (score: {docs_with_score[0].score})\n{docs_with_score[1].doc[:20] + '...'} (score: {docs_with_score[1].score})")
             search_input = DocumentSearchInput(user_question=req.request, relevant_context=docs_with_score, user_info=req.user_info)
             response = await role.aask(search_input, FinalResponse)
