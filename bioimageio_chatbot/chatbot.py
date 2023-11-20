@@ -67,7 +67,7 @@ class ModelZooInfoScriptResults(BaseModel):
     stdout: str = Field(description="The output from stdout.")
     stderr: str = Field(description="The output from stderr.")
     request: str = Field(description="User's request in details")
-    user_info: str = Field(description="User info for personalize response.")
+    user_info: Optional[str] = Field("", description="User info for personalize response.")
 
 class DirectResponse(BaseModel):
     """Direct response to a user's question."""
@@ -85,7 +85,7 @@ class DocumentSearchInput(BaseModel):
     """Results of document retrieval from documentation."""
     user_question: str = Field(description="The user's original question.")
     relevant_context: List[DocWithScore] = Field(description="Context chunks from the documentation")
-    user_info: str = Field(description="User info for personalize response.")
+    user_info: Optional[str] = Field("", description="User info for personalize response.")
     # base_url: Optional[str] = Field(None, description="The base url of the documentation, used for resolve relative URL in the document and produce markdown links.")
     # format: Optional[str] = Field(None, description="The format of the document.")
 
@@ -131,23 +131,23 @@ def create_customer_service(db_path):
         """A query to a specific channel."""
         query: str = Field(description="Query to be used for retrieving relevant documents at specific channel.")
         channel_id: str = Field(description=f"Channel id used for retrieving. It MUST be the same as the user provided channel_id, and if not specified select one based on the query automatically. The available channels are:\n{channels_info}")
-    
+        k: int = Field(description="The top-k number of documents to be retrieved from the channel, higher k number means more documents to retriev. Default 2, maximum 20.")
     
     class DocumentRetrievalInput(BaseModel):
         """Input for finding relevant documents from databases."""
         query_channel: List[ChannelQuery] = Field(description="A list of queries to be used for retrieving relevant documents in one or more channels.")
         request: str = Field(description="User's request in details")
-        user_info: str = Field(description="Brief user info summary for personalized response, including name, background etc.")
+        user_info: Optional[str] = Field("",description="Brief user info summary for personalized response, including name, background etc.")
         # channel_id: List[str] = Field(description=f"List of channels used for retrieving. It MUST be the same as the user provided channel_id, and if not specified select one or several based on the query automatically. The available channels are:\n{channels_info}")
 
     class ModelZooInfoScript(BaseModel):
         """Create a Python Script to get information about details of models, applications and datasets etc."""
         script: str = Field(description="The script to be executed, the script use a predefined local variable `resources` which contains a list of dictionaries with all the resources in the model zoo (including models, applications, datasets etc.), the response to the query should be printed to the stdout. Details about the `resources`:\n" + resource_item_stats)
         request: str = Field(description="User's request in details")
-        user_info: str = Field(description="Brief user info summary for personalized response, including name, background etc.")
+        user_info: Optional[str] = Field("", description="Brief user info summary for personalized response, including name, background etc.")
 
     async def respond_to_user(question_with_history: QuestionWithHistory = None, role: Role = None) -> str:
-        """Answer the user's question directly or retrieve relevant documents from the documentation, or create a Python Script to get information about details of models."""
+        """Answer the user's question directly or retrieve relevant documents from the documentation, or create a Python Script to get information about details of models. Always clarify the user's question if it's ambiguous."""
         inputs = [question_with_history.user_profile] + list(question_with_history.chat_history) + [question_with_history.question]
         # The channel info will be inserted at the beginning of the inputs
         if question_with_history.channel_info:
@@ -167,19 +167,20 @@ def create_customer_service(db_path):
         if isinstance(req, DirectResponse):
             return req.response
         elif isinstance(req, DocumentRetrievalInput):
-            if len(req.query_channel) == 1:
-                retrieval_k = 3
-            else:
-                retrieval_k = 2
+            # if len(req.query_channel) == 1:
+            #     retrieval_k = 3
+            # else:
+            #     retrieval_k = 2
             docs_with_score = []
             # enumerate req.channel_id
             for query_channel in req.query_channel:
                 docs_store = docs_store_dict[query_channel.channel_id]
                 collection_info = collection_info_dict[query_channel.channel_id]
-                print(f"Retrieving documents from database {query_channel.channel_id} with query: {query_channel.query}")
-                results_with_scores = await docs_store.asimilarity_search_with_relevance_scores(query_channel.query, k=retrieval_k)
-                docs_with_score.extend([DocWithScore(doc=doc.page_content, score=score, metadata=doc.metadata, base_url=collection_info.get('base_url'), format=collection_info.get('format')) for doc, score in results_with_scores])
-            print(f"Retrieved documents:\n{docs_with_score[0].doc[:20] + '...'} (score: {docs_with_score[0].score})\n{docs_with_score[1].doc[:20] + '...'} (score: {docs_with_score[1].score})")
+                print(f"Retrieving documents from database {query_channel.channel_id} with query: {query_channel.query} and k={query_channel.k}")
+                results_with_scores = await docs_store.asimilarity_search_with_relevance_scores(query_channel.query, k=query_channel.k)
+                docs_with_score.extend([DocWithScore(doc=doc.page_content, score=round(score,2), metadata=doc.metadata, base_url=collection_info.get('base_url'), format=collection_info.get('format')) for doc, score in results_with_scores])
+            for i in range(len(docs_with_score)):
+                print(f"Retrieved document:\n{docs_with_score[i].doc[:20] + '...'} (score: {docs_with_score[i].score})")
             search_input = DocumentSearchInput(user_question=req.request, relevant_context=docs_with_score, user_info=req.user_info)
             response = await role.aask(search_input, FinalResponse)
             return response.response
