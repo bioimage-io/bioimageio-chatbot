@@ -74,18 +74,20 @@ class DirectResponse(BaseModel):
     response: str = Field(description="The response to the user's question.")
 
 class DocWithScore(BaseModel):
-    """A document with relevance score."""
+    """A document with relevance score and relevant information."""
     doc: str = Field(description="The document retrieved.")
     score: float = Field(description="The relevance score of the document.")
     metadata: Dict[str, Any] = Field(description="The metadata of the document.")
-
+    base_url: Optional[str] = Field(None, description="The base url of the documentation, used for resolve relative URL in the document and produce markdown links.")
+    format: Optional[str] = Field(None, description="The format of the document.")
+    
 class DocumentSearchInput(BaseModel):
     """Results of document retrieval from documentation."""
     user_question: str = Field(description="The user's original question.")
     relevant_context: List[DocWithScore] = Field(description="Context chunks from the documentation")
     user_info: str = Field(description="User info for personalize response.")
-    base_url: Optional[str] = Field(None, description="The base url of the documentation, used for resolve relative URL in the document and produce markdown links.")
-    format: Optional[str] = Field(None, description="The format of the document.")
+    # base_url: Optional[str] = Field(None, description="The base url of the documentation, used for resolve relative URL in the document and produce markdown links.")
+    # format: Optional[str] = Field(None, description="The format of the document.")
 
 class FinalResponse(BaseModel):
     """The final response to the user's question. If the retrieved context has low relevance score, or the question isn't relevant to the retrieved context, return 'I don't know'."""
@@ -127,10 +129,10 @@ def create_customer_service(db_path):
     resource_item_stats = f"""Each item contains the following fields: {list(resource_items[0].keys())}\nThe available resource types are: {types}\nSome example tags: {tags}\nHere is an example: {resource_items[0]}"""
     class DocumentRetrievalInput(BaseModel):
         """Input for finding relevant documents from databases."""
-        query: str = Field(description="Query used to retrieve related documents.")
+        query: str = Field(description="Query to be used for retrieving relevant documents at different channel.")
         request: str = Field(description="User's request in details")
         user_info: str = Field(description="Brief user info summary for personalized response, including name, background etc.")
-        channel_id: str = Field(description=f"It MUST be the same as the user provided channel_id, and if not specified select one automatically. The available channels are:\n{channels_info}")
+        channel_id: List[str] = Field(description=f"List of channels used for retrieving. It MUST be the same as the user provided channel_id, and if not specified select one or several based on the query automatically. The available channels are:\n{channels_info}")
 
     class ModelZooInfoScript(BaseModel):
         """Create a Python Script to get information about details of models, applications and datasets etc."""
@@ -159,13 +161,23 @@ def create_customer_service(db_path):
         if isinstance(req, DirectResponse):
             return req.response
         elif isinstance(req, DocumentRetrievalInput):
-            docs_store = docs_store_dict[req.channel_id]
-            collection_info = collection_info_dict[req.channel_id]
-            print(f"Retrieving documents from database {req.channel_id} with query: {req.query}")
-            results_with_scores = await docs_store.asimilarity_search_with_relevance_scores(req.query, k=3)
-            docs_with_score = [DocWithScore(doc=doc.page_content, score=score, metadata=doc.metadata) for doc, score in results_with_scores]
-            print(f"Retrieved documents:\n{docs_with_score[0].doc[:20] + '...'} (score: {docs_with_score[0].score})\n{docs_with_score[1].doc[:20] + '...'} (score: {docs_with_score[1].score})\n{docs_with_score[2].doc[:20] + '...'} (score: {docs_with_score[2].score})")
-            search_input = DocumentSearchInput(user_question=req.request, relevant_context=docs_with_score, user_info=req.user_info, base_url=collection_info.get('base_url'), format=collection_info.get('format'))
+            if len(req.channel_id) == 1:
+                retrieval_k = 3
+            else:
+                retrieval_k = 1
+            docs_with_score = []
+            # enumerate req.channel_id
+            for i, channel_id in enumerate(req.channel_id):
+                query = req.query
+                docs_store = docs_store_dict[channel_id]
+                collection_info = collection_info_dict[channel_id]
+                print(f"Retrieving documents from database {channel_id} with query: {query}")
+                results_with_scores = await docs_store.asimilarity_search_with_relevance_scores(query, k=retrieval_k)
+                docs_with_score.append([DocWithScore(doc=doc.page_content, score=score, metadata=doc.metadata, base_url=collection_info.get('base_url'), format=collection_info.get('format')) for doc, score in results_with_scores])
+            # flat the list
+            docs_with_score = [item for sublist in docs_with_score for item in sublist]
+            print(f"Retrieved documents:\n{docs_with_score[0].doc[:20] + '...'} (score: {docs_with_score[0].score})\n{docs_with_score[1].doc[:20] + '...'} (score: {docs_with_score[1].score})")
+            search_input = DocumentSearchInput(user_question=req.request, relevant_context=docs_with_score, user_info=req.user_info)
             response = await role.aask(search_input, FinalResponse)
             return response.response
         elif isinstance(req, ModelZooInfoScript):
