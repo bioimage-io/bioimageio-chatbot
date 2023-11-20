@@ -133,7 +133,7 @@ def create_customer_service(db_path):
     
     class DocumentRetrievalInput(BaseModel):
         """Input for finding relevant documents from databases."""
-        query_channel: List[ChannelQuery] = Field(description="A list of queries to be used for retrieving relevant documents in one or more channels.")
+        queries: List[ChannelQuery] = Field(description="A list of queries to be used for retrieving relevant documents in one or more channels.")
         request: str = Field(description="User's request in details")
         user_info: Optional[str] = Field("",description="Brief user info summary for personalized response, including name, background etc.")
 
@@ -166,7 +166,7 @@ def create_customer_service(db_path):
         elif isinstance(req, DocumentRetrievalInput):
             docs_with_score = []
             # enumerate req.channel_id
-            for query_channel in req.query_channel:
+            for query_channel in req.queries:
                 docs_store = docs_store_dict[query_channel.channel_id]
                 collection_info = collection_info_dict[query_channel.channel_id]
                 print(f"Retrieving documents from database {query_channel.channel_id} with query: {query_channel.query} and k={query_channel.k}")
