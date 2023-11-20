@@ -86,9 +86,7 @@ class DocumentSearchInput(BaseModel):
     user_question: str = Field(description="The user's original question.")
     relevant_context: List[DocWithScore] = Field(description="Context chunks from the documentation")
     user_info: Optional[str] = Field("", description="User info for personalize response.")
-    # base_url: Optional[str] = Field(None, description="The base url of the documentation, used for resolve relative URL in the document and produce markdown links.")
-    # format: Optional[str] = Field(None, description="The format of the document.")
-
+    
 class FinalResponse(BaseModel):
     """The final response to the user's question. If the retrieved context has low relevance score, or the question isn't relevant to the retrieved context, return 'I don't know'."""
     response: str = Field(description="The answer to the user's question in markdown format.")
@@ -138,7 +136,6 @@ def create_customer_service(db_path):
         query_channel: List[ChannelQuery] = Field(description="A list of queries to be used for retrieving relevant documents in one or more channels.")
         request: str = Field(description="User's request in details")
         user_info: Optional[str] = Field("",description="Brief user info summary for personalized response, including name, background etc.")
-        # channel_id: List[str] = Field(description=f"List of channels used for retrieving. It MUST be the same as the user provided channel_id, and if not specified select one or several based on the query automatically. The available channels are:\n{channels_info}")
 
     class ModelZooInfoScript(BaseModel):
         """Create a Python Script to get information about details of models, applications and datasets etc."""
@@ -167,10 +164,6 @@ def create_customer_service(db_path):
         if isinstance(req, DirectResponse):
             return req.response
         elif isinstance(req, DocumentRetrievalInput):
-            # if len(req.query_channel) == 1:
-            #     retrieval_k = 3
-            # else:
-            #     retrieval_k = 2
             docs_with_score = []
             # enumerate req.channel_id
             for query_channel in req.query_channel:
