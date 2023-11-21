@@ -128,12 +128,12 @@ def create_customer_service(db_path):
     class ChannelQuery(BaseModel):
         """A query to a specific channel."""
         query: str = Field(description="Query to be used for retrieving relevant documents at specific channel.")
-        channel_id: str = Field(description=f"Channel id used for retrieving. It MUST be the same as the user provided channel_id, and if not specified select one based on the query automatically. The available channels are:\n{channels_info}")
+        channel_id: str = Field(description=f"Channel used for retrieving. The available channels are:\n{channels_info}")
         k: int = Field(description="The top-k number of documents to be retrieved from the channel, higher k number means more documents to retriev. Default 2, maximum 20.")
     
     class DocumentRetrievalInput(BaseModel):
         """Input for finding relevant documents from databases."""
-        queries: List[ChannelQuery] = Field(description="A list of queries to be used for retrieving relevant documents in one or more channels.")
+        queries: List[ChannelQuery] = Field(description="A list of queries to be used for retrieving relevant documents in one or more channels. The channel_id for each query MUST be the same as the user provided channel_id, and if not specified it should be select based on the query automatically. The available channels are:\n{channels_info}")
         request: str = Field(description="User's request in details")
         user_info: Optional[str] = Field("",description="Brief user info summary for personalized response, including name, background etc.")
 
@@ -144,7 +144,7 @@ def create_customer_service(db_path):
         user_info: Optional[str] = Field("", description="Brief user info summary for personalized response, including name, background etc.")
 
     async def respond_to_user(question_with_history: QuestionWithHistory = None, role: Role = None) -> str:
-        """Answer the user's question directly or retrieve relevant documents from the documentation, or create a Python Script to get information about details of models. Always clarify the user's question if it's ambiguous."""
+        """Answer the user's question directly or retrieve relevant documents from the documentation, or create a Python Script to get information about details of models. ALWAYS clarify the user's query if it's ambiguous."""
         inputs = [question_with_history.user_profile] + list(question_with_history.chat_history) + [question_with_history.question]
         # The channel info will be inserted at the beginning of the inputs
         if question_with_history.channel_info:
