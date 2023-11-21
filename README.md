@@ -197,7 +197,7 @@ python -m bioimageio_chatbot create-knowledge-base --output-dir=./bioimageio-kno
 To run the BioImage.IO Chatbot using a Docker container, follow these steps. First, build the Docker image by running the following command in your terminal:
 
 ```bash
-docker build -t bioimageio-chatbot:lastest .
+docker build -t bioimageio-chatbot:latest .
 ```
 
 If you prefer to use a pre-built Docker image from Docker Hub, you can pull the image using the following command:
@@ -219,7 +219,8 @@ Replace the placeholders in the command with the following values:
 
 - `sk-xxxxxxxxxxxxx`: Your OpenAI API key.
 - `/path/to/local/knowledge-base`: The local path to your knowledge base folder.
-- `bioimageio-chatbot:v0.1.18`: The name and version tag of your Docker image.
+
+Optionally, for improved reproducibility, you can change `latest` to a version tag such as `v0.1.18`.
 
 #### Step 3: Access the Chatbot
 
