@@ -129,7 +129,7 @@ def create_customer_service(db_path):
         """A query to a specific channel."""
         query: str = Field(description="Query to be used for retrieving relevant documents at specific channel.")
         channel_id: str = Field(description=f"Channel id used for retrieving. It MUST be the same as the user provided channel_id, and if not specified select one based on the query automatically. The available channels are:\n{channels_info}")
-        k: int = Field(description="The top-k number of documents to be retrieved from the channel, higher k number means more documents to retriev. Default 2, maximum 20.")
+        k: int = Field(description="The top-k number of documents to be retrieved from the channel, higher k number means more documents to retrieve. Default 2, maximum 20.")
     
     class DocumentRetrievalInput(BaseModel):
         """Input for finding relevant documents from databases."""
