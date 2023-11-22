@@ -61,7 +61,6 @@ def execute_code(script, context=None):
         sys.stdout = original_stdout
         sys.stderr = original_stderr
 
-
 class ModelZooInfoScriptResults(BaseModel):
     """Results of executing the model zoo info query script."""
     stdout: str = Field(description="The output from stdout.")
@@ -131,12 +130,20 @@ def create_customer_service(db_path):
         channel_id: str = Field(description=f"Channel used for retrieving. The available channels are:\n{channels_info}")
         k: int = Field(description="The top-k number of documents to be retrieved from the channel, higher k number means more documents to retriev. Default 2, maximum 20.")
     
+    # class DocumentRetrievalInput(BaseModel):
+    #     """Retrieve context information from one or more data channels, the number of queries and corresponding channels should be decided based on the user's request. For example, you can create a query for each channel, or different queries for different channels."""
+    #     queries: List[ChannelQuery] = Field(description="A list of queries to be used for retrieving relevant documents in one or more channels. The channel_id for each query MUST be the same as the user provided channel_id, and if not specified it should be select based on the query automatically. The available channels are:\n{channels_info}")
+    #     request: str = Field(description="User's request in details")
+    #     user_info: Optional[str] = Field("",description="Brief user info summary for personalized response, including name, background etc.")
     class DocumentRetrievalInput(BaseModel):
-        """Input for finding relevant documents from databases."""
+        """
+        Request information retrieval from multiple data channels based on user queries.
+
+        """
         queries: List[ChannelQuery] = Field(description="A list of queries to be used for retrieving relevant documents in one or more channels. The channel_id for each query MUST be the same as the user provided channel_id, and if not specified it should be select based on the query automatically. The available channels are:\n{channels_info}")
         request: str = Field(description="User's request in details")
         user_info: Optional[str] = Field("",description="Brief user info summary for personalized response, including name, background etc.")
-
+    
     class ModelZooInfoScript(BaseModel):
         """Create a Python Script to get information about details of models, applications and datasets etc."""
         script: str = Field(description="The script to be executed, the script use a predefined local variable `resources` which contains a list of dictionaries with all the resources in the model zoo (including models, applications, datasets etc.), the response to the query should be printed to the stdout. Details about the `resources`:\n" + resource_item_stats)
@@ -144,7 +151,7 @@ def create_customer_service(db_path):
         user_info: Optional[str] = Field("", description="Brief user info summary for personalized response, including name, background etc.")
 
     async def respond_to_user(question_with_history: QuestionWithHistory = None, role: Role = None) -> str:
-        """Answer the user's question directly or retrieve relevant documents from the documentation, or create a Python Script to get information about details of models. ALWAYS clarify the user's query if it's ambiguous."""
+        """Answer the user's question directly or retrieve relevant documents from the documentation, or create a Python Script to get information about details of models. """
         inputs = [question_with_history.user_profile] + list(question_with_history.chat_history) + [question_with_history.question]
         # The channel info will be inserted at the beginning of the inputs
         if question_with_history.channel_info:
@@ -193,7 +200,7 @@ def create_customer_service(db_path):
     customer_service = Role(
         name="Melman",
         profile="Customer Service",
-        goal="Your goal as Melman from Madagascar, the community knowledge base manager, is to assist users in effectively utilizing the BioImage.IO knowledge base for bioimage analysis. You are responsible for answering user questions, providing clarifications, retrieving relevant documents, and executing scripts as needed. Your overarching objective is to make the user experience both educational and enjoyable.",
+        goal="Your goal as Melman from Madagascar, the community knowledge base manager, is to assist users in effectively utilizing the BioImage.IO knowledge base for bioimage analysis. You are responsible for answering user questions, providing clarifications, retrieving relevant documents, and executing scripts as needed.  Your overarching objective is to make the user experience both educational and enjoyable.",
         constraints=None,
         actions=[respond_to_user],
     )

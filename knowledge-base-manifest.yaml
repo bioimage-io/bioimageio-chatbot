@@ -27,7 +27,7 @@ collections:
     id: bio.tools
     source: https://github.com/research-software-ecosystem/content/archive/refs/heads/master.zip
     directory: data
-    description: A repository for research software tools with metadata.
+    description: Essential scientific and technical information about software tools, databases and services for bioinformatics and the life sciences.
     base_url: https://bio.tools
     format: json 
   - name: ImJoy
