@@ -167,7 +167,10 @@ def create_customer_service(db_path):
             print(f"Retrieved documents:\n{docs_with_score[0].doc[:20] + '...'} (score: {docs_with_score[0].score})\n{docs_with_score[1].doc[:20] + '...'} (score: {docs_with_score[1].score})\n{docs_with_score[2].doc[:20] + '...'} (score: {docs_with_score[2].score})")
             search_input = DocumentSearchInput(user_question=req.request, relevant_context=docs_with_score, user_info=req.user_info, base_url=collection_info.get('base_url'), format=collection_info.get('format'))
             response = await role.aask(search_input, FinalResponse)
-            return response.response
+            details = "\n".join(f"\n- \n<code>\n{doc.doc}\n</code>\n" for i, doc in enumerate(docs_with_score))
+            references = f"""<details><summary>References</summary>\n\n{details}\n\n</details>"""
+            response = response.response + "\n\n" + references
+            return response
         elif isinstance(req, ModelZooInfoScript):
             loop = asyncio.get_running_loop()
             print(f"Executing the script:\n{req.script}")
