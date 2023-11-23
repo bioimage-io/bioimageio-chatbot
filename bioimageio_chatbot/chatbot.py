@@ -187,7 +187,7 @@ def create_customer_service(db_path):
                 request=req.request,
                 user_info=req.user_info
             ), FinalResponse)
-            references = f"""<details><summary>Source Code:</summary>\n\n<code>\nScript: \n{req.script}\n\nRestuls: \n{result["stdout"]}\nError: {result["stderr"]}\n</code>\n\n</details>"""
+            references = f"""<details><summary>Source Code</summary>\n\n<code>\nScript: \n{req.script}\n\nRestuls: \n{result["stdout"]}\nError: {result["stderr"]}\n</code>\n\n</details>"""
             response = response.response + "\n\n" + references
             return response
         
