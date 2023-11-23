@@ -111,6 +111,7 @@ class QuestionWithHistory(BaseModel):
     channel_info: Optional[ChannelInfo] = Field(None, description="The selected channel of the user's question. If provided, stick to the selected channel when answering the user's question.")
 
 def create_customer_service(db_path):
+    debug = os.environ.get("BIOIMAGEIO_DEBUG") == "true"
     collections = get_manifest()['collections']
     docs_store_dict = load_knowledge_base(db_path)
     collection_info_dict = {collection['id']: collection for collection in collections}
@@ -167,7 +168,11 @@ def create_customer_service(db_path):
             print(f"Retrieved documents:\n{docs_with_score[0].doc[:20] + '...'} (score: {docs_with_score[0].score})\n{docs_with_score[1].doc[:20] + '...'} (score: {docs_with_score[1].score})\n{docs_with_score[2].doc[:20] + '...'} (score: {docs_with_score[2].score})")
             search_input = DocumentSearchInput(user_question=req.request, relevant_context=docs_with_score, user_info=req.user_info, base_url=collection_info.get('base_url'), format=collection_info.get('format'))
             response = await role.aask(search_input, FinalResponse)
-            details = "\n".join(f"\n- \n<code>\n{doc.doc}\n</code>\n" for i, doc in enumerate(docs_with_score))
+            if debug:
+                source_func = lambda doc:f"\nSource: {doc.metadata['source']}"
+            else:
+                source_func = lambda doc:""
+            details = "\n".join(f"\n----\n<code>\n{doc.doc}\n{source_func(doc)}\n</code>\n" for i, doc in enumerate(docs_with_score))
             references = f"""<details><summary>References</summary>\n\n{details}\n\n</details>"""
             response = response.response + "\n\n" + references
             return response
@@ -182,7 +187,9 @@ def create_customer_service(db_path):
                 request=req.request,
                 user_info=req.user_info
             ), FinalResponse)
-            return response.response
+            references = f"""<details><summary>References</summary>\n\n<code>\n{result["stdout"]}\n</code>\n\n</details>"""
+            response = response.response + "\n\n" + references
+            return response
         
     customer_service = Role(
         name="Melman",
