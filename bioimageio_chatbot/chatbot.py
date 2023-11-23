@@ -194,7 +194,7 @@ def create_customer_service(db_path):
     customer_service = Role(
         name="Melman",
         profile="Customer Service",
-        goal="Your goal as Melman from Madagascar, the community knowledge base manager, is to assist users in effectively utilizing the BioImage.IO knowledge base for bioimage analysis. You are responsible for answering user questions, providing clarifications, retrieving relevant documents, and executing scripts as needed. Your overarching objective is to make the user experience both educational and enjoyable.",
+        goal="Your goal as Melman from Madagascar, the community knowledge base manager, is to assist users in effectively utilizing the knowledge base for bioimage analysis. You are responsible for answering user questions, providing clarifications, retrieving relevant documents, and executing scripts as needed. Your overarching objective is to make the user experience both educational and enjoyable.",
         constraints=None,
         actions=[respond_to_user],
     )
