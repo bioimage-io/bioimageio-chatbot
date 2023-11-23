@@ -1,0 +1,175 @@
+- question: "how to Join as a community partner?"
+  reference_answer: >
+    To become a community partner on BioImage.IO, you should follow these steps:
+    1. Submit a request issue: Go to the [BioImage.IO GitHub issue page](https://github.com/bioimage-io/collection-bioimage-io/issues/new) and submit a request with the following information:
+       - Description of your software, organization, company, or team.
+       - Description of the resources you plan to contribute, including the URL to your project repo.
+       - Description of future plans for maintaining your project.
+    2. Approval process: The BioImage.IO admin team will review your request to ensure that your project benefits the users of BioImage.IO and meets the participation requirements.
+    3. Contribute your resources: Upon approval, you will need to:
+       - Create or choose a GitHub repo for hosting your resource collection.
+       - Add a [collection RDF](https://github.com/bioimage-io/spec-bioimage-io/blob/gh-pages/collection_spec_latest.md) in your repository, listing all resources you wish to contribute.
+       - Set up a CI service for testing your collection RDF. Guidance on setting up CI can be found [here](https://bioimage.io/docs/community_partners/how_to_join?id=how-to-setup-ci-service-for-a-community-partners39-repo).
+       - Make a PR or an issue in the BioImage.IO Collection repo to link your collection to the [collection_rdf_template.yaml](https://github.com/bioimage-io/collection-bioimage-io/blob/main/collection_rdf_template.yaml) (under `config.partners`).
+       - Add one of the admin members as collaborators in your resource collection repository for easier maintenance.
+    
+    For more detailed information, you can refer to the [How to join as a community partner](https://bioimage.io/docs/community_partners/how_to_join) section in the BioImage.IO documentation.
+    
+    As a community partner, you will be able to participate in the decision-making process, showcase your logo on BioImage.IO, connect CI to test model compatibility, and use other infrastructure features. Your main responsibilities will include using BioImage.IO as the primary trained model repository, reviewing resources, and maintaining your models and resources. More about the role and benefits can be found [here](https://bioimage.io/docs/community_partners/README.md).
+    
+    Note that you do not need to become a community partner to contribute resources to the BioImage.IO Model Zoo. Information on how to contribute resources is described [here](https://bioimage.io/docs/contribute_models/README.md).
+  retrieved_context_list:
+    - >
+      # Join as a community partner
+      BioImage.IO is a community-driven open source initiative, providing access to trained deep learning models and related resources contributed by the community members. To help us better disseminate and maintain the resources, we introduced the concepts of **community partner**.
+    
+      Source: ./data/main.zip-unzipped/bioimage.io-main/docs/community_partners/README.md
+    - >
+      How to join as a community partner?
+      Note that in order to contribute resources to the BioImage.IO Model Zoo you do not need to become a community partner. How to contribute resources is described [here](/contribute_models/README.md). The role of a community partner is described [here](/community_partners/README.md).
+    
+      If you are eligible and willing to join as a community partner, please submit a request issue [here](https://github.com/bioimage-io/collection-bioimage-io/issues/new) with relevant information including the following:
+      1. Description of your software, organization, company or team.
+      2. Description of the resources that you plan to contribute. Please also include the url to your project repo.
+      3. Description of future plans on how your project will be maintained.
+    
+      The admin team of BioImage.IO will discuss the request and decide whether to approve or decline. We will mainly check whether the project are beneficial for the users of BioImage.IO and the requirements for participation are met.
+    
+      Upon approval, we will guide you to follow these steps in order to incorporate your contribution to BioImage.IO:
+    
+      1. Firstly, please create or choose a GitHub repo for hosting your resource collection that you would like to contribute. We recommend to create a dedicated repository in your organization for this purpose. As an example you might want to take a look at the [ilastik collection](https://github.com/ilastik/bioimage-io-resources/blob/main/collection.yaml).
+      1. Add a [collection RDF](https://github.com/bioimage-io/spec-bioimage-io/blob/gh-pages/collection_spec_latest.md) in your chosen repository, which lists all resources you would like to contribute. For this, you will also need to prepare the icons of your software or project.
+      1. Setup CI service for testing your collection RDF. Please refer to [how to setup CI service](/community_partners/how_to_join?id=how-to-setup-ci-service-for-a-community-partners39-repo).
+      1. Make a PR (or an issue) in the BioImage.IO Collection repo to link your collection to the [collection_rdf_template.yaml](https://github.com/bioimage-io/collection-bioimage-io/blob/main/collection_rdf_template.yaml)(under `config.partners`). We only require the link to your collection RDF here and need to agree on a partner id for you.
+      1. To make the maintainance easier, we also ask you to add one of the admin member as collabrators in your resource collection repository. This will make it easier for us to help you maintaining your collection, and keep synchronized in case we make changes to the specification.
+    
+      Source: ./data/main.zip-unzipped/bioimage.io-main/docs/community_partners/how_to_join.md
+    - >
+      What is a community partner?
+      Usually, a community partner is an organization, a company, a research group, or a software team (of one or more) that can consume and/or produce resources of the BioImage.Io model zoo. Additionally, most partners continuously and openly contribute resources of their own. The first community partners represent open source consumer software of BioImage.IO (e.g. ilastik, Fiji, deepImageJ, ZeroCostDL4Mic, StarDist).
+      
+      ### Benefits as a community partner
+      By joining BioImage.IO as a community partner, you will be able to:
+      - Participate in decision making process of the model specification.
+      - Show your logo in BioImage.IO and enable filtering models by compatibility with your software.
+      - Connect CI to automatically test new model compatibility with your software and use other infrastructure features provided by BioImage.IO.
+      
+      ### Responsibilities
+      The main responsibilities of a community partner are:
+      - Use BioImage.IO as their only primary trained model repository.
+      - Review resources contributed by others that claim to be compatible with this community partner software.
+      - Maintain this community partner's models and other resources in their linked repository, setup continous integration workflows to test models and keep them up-to-date with the latest spec.
+      
+      ### Who should join as a community partner?
+      * A team behind a software which produces or consumes trained models compatible with the BioImage.IO spec.
+      * A organization, group, company or team (of one or more) who contributed and will keep contributing more models to BioImage.IO.
+      
+      Source: ./data/main.zip-unzipped/bioimage.io-main/docs/community_partners/README.md
+- question: "I want to know about StarDist model's documentation"
+  reference_answer: >
+    The StarDist model is a popular tool for bioimage analysis, particularly for star-convex shape detection. While the specific documentation for the StarDist model itself is not directly provided in the retrieved context, here are some resources that can help you understand how to document your model or use models from the BioImage Model Zoo:
+
+    - To document your model effectively, you should follow the guidelines provided in the [Model contribution requirements](https://bioimage.io/docs/#/bioimageio_model_spec). This includes adhering to the BioImage.IO Model Resource Description File Specification (RDF) with `format_version>= 0.4.5`, ensuring cross-compatibility among consumer software, and providing a rich description tailored for life scientists.
+
+    - If you are looking to use the StarDist model or any other model from the BioImage Model Zoo, you can refer to tutorials provided by community partners such as [Ilastik](https://www.ilastik.org/documentation/nn/nn.html), [DeepImageJ](https://deepimagej.github.io/tutorials.html), [ZeroCostDL4Mic](https://github.com/HenriquesLab/ZeroCostDL4Mic/wiki), and [ImJoy](https://imjoy.io/docs/#/).
+
+    - When tagging your model, include informative tags to make it easier for users to find your model. Example tags include `denoising`, `PSSR`, `microtubules`, `encoder-decoder`, `deblurring`, `fluorescence`, `2D`, `HeLa cells`, `deepimagej`, `ilastik`, `image restoration`, `trained-model`, etc. [More on model tags](https://bioimage.io/docs/#/bioimageio_model_spec).
+
+    For more specific information about the StarDist model, you may want to search directly in the [BioImage Model Zoo](https://bioimage.io/#/).
+  retrieved_context_list:
+    - >
+      How to get most of your model documentation
+      ### Model Tags
+
+      The tags in the model RDF are used to search for each model in the BioImage Model Zoo. The more informative tags you write, the easier it will be for a potential user to find your model. Example:
+
+      **My model description**: An encoder-decoder trained for denoising of point-scanning super-resolution microsocpy images of HeLa cells microtubules
+
+      **Tags**: `denoising`, `PSSR`, `microtubules`, `encoder-decoder`, `deblurring`, `fluorescence`, `2D`, `HeLa cells`, `deepimagej`, `ilastik`, `image restoration`, `trained-model` etc.
+
+      ### Model links
+
+      Source: ./data/main.zip-unzipped/bioimage.io-main/docs/contribute_models/tutorials.md
+    - >
+      # Tutorials
+
+      The models in the BioImage Model Zoo can be used in the community partners. Please, refer to each software documentation to know how to run the models accordingly:
+
+      - [Ilastik](https://www.ilastik.org/documentation/nn/nn.html) 
+      - [DeepImageJ](https://deepimagej.github.io/tutorials.html)
+      - [ZeroCostDL4Mic](https://github.com/HenriquesLab/ZeroCostDL4Mic/wiki)
+      - [ImJoy](https://imjoy.io/docs/#/)
+
+      Source: ./data/main.zip-unzipped/bioimage.io-main/docs/consumer_software/tutorials.md
+    - >
+      Model contribution requirements
+
+      - Follow the [BioImage.IO Model Resource Description File Specification (RDF)](https://bioimage.io/docs/#/bioimageio_model_spec) with `format_version>= 0.4.5`. 
+      - The model is expected to be cross-compatible among the [consumer software](https://github.com/bioimage-io/spec-bioimage-io/blob/master/supported_formats_and_operations.md#consumers), and should always run on at least one.
+      - The model should be well documented (i.e., human readable name and rich description tailored for life-scientists, citations)
+      - The model should be public and can be used by anyone under the chosen licensing conditions.
+
+      Source: ./data/main.zip-unzipped/bioimage.io-main/docs/contribute_models/README.md
+- question: "point me to one of stardist model documentation"
+  reference_answer: >
+    It seems you are interested in finding documentation for a stardist model. Here's what I found that might be helpful to you:
+
+    1. **Model Tags**: To find a stardist model in the BioImage Model Zoo, you can use tags that are relevant to your search. For example, if you're looking for a model related to denoising or specific cell types like HeLa cells, you can use tags such as `denoising`, `microtubules`, `HeLa cells`, etc. [More on Model Tags](https://bioimage.io/docs/contribute_models/tutorials.md#model-tags).
+
+    2. **Model Naming**: When searching for models, consider the naming conventions that are informative about the application and biological tissue analyzed. For instance, names like `Neuron Segmentation in EM (Membrane Prediction)` or `B. Sutilist bacteria segmentation - Widefield microscopy - 2D UNet` indicate the model's purpose and the context in which it's used. [More on Model Naming](https://bioimage.io/docs/contribute_models/README.md#model-naming).
+
+    3. **Using Models**: If you want to know how to run stardist models with different software, you can refer to the tutorials provided by community partners such as Ilastik, DeepImageJ, ZeroCostDL4Mic, and ImJoy. [Tutorials for Software](https://bioimage.io/docs/consumer_software/tutorials.md).
+
+    I hope this information assists you in finding and using the stardist model you're looking for. If you need further assistance, feel free to ask!
+  retrieved_context_list:
+    - >
+      How to get most of your model documentation
+      ### Model Tags
+
+      The tags in the model RDF are used to search for each model in the BioImage Model Zoo. The more informative tags you write, the easier it will be for a potential user to find your model. Example:
+
+      **My model description**: An encoder-decoder trained for denoising of point-scanning super-resolution microsocpy images of HeLa cells microtubules
+
+      **Tags**: `denoising`, `PSSR`, `microtubules`, `encoder-decoder`, `deblurring`, `fluorescence`, `2D`, `HeLa cells`, `deepimagej`, `ilastik`, `image restoration`, `trained-model` etc.
+
+      ### Model links
+
+      Source: ./data/main.zip-unzipped/bioimage.io-main/docs/contribute_models/tutorials.md
+    - >
+      How to get most of your model documentation
+      ### Model naming
+
+      Models are expected to be used by life-scientists, thus, it is expected that the naming is human readable but also informative enough regarding the final application and the biological tissue being analysed. Example:
+        
+        **Name:** `Neuron Segmentation in EM (Membrane Prediction)`, `B. Sutilist bacteria segmentation - Widefield microscopy - 2D UNet`
+
+        
+      ### Model Tags
+
+      The tags in the model RDF are used to search for each model in the BioImage Model Zoo. The more informative tags you write, the easier it will be for a potential user to find your model. Example:
+
+        **My model description**: An encoder-decoder trained for denoising of point-scanning super-resolution microsocpy images of HeLa cells microtubules
+        
+        **Tags**: `denoising`, `PSSR`, `microtubules`, `encoder-decoder`, `deblurring`, `fluorescence`, `2D`, `HeLa cells`, `deepimagej`, `ilastik`, `image restoration`, `trained-model` etc.
+
+      ### Model links
+      The BioImage Model Zoo is a software webpage. Each model is displayed with an interactive card that can have datasets, notebooks, applications, consumer-software or test-run buttons linked. Example:
+          
+        **Links**: `imjoy/BioImageIO-Packager`, `ilastik/ilastik`, `deepimagej/deepimagej`, `zero/dataset_fnet_3d_zerocostdl4mic` etc.
+
+      ### Representative Covers
+
+      You can include different cover images that represent the analysed tissue, imaging modality, image processing task and the performance of the model. This image will be used in the model card to guide the users through the model search.
+
+      Source: ./data/main.zip-unzipped/bioimage.io-main/docs/contribute_models/README.md
+    - >
+      # Tutorials
+
+      The models in the BioImage Model Zoo can be used in the community partners. Please, refer to each software documentation to know how to run the models accordingly:
+
+      - [Ilastik](https://www.ilastik.org/documentation/nn/nn.html) 
+      - [DeepImageJ](https://deepimagej.github.io/tutorials.html)
+      - [ZeroCostDL4Mic](https://github.com/HenriquesLab/ZeroCostDL4Mic/wiki)
+      - [ImJoy](https://imjoy.io/docs/#/)
+
+      Source: ./data/main.zip-unzipped/bioimage.io-main/docs/consumer_software/tutorials.md
