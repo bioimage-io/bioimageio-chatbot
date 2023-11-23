@@ -13,8 +13,8 @@ collections:
     id: bioimage.io
     source: https://github.com/bioimage-io/bioimage.io/archive/refs/heads/main.zip
     directory: docs
-    description: A model repository for bioimage analysis.
-    base_url: https://bioimage.io/docs/#/
+    description: A platform for sharing and deploying deep learning models in bioimaging.
+    base_url: https://bioimage.io/docs/
     format: markdown
   - name: imagej.net
     id: imagej.net
