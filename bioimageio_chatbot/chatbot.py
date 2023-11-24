@@ -171,16 +171,12 @@ def create_customer_service(db_path):
                     new_docs_with_score = [DocWithScore(doc=doc.page_content, score=score, metadata=doc.metadata) for doc, score in results_with_scores]
                     docs_with_score.extend(new_docs_with_score)
                     print(f"Retrieved documents:\n{new_docs_with_score[0].doc[:20] + '...'} (score: {new_docs_with_score[0].score})\n{new_docs_with_score[1].doc[:20] + '...'} (score: {new_docs_with_score[1].score})")
+                # rank the documents by relevance score
+                docs_with_score = sorted(docs_with_score, key=lambda x: x.score, reverse=True)
+                # only keep the top 3 documents
+                docs_with_score = docs_with_score[:3]
                 search_input = DocumentSearchInput(user_question=req.request, relevant_context=docs_with_score, user_info=req.user_info, base_url=None, format=None)
                 response = await role.aask(search_input, FinalResponse)
-                if debug:
-                    source_func = lambda doc:f"\nSource: {doc.metadata['source']}"
-                else:
-                    source_func = lambda doc:""
-                details = "\n".join(f"\n----\n<code>\n{doc.doc}\n{source_func(doc)}\n</code>\n" for i, doc in enumerate(docs_with_score))
-                references = f"""<details><summary>References</summary>\n\n{details}\n\n</details>"""
-                response = response.response + "\n\n" + references
-                return response
             else:
                 docs_store = docs_store_dict[req.channel_id]
                 collection_info = collection_info_dict[req.channel_id]
@@ -190,14 +186,24 @@ def create_customer_service(db_path):
                 print(f"Retrieved documents:\n{docs_with_score[0].doc[:20] + '...'} (score: {docs_with_score[0].score})\n{docs_with_score[1].doc[:20] + '...'} (score: {docs_with_score[1].score})\n{docs_with_score[2].doc[:20] + '...'} (score: {docs_with_score[2].score})")
                 search_input = DocumentSearchInput(user_question=req.request, relevant_context=docs_with_score, user_info=req.user_info, base_url=collection_info.get('base_url'), format=collection_info.get('format'))
                 response = await role.aask(search_input, FinalResponse)
-                if debug:
-                    source_func = lambda doc:f"\nSource: {doc.metadata['source']}"
-                else:
-                    source_func = lambda doc:""
-                details = "\n".join(f"\n----\n<code>\n{doc.doc}\n{source_func(doc)}\n</code>\n" for i, doc in enumerate(docs_with_score))
-                references = f"""<details><summary>References</summary>\n\n{details}\n\n</details>"""
-                response = response.response + "\n\n" + references
-                return response
+            if debug:
+                source_func = lambda doc: f"\nSource: {doc.metadata.get('source', 'N/A')}"  # Use get() to provide a default value if 'source' is not present
+            else:
+                source_func = lambda doc:""
+            # Create an HTML table for references
+            table_rows = []
+            for i, doc in enumerate(docs_with_score):
+                # if 'source' in doc.metadata:
+                table_rows.append(f"<tr><td>{i + 1}</td><td>{source_func(doc)}</td><td>{doc.doc}</td></tr>")
+            table_content = "\n".join(table_rows)
+            references_table = f"""<details><summary>References</summary>
+                                <table border="1">
+                                    <tr><th>#</th><th>Source</th><th>Document</th></tr>
+                                    {table_content}
+                                </table>
+                            </details>"""
+            response = response.response + "\n\n" + references_table
+            return response
         elif isinstance(req, ModelZooInfoScript):
             loop = asyncio.get_running_loop()
             print(f"Executing the script:\n{req.script}")
@@ -209,7 +215,7 @@ def create_customer_service(db_path):
                 request=req.request,
                 user_info=req.user_info
             ), FinalResponse)
-            references = f"""<details><summary>Source Code</summary>\n\n<code>\nScript: \n{req.script}\n\nRestuls: \n{result["stdout"]}\nError: {result["stderr"]}\n</code>\n\n</details>"""
+            references = f"""<details><summary>Source Code</summary>\n\n<code>\nScript: \n{req.script}\n\nResults: \n{result["stdout"]}\nError: {result["stderr"]}\n</code>\n\n</details>"""
             response = response.response + "\n\n" + references
             return response
         
