@@ -14,6 +14,8 @@ import yaml
 
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
+KNOWLEDGE_BASE_PATH = "./bioimageio-knowledge-base"
+
 class EvalInput(BaseModel):
     """Input for evaluating scores of LLM-based system."""
     question: str = Field(description="The question that was asked.")
@@ -44,8 +46,43 @@ def load_query_answer():
     query_answer = pd.read_csv(os.path.join(dir_path, "Knowledge-Retrieval-Evaluation - Hoja 1.csv"))
     return query_answer
 
+def create_chatgpt():
+    async def respond_direct(question: str, role: Role) -> str:
+        """Generate a response to a question."""
+        return await role.aask(question)
+        
+    chatgpt = Role(
+        name="ChatGPT",
+        model="gpt-3.5-turbo-1106",
+        profile="Customer Service",
+        goal="You are responsible for answering user questions, providing clarifications. Your overarching objective is to make the user experience both educational and enjoyable.",
+        constraints=None,
+        actions=[respond_direct],
+    )
+    return chatgpt
+
+async def get_answers():
+    query_answer = pd.read_csv(os.path.join(dir_path, "Knowledge-Retrieval-Evaluation-Results.csv"))
+    customer_service = create_customer_service(KNOWLEDGE_BASE_PATH)
+    chat_history = []
+    # get query_answer from yaml file
+    for i in range(len(query_answer)):
+        question = query_answer.iloc[i]["Question"]
+        # chatgpt answer
+        chatgpt = create_chatgpt()
+        chatgpt_answer = await chatgpt.handle(Message(content=question, role="User"))
+        query_answer.loc[i, 'ChatGPT3.5 Answer (Without Context)'] = chatgpt_answer[0].content
+        # BMZ chatbot
+        profile = UserProfile(name="", occupation="", background="")
+        m = QuestionWithHistory(question=question, chat_history=chat_history, user_profile=UserProfile.parse_obj(profile), channel_id=None)
+        llm_answer = await customer_service.handle(Message(content=m.json(), data=m , role="User"))
+        # add a column to query_answer, content is llm_answer[0].content
+        query_answer.loc[i, 'BMZ Chatbot Answer'] = llm_answer[0].content
+    # save query_answer to original csv file
+    query_answer.to_csv(os.path.join(dir_path, "Knowledge-Retrieval-Evaluation-Results.csv"))
+    print("Updated Knowledge-Retrieval-Evaluation-Results.csv")
+    
 async def start_evaluate():
-      
     async def bot_answer_evaluate(req: EvalInput, role: Role) -> EvalScores:
         """Return the answer to the question."""
         response = await role.aask(req, EvalScores)
@@ -64,8 +101,8 @@ async def start_evaluate():
     
     query_answer = load_query_answer()
     question_list = list(query_answer['Question'])
-    reference_answer_list = list(query_answer['ChatGPT (3.5) Answer'])
-    chatgpt_answer_list = list(query_answer['ChatGPT Direct Answer'])
+    reference_answer_list = list(query_answer['ChatGPT3.5 Answer (With Context)'])
+    chatgpt_answer_list = list(query_answer['ChatGPT3.5 Answer (Without Context)'])
     BMZ_chatbot_answer_list = list(query_answer['BMZ Chatbot Answer'])
     
     
@@ -73,7 +110,7 @@ async def start_evaluate():
         question = question_list[i]
         reference_answer = reference_answer_list[i]
         gpt_direct_answer = chatgpt_answer_list[i]
-        chatbot_answr = BMZ_chatbot_answer_list[i]
+        chatbot_answer = BMZ_chatbot_answer_list[i]
         retrieved_context= query_answer.iloc[i]["Documentation"]
         # read text in retrieved_context, and split it into a list of contexts by []
         retrieved_context_list = retrieved_context.split('[')
@@ -84,7 +121,7 @@ async def start_evaluate():
         scores_gpt3_direct = await evalBot.handle(Message(content= eval_input_gpt3_direct.json(), data= eval_input_gpt3_direct, role="User"))
         
         # chatbot answer
-        eval_input_chatbot = EvalInput(question=question, reference_answer=reference_answer, llm_answer=chatbot_answr, retrieved_context_list=retrieved_context_list)
+        eval_input_chatbot = EvalInput(question=question, reference_answer=reference_answer, llm_answer=chatbot_answer, retrieved_context_list=retrieved_context_list)
         scores_chatbot = await evalBot.handle(Message(content= eval_input_chatbot.json(), data= eval_input_chatbot, role="User"))
         SimilaryScore = scores_chatbot[0].data.similarity_score
         RetrievalPrecision = sum(scores_chatbot[0].data.context_scores.retrieval_precision) / len(scores_chatbot[0].data.context_scores.retrieval_precision)
