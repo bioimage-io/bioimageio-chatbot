@@ -196,11 +196,11 @@ def create_customer_service(db_path):
             table_rows = []
             for i, doc in enumerate(docs_with_score):
                 # if 'source' in doc.metadata:
-                table_rows.append(f"<tr><td>{i + 1}</td><td>{doc.doc}</td><td>{source_func(doc)}</td></tr>")
+                table_rows.append(f"<tr><td>{i + 1}</td><td>{doc.doc}{source_func(doc)}</td></tr>")
             table_content = "\n".join(table_rows)
             references_table = f"""<details><summary>References</summary>
                                 <table border="1">
-                                    <tr><th>#</th><th>Content</th><th>Source</th></tr>
+                                    <tr><th>#</th><th>Content</th></tr>
                                     {table_content}
                                 </table>
                             </details>"""
