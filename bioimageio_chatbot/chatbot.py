@@ -63,52 +63,54 @@ def execute_code(script, context=None):
 
 
 class ModelZooInfoScriptResults(BaseModel):
-    """Results of executing the model zoo info query script."""
-    stdout: str = Field(description="The output from stdout.")
-    stderr: str = Field(description="The output from stderr.")
-    request: str = Field(description="User's request in details")
-    user_info: Optional[str] = Field("", description="User info for personalize response.")
+    """Results of executing a model zoo info query script."""
+    stdout: str = Field(description="The query script execution stdout output.")
+    stderr: str = Field(description="The query script execution stderr output.")
+    request: str = Field(description="Details concerning the user's request that triggered the model zoo query script execution")
+    user_info: Optional[str] = Field("", description="The user's info for personalizing response.")
 
 class DirectResponse(BaseModel):
     """Direct response to a user's question."""
-    response: str = Field(description="The response to the user's question.")
+    response: str = Field(description="The response to the user's question answering what that asked for.")
 
 class DocWithScore(BaseModel):
-    """A document with relevance score."""
+    """A document with an associated relevance score."""
     doc: str = Field(description="The document retrieved.")
-    score: float = Field(description="The relevance score of the document.")
-    metadata: Dict[str, Any] = Field(description="The metadata of the document.")
+    score: float = Field(description="The relevance score of the retrieved document.")
+    metadata: Dict[str, Any] = Field(description="The document's metadata.")
 
 class DocumentSearchInput(BaseModel):
-    """Results of document retrieval from documentation."""
+    """Results of a document retrieval process from a documentation base."""
     user_question: str = Field(description="The user's original question.")
-    relevant_context: List[DocWithScore] = Field(description="Context chunks from the documentation")
-    user_info: Optional[str] = Field("", description="User info for personalize response.")
-    base_url: Optional[str] = Field(None, description="The base url of the documentation, used for resolve relative URL in the document and produce markdown links.")
+    relevant_context: List[DocWithScore] = Field(description="Chunks of context retrieved from the documentation that are relevant to the user's original question.")
+    user_info: Optional[str] = Field("", description="The user's info for personalizing the response.")
+    base_url: Optional[str] = Field(None, description="The documentation's base URL, which will be used to resolve the relative URLs in the retrieved document chunks when producing markdown links.")
     format: Optional[str] = Field(None, description="The format of the document.")
 
 class FinalResponse(BaseModel):
-    """The final response to the user's question. If the retrieved context has low relevance score, or the question isn't relevant to the retrieved context, return 'I don't know'."""
-    response: str = Field(description="The answer to the user's question in markdown format.")
+    """The final response to the user's question based on the documentation search results. 
+    If the documentation search results are relevant to the user's question, provide a text response to the question based on the search results.
+    If the documentation search results contains only low relevance scores or if the question isn't relevant to the search results, return 'I don't know'."""
+    response: str = Field(description="The answer to the user's question based on the search results. Can be either a detailed response in markdown format if the search results are relevant to the user's question or 'I don't know'.")
 
 class ChannelInfo(BaseModel):
-    """The selected channel of the user's question. If provided, stick to the selected channel when answering the user's question."""
+    """The selected knowledge base channel for the user's question. If provided, rely only on the selected channel when answering the user's question."""
     id: str = Field(description="The channel id.")
     name: str = Field(description="The channel name.")
     description: str = Field(description="The channel description.")
 
 class UserProfile(BaseModel):
-    """The user's profile. This will be used to personalize the response."""
+    """The user's profile. This will be used to personalize the response to the user."""
     name: str = Field(description="The user's name.", max_length=32)
-    occupation: str = Field(description="The user's occupation. ", max_length=128)
-    background: str = Field(description="The user's background. ", max_length=256)
+    occupation: str = Field(description="The user's occupation.", max_length=128)
+    background: str = Field(description="The user's background.", max_length=256)
 
 class QuestionWithHistory(BaseModel):
-    """The user's question, chat history and user's profile."""
+    """The user's question, chat history, and user's profile."""
     question: str = Field(description="The user's question.")
     chat_history: Optional[List[Dict[str, str]]] = Field(None, description="The chat history.")
     user_profile: Optional[UserProfile] = Field(None, description="The user's profile. You should use this to personalize the response based on the user's background and occupation.")
-    channel_info: Optional[ChannelInfo] = Field(None, description="The selected channel of the user's question. If provided, stick to the selected channel when answering the user's question.")
+    channel_info: Optional[ChannelInfo] = Field(None, description="The selected channel of the user's question. If provided, rely only on the selected channel when answering the user's question.")
 
 def create_customer_service(db_path):
     debug = os.environ.get("BIOIMAGEIO_DEBUG") == "true"
@@ -127,17 +129,17 @@ def create_customer_service(db_path):
     channels_info = "\n".join(f"""- `{collection['id']}`: {collection['description']}""" for collection in collections)
     resource_item_stats = f"""Each item contains the following fields: {list(resource_items[0].keys())}\nThe available resource types are: {types}\nSome example tags: {tags}\nHere is an example: {resource_items[0]}"""
     class DocumentRetrievalInput(BaseModel):
-        """Input for finding relevant documents from databases."""
-        query: str = Field(description="Query used to retrieve related documents.")
-        request: str = Field(description="User's request in details")
-        user_info: Optional[str] = Field("", description="Brief user info summary for personalized response, including name, background etc.")
-        channel_id: str = Field(description=f"It MUST be the same as the user provided channel_id. If not specified, either select 'all' to search for all the available channels or select one from the available channels are:\n{channels_info}. If you are not sure which channel to select, select 'all'.")
+        """Input for searching knowledge bases and finding documents relevant to the user's request."""
+        query: str = Field(description="The query used to retrieve documents related to the user's request.")
+        request: str = Field(description="The user's detailed request")
+        user_info: Optional[str] = Field("", description="Brief user info summary including name, background, etc., for personalizing responses to the user.")
+        channel_id: str = Field(description=f"The channel_id of the knowledge base to search. It MUST be the same as the user provided channel_id. If not specified, either select 'all' to search through all the available knowledge base channels or select one from the available channels which are:\n{channels_info}. If you are not sure which channel to select, select 'all'.")
 
     class ModelZooInfoScript(BaseModel):
-        """Create a Python Script to get information about details of models, applications and datasets etc."""
-        script: str = Field(description="The script to be executed, the script use a predefined local variable `resources` which contains a list of dictionaries with all the resources in the model zoo (including models, applications, datasets etc.), the response to the query should be printed to the stdout. Details about the `resources`:\n" + resource_item_stats)
-        request: str = Field(description="User's request in details")
-        user_info: Optional[str] = Field("", description="Brief user info summary for personalized response, including name, background etc.")
+        """Create a Python Script to get information about details of models, applications, datasets, etc. in the model zoo."""
+        script: str = Field(description="The script to be executed which uses a predefined local variable `resources` containing a list of dictionaries with all the resources in the model zoo (including models, applications, datasets etc.). The response to the query should be printed to stdout. Details about the local variable `resources`:\n" + resource_item_stats)
+        request: str = Field(description="The user's detailed request")
+        user_info: Optional[str] = Field("", description="Brief user info summary including name, background, etc., for personalizing responses to the user.")
 
     async def respond_to_user(question_with_history: QuestionWithHistory = None, role: Role = None) -> str:
         """Answer the user's question directly or retrieve relevant documents from the documentation, or create a Python Script to get information about details of models."""
