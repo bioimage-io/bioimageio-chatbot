@@ -1,4 +1,4 @@
-,Unnamed: 0,Question,Documentation,ChatGPT (3.5) Answer,ChatGPT (4) Answer,GT: Retrieved channel id,ChatGPT Direct Answer,BMZ Chatbot Answer,ChatGPT-3.5 Direct Answer Similarity Score,Chatbot Answer Similarity Score,Chatbot Answer Retrieval Precision,Chatbot Answer Augmentation Accuracy,Chatbot Answer Augmentation Precision,Chatbot Answer Augmentation Consistency
+,Unnamed: 0,Question,Documentation,ChatGPT3.5 Answer (With Context),ChatGPT (4) Answer,GT: Retrieved channel id,ChatGPT3.5 Answer (Without Context),BMZ Chatbot Answer,ChatGPT-3.5 Direct Answer Similarity Score,Chatbot Answer Similarity Score,Chatbot Answer Retrieval Precision,Chatbot Answer Augmentation Accuracy,Chatbot Answer Augmentation Precision,Chatbot Answer Augmentation Consistency
 0,0,WHat is a community partner?,"[Join as a community partner
 
 BioImage.IO is a community-driven open source initiative, providing access to trained deep learning models and related resources contributed by the community members. To help us better disseminate and maintain the resources, we introduced the concepts of community partner.
