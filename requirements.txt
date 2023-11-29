@@ -6,3 +6,9 @@ hypha
 tqdm
 aiofiles
 langchain==0.0.335
+opencv-python
+tensorflow
+torch
+lpips
+tqdm
+
