@@ -3,6 +3,8 @@ import cv2
 from keras.applications.vgg16 import preprocess_input
 from keras.applications.vgg16 import VGG16
 from keras.models import Model
+# from langchain.embeddings.openai import OpenAIEmbeddings
+from langchain_core.embeddings import Embeddings
 
 
 class VGG16Model:
@@ -18,7 +20,7 @@ class VGG16Model:
             raise Exception(f"Error getting vector embedding: {str(e)}")
 
 
-class ImageProcessor:
+class ImageProcessor():
     def __init__(self):
         self.vector_embedding = None
         self.image = None
@@ -66,6 +68,7 @@ class ImageProcessor:
         output_tup = tuple(current_axes.index(c) for c in output_format) # reshape to output format
         resized_image = np.transpose(resized_image, output_tup)
         return(resized_image)
+
     
     def embed_image(self, input_image_path : str, current_format : str, model_format : str = "byxc"):
         resized_image = self.resize_image(input_image_path, current_format, output_format = model_format)
@@ -81,6 +84,7 @@ class ImageProcessor:
         except Exception as e:
             raise Exception(f"Error saving output to {self.output_path}: {str(e)}")
         
+
 
 if __name__ == "__main__":
     embedder = ImageProcessor()
