@@ -310,7 +310,7 @@ async def register_chat_service(server):
         await save_chat_history(chat_log_full_path, chat_his_dict)
         print(f"User report saved to {filename}")
         
-    async def chat(text, chat_history, user_profile=None, channel=None, status_callback=None, session_id=None, imageData=None,context=None):
+    async def chat(text, chat_history, user_profile=None, channel=None, status_callback=None, session_id=None, image_data=None, context=None):
         if login_required and context and context.get("user"):
             assert check_permission(context.get("user")), "You don't have permission to use the chatbot, please sign up and wait for approval"
         session_id = session_id or secrets.token_hex(8)
@@ -321,10 +321,15 @@ async def register_chat_service(server):
                     await status_callback(message.dict())
 
         event_bus.on("stream", stream_callback)
+
+
+        if image_data:
+            await status_callback({"type": "text", "content": f"\n![Uploaded Image]({image_data})\n"})
         # decode image 
         def decode_base64(encoded_data):
             try:
-                decoded_data = base64.b64decode(encoded_data)
+                
+                decoded_data = base64.b64decode(encoded_data.split(',')[1])
                 return decoded_data
             except Exception as e:
                 print(f"Error decoding base64: {e}")
@@ -332,7 +337,7 @@ async def register_chat_service(server):
 
         # Example usage:
         # base64_encoded_image = "your_base64_encoded_image_data_here"
-        decoded_image_data = decode_base64(imageData)
+        decoded_image_data = decode_base64(image_data)
 
         if decoded_image_data is not None:
             # Now you can use 'decoded_image_data' as the binary image data
