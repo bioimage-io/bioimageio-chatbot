@@ -12,24 +12,34 @@
   <link rel="icon" type="image/x-icon" href="https://bioimage.io/static/icons/favicon.ico">
   <style>
     /* Custom CSS */
+    .file-selected {
+      background-color: #036ffc;
+      border-radius: 4px;
+      padding: 5px;
+      color: white;
+    }
+
     .form-label {
       color: #808080b0;
     }
+
     .markdown-body {
       max-width: calc(100% - 40px);
     }
+
     .rounded-icon-container {
-        margin-left:2px;
-        margin-right:2px;
-        border-radius: 50%;
-        width: 30px;
-        height: 30px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background-color: #ddd;  /* or any color you prefer */
+      margin-left: 2px;
+      margin-right: 2px;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #ddd;
+      /* or any color you prefer */
     }
-  
+
     /* Styles for the message container */
     #chat1 .message-container {
       display: flex;
@@ -86,7 +96,7 @@
       display: flex;
       margin-top: 10px;
     }
-    
+
     .feedback-button {
       margin-right: 2px;
       padding: 5px 10px;
@@ -95,27 +105,38 @@
       border: none;
       border-radius: 5px;
       cursor: pointer;
-      display: inline-block; /* Initially, both buttons are visible */
+      display: inline-block;
+      /* Initially, both buttons are visible */
     }
+
     .small-grey-button {
-      font-size: 14px; /* Adjust the font size as needed */
-      color: #ffc107ad; /* Change the color to grey or any other desired shade */
-      background-color: transparent; /* Set the background to transparent */
-      border: none; /* Remove the border */
-      padding: 0; /* Remove padding to make it smaller */
+      font-size: 14px;
+      /* Adjust the font size as needed */
+      color: #ffc107ad;
+      /* Change the color to grey or any other desired shade */
+      background-color: transparent;
+      /* Set the background to transparent */
+      border: none;
+      /* Remove the border */
+      padding: 0;
+      /* Remove padding to make it smaller */
     }
-    
+
     .small-grey-button i {
-      font-size: 16px; /* Adjust the icon size as needed */
-      margin-right: 5px; /* Add space between the icon and text (if any) */
+      font-size: 16px;
+      /* Adjust the icon size as needed */
+      margin-right: 5px;
+      /* Add space between the icon and text (if any) */
     }
-    
+
 
     .feedback-button:hover {
       background-color: #dee2e6;
     }
+
     .feedback-button:last-child {
-      margin-right: 0; /* Remove margin for the last button */
+      margin-right: 0;
+      /* Remove margin for the last button */
     }
 
     .announcement-banner {
@@ -123,14 +144,18 @@
       color: #000;
       text-align: center;
       padding: 15px;
-      margin-top: 0px; /* Adjust margin as needed */
-      border: 2px solid #007bff; /* Prominent border color */
+      margin-top: 0px;
+      /* Adjust margin as needed */
+      border: 2px solid #007bff;
+      /* Prominent border color */
       border-radius: 8px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Add a subtle shadow for prominence */
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      /* Add a subtle shadow for prominence */
     }
 
     .announcement-banner__text {
-      font-size: 18px; /* Adjust font size as needed */
+      font-size: 18px;
+      /* Adjust font size as needed */
     }
 
     .announcement-banner__text a {
@@ -152,8 +177,10 @@
 
     /* Add consistent styling for the login card */
     #login-card {
-      margin: 0 auto; /* Center the card horizontally */
-      max-width: 400px; /* Adjust the width as needed */
+      margin: 0 auto;
+      /* Center the card horizontally */
+      max-width: 400px;
+      /* Adjust the width as needed */
     }
 
     /* Style the login button similar to the chat send button */
@@ -163,11 +190,12 @@
 
     /* Apply consistent styling to the chat container */
     #chat1 {
-      margin: 0 auto; /* Center the chat container horizontally */
+      margin: 0 auto;
+      /* Center the chat container horizontally */
     }
 
 
-    
+
     @keyframes spin {
       0% {
         transform: rotate(0deg);
@@ -184,18 +212,21 @@
 <body>
   <div class="announcement-banner">
     <div class="announcement-banner__text">
-      Thank you for trying out the BioImage.IO Chatbot! 
-      
-      <p>Please provide feedback by clicking 
-      <button class="feedback-button like-button small-grey-button">
-        <i class="fas fa-thumbs-up"></i> 
-      </button>
-      or 
-      <button class="feedback-button unlike-button small-grey-button">
-        <i class="fas fa-thumbs-down"></i> 
-      </button> for each response, or by clicking the 'Feedback' button below.</p>
+      Thank you for trying out the BioImage.IO Chatbot!
 
-      <p>Note that the chatbot is still in beta and is being actively developed. See <a href="https://github.com/bioimage-io/bioimageio-chatbot/blob/main/docs/DISCLAIMER.md" target="_blank">the Disclaimer</a> for more details.</p>
+      <p>Please provide feedback by clicking
+        <button class="feedback-button like-button small-grey-button">
+          <i class="fas fa-thumbs-up"></i>
+        </button>
+        or
+        <button class="feedback-button unlike-button small-grey-button">
+          <i class="fas fa-thumbs-down"></i>
+        </button> for each response, or by clicking the 'Feedback' button below.
+      </p>
+
+      <p>Note that the chatbot is still in beta and is being actively developed. See <a
+          href="https://github.com/bioimage-io/bioimageio-chatbot/blob/main/docs/DISCLAIMER.md" target="_blank">the
+          Disclaimer</a> for more details.</p>
 
       <button class="feedback-button" onclick="$('.announcement-banner').hide()">OK, got it!</button>
     </div>
@@ -209,7 +240,8 @@
           style="height: 24px; margin-right: 10px">
         BioImage.IO Chatbot
       </div>
-      <div class="card-body" style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+      <div class="card-body"
+        style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
         <h3 class="text-center">Welcome to BioImage.IO Chatbot</h3>
         <button id="login-button" class="btn btn-primary">Login</button>
         <div class="login-spinner spinner" style="display:none"></div>
@@ -222,85 +254,102 @@
 
   <div id="app-container" style="display: none;">
 
-  <div class="container mt-5">
-    <div class="card" id="chat1">
-      <div class="card-header">
-        <img src="https://bioimage.io/static/img/bioimage-io-icon.svg" alt="BioImage.IO Icon"
-          style="height: 24px; margin-right: 10px">
-        BioImage.IO Chatbot
-      </div>
-
-      <div class="card-body">
-        <div class="message-holder"></div>
-        <div class="form-outline">
-          <label class="form-label" for="textAreaExample" id="status-text">Type your message and press enter</label>
-          <textarea class="form-control message" id="textAreaExample"></textarea>
+    <div class="container mt-5">
+      <div class="card" id="chat1">
+        <div class="card-header">
+          <img src="https://bioimage.io/static/img/bioimage-io-icon.svg" alt="BioImage.IO Icon"
+            style="height: 24px; margin-right: 10px">
+          BioImage.IO Chatbot
         </div>
-        <button type="button" class="btn btn-primary mt-3 send-btn"><i class="fas fa-paper-plane"></i>Send</button>
 
-        <!-- Add an "Edit Profile" button to toggle the profile options -->
-        <button type="button" class="btn btn-info mt-3" id="edit-profile-btn">
-          <i class="fas fa-pen"></i>Edit Profile
-        </button>
-        <!-- Add a "Reset" button to restart the session -->
-        <button type="button" class="btn btn-secondary mt-3" id="reset-btn">
-          <i class="fas fa-sync-alt"></i>Reset
-        </button>
-        <!-- Add the "Feedback" button -->
-      <button type="button" class="btn btn-info mt-3" id="feedback-btn">
-        <i class="fas fa-comment"></i> Feedback
-      </button>
+        <div class="card-body">
+          <div class="message-holder"></div>
+          <div class="form-outline">
+            <label class="form-label" for="textAreaExample" id="status-text">Ready to chat! Type your message and press
+              enter!</label>
+            <div style="position: relative; display: flex; align-items: center; gap: 10px;">
+              <label for="fileUpload" style="cursor: pointer; flex-shrink: 0;">
+                <i class="fas fa-paperclip" style="font-size: 1.2rem;" id="paperclipIcon"></i>
+                <!-- Adjust the font size as needed -->
+              </label>
+              <input type="file" id="fileUpload" style="visibility: hidden; position: absolute;"
+                onchange="fileSelected()">
+              <textarea class="form-control message" id="textAreaExample" rows="1"
+                style="flex-grow: 1; border: 1px solid #ced4da; border-radius: .25rem; height: 36px; padding: .375rem .75rem;"></textarea>
+            </div>
+          </div>
+          <button type="button" class="btn btn-primary mt-3 send-btn"><i class="fas fa-paper-plane"></i>Send</button>
 
-        <!-- Profile options initially collapsed -->
-        <div id="profileOptions" class="collapse">
-          <input type="text" class="form-control mt-3" id="userNameInput" placeholder="Enter your name...">
-          <input type="text" class="form-control mt-3" id="userOccupationInput" placeholder="Enter your occupation...">
-          <input type="text" class="form-control mt-3" id="userBackgroundInput" placeholder="Enter your background...">
-          <!-- Add a "Save" button for the user profile -->
-          <button type="button" class="btn btn-success mt-3" id="save-profile-btn">
-            Save
+          <!-- Add an "Edit Profile" button to toggle the profile options -->
+          <button type="button" class="btn btn-info mt-3" id="edit-profile-btn">
+            <i class="fas fa-pen"></i>Edit Profile
           </button>
-        </div>
-
-        <!-- Feedback form initially collapsed -->
-        <div id="feedback-form" class="collapse">
-          <textarea class="form-control mt-3" id="generalFeedback" placeholder="Tell us your experience about Bioimage.IO chatbot..." rows="3"></textarea>
-          <!-- Save Feedback button -->
-          <button type="button" class="btn btn-success mt-3" id="save-feedback-btn">
-            Submit Feedback
+          <!-- Add a "Reset" button to restart the session -->
+          <button type="button" class="btn btn-secondary mt-3" id="reset-btn">
+            <i class="fas fa-sync-alt"></i>Reset
           </button>
+          <!-- Add the "Feedback" button -->
+          <button type="button" class="btn btn-info mt-3" id="feedback-btn">
+            <i class="fas fa-comment"></i> Feedback
+          </button>
+
+          <!-- Profile options initially collapsed -->
+          <div id="profileOptions" class="collapse">
+            <input type="text" class="form-control mt-3" id="userNameInput" placeholder="Enter your name...">
+            <input type="text" class="form-control mt-3" id="userOccupationInput"
+              placeholder="Enter your occupation...">
+            <input type="text" class="form-control mt-3" id="userBackgroundInput"
+              placeholder="Enter your background...">
+            <!-- Add a "Save" button for the user profile -->
+            <button type="button" class="btn btn-success mt-3" id="save-profile-btn">
+              Save
+            </button>
+          </div>
+
+          <!-- Feedback form initially collapsed -->
+          <div id="feedback-form" class="collapse">
+            <textarea class="form-control mt-3" id="generalFeedback"
+              placeholder="Tell us your experience about Bioimage.IO chatbot..." rows="3"></textarea>
+            <!-- Save Feedback button -->
+            <button type="button" class="btn btn-success mt-3" id="save-feedback-btn">
+              Submit Feedback
+            </button>
+          </div>
+
+
+          <!-- Add the "Channels" dropdown menu -->
+          <div class="form-outline btn-info mt-3">
+            <label for="channelSelect">Knowledge Base Channel: </label>
+            <select class="form-select" id="channelSelect">
+              <option value="" disabled selected>Select a Channel</option>
+            </select>
+          </div>
+
         </div>
-
-
-        <!-- Add the "Channels" dropdown menu -->
-        <div class="form-outline btn-info mt-3">
-          <label for="channelSelect">Knowledge Base Channel: </label>
-          <select class="form-select" id="channelSelect">
-            <option value="" disabled selected>Select a Channel</option>
-          </select>
-        </div>
-
       </div>
-    </div>
-    <div class="card-footer text-center">
-      <!-- Helper message for personalized answers -->
-      <p class="mt-3">Tips: Customize your profile to get personalized answers based on your background.</p>
-      <a href="https://ai4life.eurobioimaging.eu/" target="_blank"><img src="https://ai4life.eurobioimaging.eu/wp-content/uploads/2022/09/AI4Life-logo_giraffe-nodes-2048x946.png"
-        alt="AI4Life Icon" style="height: 80px; margin-right: 10px">
-      </a>
-      <br>
-      <a href="https://github.com/bioimage-io/bioimageio-chatbot/blob/main/docs/DISCLAIMER.md" target="_blank">Disclaimer for BioImage.IO Chatbot</a> 
-      <br>
-      <a href="https://github.com/bioimage-io/bioimageio-chatbot/" target="_blank" style="text-decoration: none; color: inherit;">
-        <span class="badge bg-secondary"><i class="fab fa-github" style="font-size: 12px;"></i>Github</span>
-      </a>  
-      <span class="badge bg-secondary">bioimageio-chatbot v0.1.0</span>
-      <br>
-          
-      <a href="https://badge.fury.io/py/bioimageio-chatbot" target="_blank"><img src="https://badge.fury.io/py/bioimageio-chatbot.svg" alt="PyPI version" height="18"></a>
+      <div class="card-footer text-center">
+        <!-- Helper message for personalized answers -->
+        <p class="mt-3">Tips: Customize your profile to get personalized answers based on your background.</p>
+        <a href="https://ai4life.eurobioimaging.eu/" target="_blank"><img
+            src="https://ai4life.eurobioimaging.eu/wp-content/uploads/2022/09/AI4Life-logo_giraffe-nodes-2048x946.png"
+            alt="AI4Life Icon" style="height: 80px; margin-right: 10px">
+        </a>
+        <br>
+        <a href="https://github.com/bioimage-io/bioimageio-chatbot/blob/main/docs/DISCLAIMER.md"
+          target="_blank">Disclaimer for BioImage.IO Chatbot</a>
+        <br>
+        <a href="https://github.com/bioimage-io/bioimageio-chatbot/" target="_blank"
+          style="text-decoration: none; color: inherit;">
+          <span class="badge bg-secondary"><i class="fab fa-github" style="font-size: 12px;"></i>Github</span>
+        </a>
+        <span class="badge bg-secondary">bioimageio-chatbot v0.1.0</span>
+        <br>
+
+        <a href="https://badge.fury.io/py/bioimageio-chatbot" target="_blank"><img
+            src="https://badge.fury.io/py/bioimageio-chatbot.svg" alt="PyPI version" height="18"></a>
+      </div>
     </div>
   </div>
-</div>
 
 
   <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
@@ -308,6 +357,16 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/2.1.3/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
   <script>
+    function fileSelected() {
+      var input = document.getElementById('fileUpload');
+      var label = document.getElementById('paperclipIcon');
+      if (input.files && input.files[0]) {
+        label.classList.add('file-selected');
+        label.title = "Selected file: " + input.files[0].name;
+      } else {
+        label.classList.remove('file-selected');
+      }
+    }
     $(document).ready(async function () {
       let svc;
       let token = null;
@@ -364,10 +423,10 @@
       });
 
       const login_required = "LOGIN_REQUIRED";
-      if(login_required !== "false"){
+      if (login_required !== "false") {
         showLoginScreen();
       }
-      else{
+      else {
         svc = await initializeService();
         showAppInterface();
       }
@@ -376,7 +435,7 @@
         $('#profileOptions').collapse('toggle');
       });
 
-      async function initializeService(){
+      async function initializeService() {
         $('.message-holder').append(spinner);
         showConnectingStatus();
         try {
@@ -482,15 +541,15 @@
         smartypants: false
       });
 
-      renderer.link = function( href, title, text ) {
-        return '<a target="_blank" href="'+ href +'" title="' + title + '">' + text + '</a>';
+      renderer.link = function (href, title, text) {
+        return '<a target="_blank" href="' + href + '" title="' + title + '">' + text + '</a>';
       }
 
       function autoResize() {
         this.style.height = (this.scrollHeight) + 'px';
       }
       //svc = await initializeService();
-        
+
       const chat_history = [];
 
       let sessionId = generateSessionID();
@@ -499,11 +558,39 @@
 
       async function sendMessage(e) {
         e.preventDefault();
+
+        // Get the text message
         const message = $('.message').val();
+
+        // Get the selected file
+        const fileInput = document.getElementById('fileUpload');
+        const selectedFile = fileInput.files[0];
+
+        // Check if a file is selected
+        if (selectedFile) {
+          // Read the selected file as a data URL (base64)
+          const reader = new FileReader();
+          reader.onloadend = function () {
+            const imageData = reader.result; // Extract base64 data
+            sendChatMessage(message, imageData);
+          };
+          reader.readAsDataURL(selectedFile);
+        } else {
+          // No file selected, send only text message
+          sendChatMessage(message, null);
+        }
+
+        // Clear the input fields
+        $('.message').val('').focus();
+        fileInput.value = ''; // Clear the file input
+      }
+
+      async function sendChatMessage(textMessage, imageData) {
         const userName = $('#userNameInput').val();
         const userOccupation = $('#userOccupationInput').val();
         const userBackground = $('#userBackgroundInput').val();
-        const selectedChannel = $('#channelSelect').val(); // Get the selected channel
+        const selectedChannel = $('#channelSelect').val();
+
         // Create a user_profile object with name, occupation, and background
         let user_profile = {
           name: userName,
@@ -511,59 +598,66 @@
           background: userBackground
         };
 
-        $('.message').val('').focus();
+        appendUserMessage(textMessage);
 
-        appendUserMessage(message); // Append user message to the message container
         // Show 'Thinking...' status while waiting for the server's response
         showThinkingStatus();
+
+        // Append the image if available
+        const imageHTML = imageData ? `<img src="data:image/png;base64,${imageData}" alt="User Image" style="max-width: 100%;">` : '';
         $('.message-holder').append(`
-        <div id="progress-message-container" class="message-container robot-message">
-          <div class="rounded-icon-container">
-            <i class="fas fa-robot" style="margin-left: 0px;margin-top: -2px;"></i>
-          </div>
-          
-          <div  class="markdown-body message-content">
-            <h3><div class="spinner" style='display: inline-block;width:25px;height:25px;margin-bottom:-4px;'></div>🤔Thinking...</h3>
-            <div id="progress-message-content">
-            </div>
-          </div>
-        </div>`);
+  <div id="progress-message-container" class="message-container robot-message">
+      <div class="rounded-icon-container">
+        <i class="fas fa-robot" style="margin-left: 0px;margin-top: -2px;"></i>
+      </div>
+      <div  class="markdown-body message-content">
+        <h3><div class="spinner" style='display: inline-block;width:25px;height:25px;margin-bottom:-4px;'></div>🤔Thinking...</h3>
+        <div id="progress-message-content">
+    </div>
+  </div>
+</div>`);
         let accumulatedArgs = ""
-        function statusCallback(message){
-          if(message.type === 'function_call'){
-            if(message.status === 'in_progress'){
+        function statusCallback(message) {
+          if (message.type === 'function_call') {
+            if (message.status === 'in_progress') {
               accumulatedArgs += message.arguments
             }
-            else{
+            else {
               accumulatedArgs = message.arguments
             }
             content = // `<details> <summary>${message.name}</summary>`+
               "**Generating response for " + message.name + "...**" +
               "\n" + accumulatedArgs.replace(/\\n/g, '\n') + "\n\n";
-              // + "</details>";
-            $('#progress-message-content').html(marked(content, { renderer:renderer }));
+            // + "</details>";
+            $('#progress-message-content').html(marked(content, { renderer: renderer }));
+          }
+          else if (message.type === 'text') {
+            $('#progress-message-content').html(marked(message.content, { renderer: renderer }));
           }
         }
-        try{
-          response = await svc.chat(message, chat_history, user_profile, selectedChannel, statusCallback, sessionId);
+
+        try {
+          // Call the chat function with text and image data
+          response = await svc.chat(textMessage, chat_history, user_profile, selectedChannel, statusCallback, sessionId, imageData);
           console.log(response)
-          chat_history.push({ role: 'user', content: message })
-          chat_history.push({ role: 'assistant', content: response })
+          chat_history.push({ role: 'user', content: textMessage });
+          chat_history.push({ role: 'assistant', content: response });
           showReadyStatus();
+
         }
-        catch(e){
+        catch (e) {
           // generate an error message to simulate how Melman from Madagascar would respond to an error
           response = "Oh no! I'm sorry, I don't know how to answer that. Please try again.";
           showErrorStatus(`The server failed to respond, please try again. ${e}`);
           console.error(e);
         }
-        finally{
+        finally {
           // Remove spinner and set status back to 'Ready to chat' after finishing
           $('.spinner').remove();
           $('#progress-message-container').remove();
-          
-          appendRobotMessage(response, "message-"+chat_history.length); // Append robot message to the message container
-        } 
+
+          appendRobotMessage(response, "message-" + chat_history.length); // Append robot message to the message container
+        }
       }
 
       function appendUserMessage(message) {
@@ -578,7 +672,7 @@
 
       function appendRobotMessage(message, messageId) {
         // Convert the message to HTML using the marked library
-        const htmlMessage = marked(message, { renderer:renderer });
+        const htmlMessage = marked(message, { renderer: renderer });
 
         let messageContainer = `<div class="message-container robot-message">
           <div class="rounded-icon-container">
@@ -590,8 +684,8 @@
           <button class="feedback-button like-button small-grey-button"><i class="fas fa-thumbs-up"></i></button>
           <button class="feedback-button unlike-button small-grey-button"><i class="fas fa-thumbs-down"></i></button>
         </div>`;
-        
-        
+
+
         $('.message-holder').append(messageContainer);
       }
       // Function to update the status text
@@ -621,16 +715,16 @@
       function generateSessionID() {
         // Create a timestamp to ensure uniqueness
         const timestamp = new Date().getTime();
-  
+
         // Generate a random number to add randomness
         const random = Math.random();
-  
+
         // Combine timestamp and random number to create the session ID
         const sessionID = `${timestamp}-${random}`;
-  
+
         return sessionID;
       }
-  
+
       // Call the function to generate a session ID
 
       async function showFeedbackWindow() {
@@ -639,9 +733,9 @@
 
         if (feedbackMessage !== null) {
           const feedbackType = $(this).hasClass('like-button') ? 'like' : 'unlike';
-          
+
           // get the messageId
-          const messageId = $(this).parent().attr('id'); 
+          const messageId = $(this).parent().attr('id');
           // remove message- from the messageId and convert to integer
           const messageIndex = parseInt(messageId.replace('message-', ''));
           // get the chat history until messageIndex
@@ -652,31 +746,31 @@
             messages: chatMessages,
             session_id: sessionId
           };
-      
+
           // Call the 'svc.report()' function to send the feedback data
-          try{
+          try {
             await svc.report(feedbackData);
           }
-          catch(e){
+          catch (e) {
             console.error(e);
             alert(`Failed to send feedback, error: ${e}`);
             return;
           }
           // Hide the unclicked button
           const otherButton = $(this).hasClass('like-button')
-          ? $('.unlike-button', $(this).parent())
-          : $('.like-button', $(this).parent());
-        otherButton.hide();
+            ? $('.unlike-button', $(this).parent())
+            : $('.like-button', $(this).parent());
+          otherButton.hide();
 
-        // Disable the clicked button
-        $(this).prop('disabled', true).off('click');
+          // Disable the clicked button
+          $(this).prop('disabled', true).off('click');
         }
-      }  
-      
+      }
+
       // Attach a click event handler to the 'like' and 'unlike' buttons
       $('.message-holder').on('click', '.feedback-button', showFeedbackWindow);
-      
-      
+
+
       $("#textAreaExample").on("keydown", function (event) {
         if (event.key === "Enter") {
           event.preventDefault(); // Prevent the default new line behavior
@@ -689,55 +783,56 @@
       });
 
       $('.send-btn').on('click', sendMessage);
-    
 
 
-    // Add a click event handler for the "Feedback" button
-    $('#feedback-btn').click(function () {
-      // Show the feedback form
-      $('#feedback-form').collapse('toggle');
 
-      // Set the initial height of the textarea dynamically to show three lines
-      const lineHeight = 20; // You may need to adjust this based on your font size
-      $('#generalFeedback').css('height', (lineHeight * 5) + 'px');
+      // Add a click event handler for the "Feedback" button
+      $('#feedback-btn').click(function () {
+        // Show the feedback form
+        $('#feedback-form').collapse('toggle');
+
+        // Set the initial height of the textarea dynamically to show three lines
+        const lineHeight = 20; // You may need to adjust this based on your font size
+        $('#generalFeedback').css('height', (lineHeight * 5) + 'px');
+      });
+
+      // Add a click event handler for the "Save Feedback" button
+      $('#save-feedback-btn').click(async function () {
+        // Get the general feedback message from the textarea
+        const generalFeedback = $('#generalFeedback').val();
+
+        // Create a feedbackData object
+        const feedbackData = {
+          type: 'general', // Set the type to 'general feedback'
+          feedback: generalFeedback,
+          messages: chat_history, // Include chat history
+          session_id: sessionId
+        };
+
+        // Call the 'svc.report()' function to send the feedback data
+        try {
+          await svc.report(feedbackData);
+        }
+        catch (e) {
+          console.error(e);
+          alert(`Failed to send feedback, error: ${e}`);
+          return;
+        }
+
+        // Clear the input field
+        $('#generalFeedback').val('');
+
+        // Collapse the feedback form
+        $('#feedback-form').collapse('hide');
+
+        alert("Thank you for your feedback!");
+      });
+
     });
-
-    // Add a click event handler for the "Save Feedback" button
-    $('#save-feedback-btn').click(async function () {
-      // Get the general feedback message from the textarea
-      const generalFeedback = $('#generalFeedback').val();
-
-      // Create a feedbackData object
-      const feedbackData = {
-        type: 'general', // Set the type to 'general feedback'
-        feedback: generalFeedback,
-        messages: chat_history, // Include chat history
-        session_id: sessionId
-      };
-
-      // Call the 'svc.report()' function to send the feedback data
-      try{
-        await svc.report(feedbackData);
-      }
-      catch(e){
-        console.error(e);
-        alert(`Failed to send feedback, error: ${e}`);
-        return;
-      }
-
-      // Clear the input field
-      $('#generalFeedback').val('');
-
-      // Collapse the feedback form
-      $('#feedback-form').collapse('hide');
-
-      alert("Thank you for your feedback!");
-    });
-
-  });
   </script>
   <!-- https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.3.0/github-markdown.min.css -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.3.0/github-markdown-light.css" />
+  <link rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.3.0/github-markdown-light.css" />
 </body>
 
 </html>

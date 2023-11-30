@@ -16,7 +16,12 @@ import io
 from bioimageio_chatbot.knowledge_base import load_knowledge_base
 from bioimageio_chatbot.utils import get_manifest
 import pkg_resources
+import base64
 
+def decode_base64(encoded_data):
+    decoded_data = base64.b64decode(encoded_data.split(',')[1])
+    return decoded_data
+    
 def load_model_info():
     response = requests.get("https://bioimage-io.github.io/collection-bioimage-io/collection.json")
     assert response.status_code == 200
@@ -309,7 +314,7 @@ async def register_chat_service(server):
         await save_chat_history(chat_log_full_path, chat_his_dict)
         print(f"User report saved to {filename}")
         
-    async def chat(text, chat_history, user_profile=None, channel=None, status_callback=None, session_id=None, context=None):
+    async def chat(text, chat_history, user_profile=None, channel=None, status_callback=None, session_id=None, image_data=None, context=None):
         if login_required and context and context.get("user"):
             assert check_permission(context.get("user")), "You don't have permission to use the chatbot, please sign up and wait for approval"
         session_id = session_id or secrets.token_hex(8)
@@ -320,7 +325,15 @@ async def register_chat_service(server):
                     await status_callback(message.dict())
 
         event_bus.on("stream", stream_callback)
-        
+
+
+        if image_data:
+            await status_callback({"type": "text", "content": f"\n![Uploaded Image]({image_data})\n"})
+            try:
+                decoded_image_data = decode_base64(image_data)
+            except Exception as e:
+                return f"Failed to decode the image, error: {e}"
+
         # Get the channel id by its name
         if channel == 'auto':
             channel = None
