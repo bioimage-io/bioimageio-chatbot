@@ -18,6 +18,10 @@ from bioimageio_chatbot.utils import get_manifest
 import pkg_resources
 import base64
 
+def decode_base64(encoded_data):
+    decoded_data = base64.b64decode(encoded_data.split(',')[1])
+    return decoded_data
+    
 def load_model_info():
     response = requests.get("https://bioimage-io.github.io/collection-bioimage-io/collection.json")
     assert response.status_code == 200
@@ -325,27 +329,11 @@ async def register_chat_service(server):
 
         if image_data:
             await status_callback({"type": "text", "content": f"\n![Uploaded Image]({image_data})\n"})
-        # decode image 
-        def decode_base64(encoded_data):
             try:
-                
-                decoded_data = base64.b64decode(encoded_data.split(',')[1])
-                return decoded_data
+                decoded_image_data = decode_base64(image_data)
             except Exception as e:
-                print(f"Error decoding base64: {e}")
-                return None
+                return f"Failed to decode the image, error: {e}"
 
-        # Example usage:
-        # base64_encoded_image = "your_base64_encoded_image_data_here"
-        decoded_image_data = decode_base64(image_data)
-
-        if decoded_image_data is not None:
-            # Now you can use 'decoded_image_data' as the binary image data
-            # with open("decoded_image.jpg", "wb") as image_file:
-            #     image_file.write(decoded_image_data)
-            print("Image successfully decoded and saved.")
-        else:
-            print("Image decoding failed.")
         # Get the channel id by its name
         if channel == 'auto':
             channel = None
