@@ -12,6 +12,13 @@
   <link rel="icon" type="image/x-icon" href="https://bioimage.io/static/icons/favicon.ico">
   <style>
     /* Custom CSS */
+    .file-selected {
+      background-color: #036ffc;
+      border-radius: 4px;
+      padding: 5px;
+      color: white;
+    }
+
     .form-label {
       color: #808080b0;
     }
@@ -233,12 +240,15 @@
       <div class="card-body">
         <div class="message-holder"></div>
         <div class="form-outline">
-          <label class="form-label" for="textAreaExample" id="status-text">Type your message and press enter</label>
-          <!-- Add the file input element -->
-          <input type="file" id="imageUpload" accept="image/*">
-
-          <textarea class="form-control message" id="textAreaExample"></textarea>
-        </div>
+          <label class="form-label" for="textAreaExample" id="status-text">Ready to chat! Type your message and press enter!</label>
+          <div style="position: relative; display: flex; align-items: center; gap: 10px;">
+            <label for="fileUpload" style="cursor: pointer; flex-shrink: 0;">
+              <i class="fas fa-paperclip" style="font-size: 1.2rem;" id="paperclipIcon"></i> <!-- Adjust the font size as needed -->
+            </label>
+            <input type="file" id="fileUpload" style="visibility: hidden; position: absolute;" onchange="fileSelected()">
+            <textarea class="form-control message" id="textAreaExample" rows="1" style="flex-grow: 1; border: 1px solid #ced4da; border-radius: .25rem; height: 36px; padding: .375rem .75rem;"></textarea>
+          </div>
+        </div>        
         <button type="button" class="btn btn-primary mt-3 send-btn"><i class="fas fa-paper-plane"></i>Send</button>
 
         <!-- Add an "Edit Profile" button to toggle the profile options -->
@@ -311,6 +321,16 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/2.1.3/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
   <script>
+     function fileSelected() {
+      var input = document.getElementById('fileUpload');
+      var label = document.getElementById('paperclipIcon');
+      if(input.files && input.files[0]) {
+        label.classList.add('file-selected');
+        label.title = "Selected file: " + input.files[0].name;
+      } else {
+        label.classList.remove('file-selected');
+      }
+    }
     $(document).ready(async function () {
       let svc;
       let token = null;
@@ -507,7 +527,7 @@
   const message = $('.message').val();
 
   // Get the selected file
-  const fileInput = document.getElementById('imageUpload');
+  const fileInput = document.getElementById('fileUpload');
   const selectedFile = fileInput.files[0];
 
   // Check if a file is selected
@@ -515,7 +535,7 @@
     // Read the selected file as a data URL (base64)
     const reader = new FileReader();
     reader.onloadend = function () {
-      const imageData = reader.result.split(',')[1]; // Extract base64 data
+      const imageData = reader.result; // Extract base64 data
       sendChatMessage(message, imageData);
     };
     reader.readAsDataURL(selectedFile);
@@ -574,6 +594,9 @@ let accumulatedArgs = ""
               "\n" + accumulatedArgs.replace(/\\n/g, '\n') + "\n\n";
               // + "</details>";
             $('#progress-message-content').html(marked(content, { renderer:renderer }));
+          }
+          else if(message.type === 'text'){
+            $('#progress-message-content').html(marked(message.content, { renderer:renderer }));
           }
         }
 
