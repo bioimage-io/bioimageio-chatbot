@@ -152,3 +152,5 @@ bioimageio-knowledge-base/
 chat_logs
 authorized_users.json
 .pypirc
+
+tmp/
