@@ -234,6 +234,9 @@
         <div class="message-holder"></div>
         <div class="form-outline">
           <label class="form-label" for="textAreaExample" id="status-text">Type your message and press enter</label>
+          <!-- Add the file input element -->
+          <input type="file" id="imageUpload" accept="image/*">
+
           <textarea class="form-control message" id="textAreaExample"></textarea>
         </div>
         <button type="button" class="btn btn-primary mt-3 send-btn"><i class="fas fa-paper-plane"></i>Send</button>
@@ -498,37 +501,66 @@
 
 
       async function sendMessage(e) {
-        e.preventDefault();
-        const message = $('.message').val();
-        const userName = $('#userNameInput').val();
-        const userOccupation = $('#userOccupationInput').val();
-        const userBackground = $('#userBackgroundInput').val();
-        const selectedChannel = $('#channelSelect').val(); // Get the selected channel
-        // Create a user_profile object with name, occupation, and background
-        let user_profile = {
-          name: userName,
-          occupation: userOccupation,
-          background: userBackground
-        };
+  e.preventDefault();
 
-        $('.message').val('').focus();
+  // Get the text message
+  const message = $('.message').val();
 
-        appendUserMessage(message); // Append user message to the message container
-        // Show 'Thinking...' status while waiting for the server's response
-        showThinkingStatus();
-        $('.message-holder').append(`
-        <div id="progress-message-container" class="message-container robot-message">
-          <div class="rounded-icon-container">
-            <i class="fas fa-robot" style="margin-left: 0px;margin-top: -2px;"></i>
-          </div>
-          
-          <div  class="markdown-body message-content">
-            <h3><div class="spinner" style='display: inline-block;width:25px;height:25px;margin-bottom:-4px;'></div>🤔Thinking...</h3>
-            <div id="progress-message-content">
-            </div>
-          </div>
-        </div>`);
-        let accumulatedArgs = ""
+  // Get the selected file
+  const fileInput = document.getElementById('imageUpload');
+  const selectedFile = fileInput.files[0];
+
+  // Check if a file is selected
+  if (selectedFile) {
+    // Read the selected file as a data URL (base64)
+    const reader = new FileReader();
+    reader.onloadend = function () {
+      const imageData = reader.result.split(',')[1]; // Extract base64 data
+      sendChatMessage(message, imageData);
+    };
+    reader.readAsDataURL(selectedFile);
+  } else {
+    // No file selected, send only text message
+    sendChatMessage(message, null);
+  }
+
+  // Clear the input fields
+  $('.message').val('').focus();
+  fileInput.value = ''; // Clear the file input
+}
+
+async function sendChatMessage(textMessage, imageData) {
+  const userName = $('#userNameInput').val();
+  const userOccupation = $('#userOccupationInput').val();
+  const userBackground = $('#userBackgroundInput').val();
+  const selectedChannel = $('#channelSelect').val();
+
+  // Create a user_profile object with name, occupation, and background
+  let user_profile = {
+    name: userName,
+    occupation: userOccupation,
+    background: userBackground
+  };
+
+  appendUserMessage(textMessage);
+
+  // Show 'Thinking...' status while waiting for the server's response
+  showThinkingStatus();
+
+  // Append the image if available
+  const imageHTML = imageData ? `<img src="data:image/png;base64,${imageData}" alt="User Image" style="max-width: 100%;">` : '';
+  $('.message-holder').append(`
+  <div id="progress-message-container" class="message-container robot-message">
+      <div class="rounded-icon-container">
+        <i class="fas fa-robot" style="margin-left: 0px;margin-top: -2px;"></i>
+      </div>
+      <div  class="markdown-body message-content">
+        <h3><div class="spinner" style='display: inline-block;width:25px;height:25px;margin-bottom:-4px;'></div>🤔Thinking...</h3>
+        <div id="progress-message-content">
+    </div>
+  </div>
+</div>`);
+let accumulatedArgs = ""
         function statusCallback(message){
           if(message.type === 'function_call'){
             if(message.status === 'in_progress'){
@@ -544,27 +576,30 @@
             $('#progress-message-content').html(marked(content, { renderer:renderer }));
           }
         }
-        try{
-          response = await svc.chat(message, chat_history, user_profile, selectedChannel, statusCallback, sessionId);
-          console.log(response)
-          chat_history.push({ role: 'user', content: message })
-          chat_history.push({ role: 'assistant', content: response })
-          showReadyStatus();
-        }
-        catch(e){
-          // generate an error message to simulate how Melman from Madagascar would respond to an error
-          response = "Oh no! I'm sorry, I don't know how to answer that. Please try again.";
-          showErrorStatus(`The server failed to respond, please try again. ${e}`);
-          console.error(e);
-        }
-        finally{
-          // Remove spinner and set status back to 'Ready to chat' after finishing
-          $('.spinner').remove();
-          $('#progress-message-container').remove();
-          
-          appendRobotMessage(response, "message-"+chat_history.length); // Append robot message to the message container
-        } 
-      }
+
+  try {
+    // Call the chat function with text and image data
+    response = await svc.chat(textMessage, chat_history, user_profile, selectedChannel, statusCallback, sessionId, imageData);
+    console.log(response)
+    chat_history.push({ role: 'user', content: textMessage });
+    chat_history.push({ role: 'assistant', content: response });
+    showReadyStatus();
+    
+  } 
+  catch(e){
+    // generate an error message to simulate how Melman from Madagascar would respond to an error
+    response = "Oh no! I'm sorry, I don't know how to answer that. Please try again.";
+    showErrorStatus(`The server failed to respond, please try again. ${e}`);
+    console.error(e);
+  }
+  finally{
+    // Remove spinner and set status back to 'Ready to chat' after finishing
+    $('.spinner').remove();
+    $('#progress-message-container').remove();
+    
+    appendRobotMessage(response, "message-"+chat_history.length); // Append robot message to the message container
+  } 
+}
 
       function appendUserMessage(message) {
         let messageContainer = `<div class="message-container user-message">
