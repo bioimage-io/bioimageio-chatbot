@@ -1,3 +1,4 @@
+import typing as T
 import numpy as np
 import cv2
 from keras.applications.vgg16 import preprocess_input
@@ -11,6 +12,7 @@ import torch
 import lpips
 from tqdm.auto import tqdm
 import pickle as pkl
+
 
 class VGG16Model:
     def __init__(self):
@@ -31,13 +33,12 @@ class ImageProcessor():
         self.image = None
         self.model = VGG16Model()
 
-
     def load_image(self, image_path):
         try:
             self.image = np.load(image_path)
         except Exception as e:
             raise Exception(f"Error loading image from {self.image_path}: {str(e)}")
-        
+
     def resize_image(self, input_image, current_format, output_format = "byxc"):
         # input_image = np.load(input_image_path)
         # self.load_image(input_image_path)
@@ -57,7 +58,7 @@ class ImageProcessor():
         input_image = np.transpose(input_image, index_tup)
         current_axes = 'bcyx'
         resized_image = np.array([[cv2.resize(img_xy, (224, 224)) for img_xy in img_cxy] for img_cxy in input_image])
-        if resized_image.shape[0] > 1: # flatten the 'b' dimension
+        if resized_image.shape[0] > 1:  # flatten the 'b' dimension
             resized_image = np.mean(resized_image, axis=0, keepdims=True)
         num_channels = resized_image.shape[1]
         if num_channels == 1:
@@ -72,22 +73,24 @@ class ImageProcessor():
             resized_image = resized_image[:, :3, :, :]
         output_tup = tuple(current_axes.index(c) for c in output_format) # reshape to output format
         resized_image = np.transpose(resized_image, output_tup)
-        return(resized_image)
+        return resized_image
 
-    
-    def embed_image(self, input_image, current_format : str, model_format : str = "byxc"):
-        resized_image = self.resize_image(input_image, current_format, output_format = model_format)
+    def embed_image(
+            self, input_image, current_format: str,
+            model_format: str = "byxc"):
+        resized_image = self.resize_image(
+            input_image, current_format, output_format=model_format)
         preprocessed_image = preprocess_input(resized_image)
         vector_embedding = self.model.get_vector_embedding(preprocessed_image)
         self.vector_embedding = vector_embedding
-        return(vector_embedding)
+        return vector_embedding
 
     def save_output(self):
         try:
             np.save(self.output_path, self.vector_embedding)
         except Exception as e:
             raise Exception(f"Error saving output to {self.output_path}: {str(e)}")
-    
+
     def get_torch_image(self, input_image_path, input_axes):
         if input_image_path.endswith('.npy'):
             input_image = np.load(input_image_path)
@@ -96,9 +99,10 @@ class ImageProcessor():
         resized_image = self.resize_image(input_image, input_axes, output_format = "bcyx") # https://github.com/richzhang/PerceptualSimilarity
         preprocessed_image = preprocess_input(resized_image)
         torch_image = torch.from_numpy(preprocessed_image.copy()).to(torch.float32)
-        return(torch_image)
-    
-def get_model_rdf(m : dict, db_path : str) -> dict | None:
+        return torch_image
+
+
+def get_model_rdf(m: dict, db_path: str) -> T.Optional[dict]:
     """Gets the model rdf_source yaml (and writes to db_path). 
     Returns None if the yaml doesn't have test_inputs or input_axes"""
     nickname = m['nickname']
@@ -110,18 +114,14 @@ def get_model_rdf(m : dict, db_path : str) -> dict | None:
         if response.status_code == 200:
             rdf_source_content = response.content.decode('utf-8')
     else:
-        with open(yaml_name, 'r') as f:
+        with open(yaml_name, 'r', encoding="utf-8") as f:
             rdf_source_content = f.read()
     rdf_dict = yaml.safe_load(rdf_source_content)
-    try:
-        test_inputs = rdf_dict['test_inputs']
-        input_axes = rdf_dict['inputs'][0]['axes']
-        with open(yaml_name, 'w') as f:
-            f.write(rdf_source_content)
-        return(rdf_dict)
-    except:
-        return(None)
-    
+    with open(yaml_name, 'w', encoding='utf-8') as f:
+        f.write(rdf_source_content)
+    return rdf_dict
+
+
 def get_model_torch_images(rdf_dict: dict, db_path : str) -> (list, list):
     image_embedder = ImageProcessor()
     mislabeled_axes = {'impartial-shark' : 'yx'} # impartial shark has mislabeled axes
@@ -146,52 +146,74 @@ def get_model_torch_images(rdf_dict: dict, db_path : str) -> (list, list):
         torch_image = image_embedder.get_torch_image(input_image_file, input_axes)
         torch_images.append(torch_image)
         model_metadata.append(rdf_dict)
-    return(torch_images, model_metadata)
+    return torch_images, model_metadata
 
 
-def get_torch_db(db_path : str) -> list[(torch.Tensor, dict)]:
+def get_torch_db(db_path: str, embedder, force_build: bool = False) -> list[(torch.Tensor, dict)]:
     out_db_path = os.path.join(db_path, 'db.pkl')
-    if os.path.exists(out_db_path):
+    if (not force_build) and os.path.exists(out_db_path):
         db = pkl.load(open(out_db_path, 'rb'))
-        return(db)
+        return db
     models = load_model_info()
     all_metadata = []
     all_torch_images = []
+    all_embeddings = []
     print('Creating PyTorch image database from model zoo...')
-    for i_m, m in enumerate(tqdm(models)):
+    for _, m in enumerate(tqdm(models)):
         if 'nickname' not in m:
             continue
         rdf_dict = get_model_rdf(m, db_path)
         if not rdf_dict:
             continue
-        model_torch_images, model_metadata = get_model_torch_images(rdf_dict, db_path)
+        model_torch_images, model_metadata = get_model_torch_images(
+            rdf_dict, db_path)
         all_torch_images.extend(model_torch_images)
         all_metadata.extend(model_metadata)
-    db = list(zip(all_torch_images, all_metadata))
+        for img in model_torch_images:
+            vec = embedder.embed_image(img.numpy(), "bcyx")
+            all_embeddings.append(vec)
+    db = list(zip(all_torch_images, all_embeddings, all_metadata))
     with open(out_db_path, 'wb') as f:
         pkl.dump(db, f)
-    return(db)
+    return db
 
-def get_similarity(img1 : torch.Tensor, img2 : torch.Tensor) -> float:
+
+def get_similarity(img1: torch.Tensor, img2: torch.Tensor) -> float:
     loss_fn_vgg = lpips.LPIPS(net='vgg', verbose=False)
     diff = loss_fn_vgg(img1, img2)
     diff = diff.detach().numpy()[0][0][0][0]
-    sim = 1 - diff # Closer to 1 = more similar
-    return(sim)
+    sim = 1 - diff  # Closer to 1 = more similar
+    return sim
 
-def search_torch_db(input_image_path : str, input_image_axes : str, db_path : str, top_n : int = 5) -> str:
-    db = get_torch_db(db_path)
+
+def get_similarity_vec(vec1: np.ndarray, vec2: np.ndarray) -> float:
+    # cosine similarity
+    vec1 = vec1.flatten()
+    vec2 = vec2.flatten()
+    return np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
+
+
+def search_torch_db(
+        input_image_path: str, input_image_axes: str,
+        db_path: str, top_n: int = 5) -> str:
     image_embedder = ImageProcessor()
-    user_torch_image = image_embedder.get_torch_image(input_image_path, input_image_axes)
+    db = get_torch_db(db_path, image_embedder)
+    user_torch_image = image_embedder.get_torch_image(
+        input_image_path, input_image_axes)
+    user_embedding = image_embedder.embed_image(
+        user_torch_image.numpy(), "bcyx")
     print('Searching DB...')
-    sims = [get_similarity(user_torch_image, img) for (img,_) in tqdm(db)]
-    hit_indices = sorted(range(len(sims)), key=lambda i: sims[i], reverse=True)[:top_n]
+    sims = [get_similarity_vec(user_embedding, embedding) for (_, embedding, _) in tqdm(db)]
+    hit_indices = sorted(
+        range(len(sims)), key=lambda i: sims[i], reverse=True)[:top_n]
     print("-----------------------------------\nTop Hits\n-----------------------------------")
     for i_hit, hit_idx in enumerate(hit_indices):
-        entry = db[hit_idx][1]
+        entry = db[hit_idx][-1]
         nickname = entry['config']['bioimageio']['nickname']
-        print(f"({i_hit}) - {nickname}\n")
+        similarity = sims[hit_idx]
+        print(f"({i_hit}) - {nickname} - similarity: {similarity}\n")
     print("-----------------------------------")
+
 
 if __name__ == "__main__":
     # embedder = ImageProcessor()
@@ -205,8 +227,7 @@ if __name__ == "__main__":
     # print(image_embedder.resize_image(user_img, user_img_axes))
     # db_path = create_torch_db("/Users/gkreder/Downloads/image_db")
     # input_img = "/Users/gkreder/Downloads/microscopy-fruit-fly-neurosciencenews.jpeg"
-    input_img = "/Users/gkreder/Downloads/nuclear_blue_image.jpg"
+    input_img = "./user_input.jpeg"
     input_axes = "yxc"
-    db_path = "/Users/gkreder/Downloads/image_db"
+    db_path = "./image_db"
     search_torch_db(input_img, input_axes, db_path)
-    
