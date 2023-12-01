@@ -1,25 +1,26 @@
-import asyncio
 import os
+import io
+import sys
 import json
-import datetime
+import base64
+import asyncio
 import secrets
-import aiofiles
-from imjoy_rpc.hypha import login, connect_to_server
+import datetime
 
+import requests
+import aiofiles
+import pkg_resources
+import matplotlib.pyplot as plt
 from pydantic import BaseModel, Field
 from schema_agents.role import Role
 from schema_agents.schema import Message
 from typing import Any, Dict, List, Optional, Union
-import requests
-import sys
-import io
+from imjoy_rpc.hypha import login, connect_to_server
+
 from bioimageio_chatbot.knowledge_base import load_knowledge_base
 from bioimageio_chatbot.utils import get_manifest
-import pkg_resources
-import base64
-from bioimageio_chatbot.image_processor import search_torch_db
+from bioimageio_chatbot.image_processor import search_torch_db, BioengineRunner, ImageProcessor
 
-import base64
 
 def decode_base64(encoded_data):
     # Split the string on the comma
@@ -31,6 +32,14 @@ def decode_base64(encoded_data):
     file_extension = header.split(';')[0].split('/')[1]
 
     return decoded_data, file_extension
+
+
+def encode_base64(image_path):
+    with open(image_path, "rb") as image_file:
+        encoded_string = base64.b64encode(image_file.read())
+    # format it for the html img tag
+    encoded_string = f"data:image/png;base64,{encoded_string.decode('utf-8')}"
+    return encoded_string
 
     
 def load_model_info():
@@ -129,9 +138,19 @@ class QuestionWithHistory(BaseModel):
     channel_info: Optional[ChannelInfo] = Field(None, description="The selected channel of the user's question. If provided, rely only on the selected channel when answering the user's question.")
     image_data: Optional[str] = Field(None, description = "The uploaded image data") # gkreder
 
-class SearchModelByImage(BaseModel):
-    """Searching the bioimage models against the user input image"""
+class SearchAndRunModelByImage(BaseModel):
+    """Search bioimage model zoo for the best model to analyze user's image and run the model according to user's request"""
     request: str = Field(description="The user's request")
+
+class InputImageDescription(BaseModel):
+    """"Some description of the input image"""
+    image_shape: str = Field(description = "The shape of the input image.")
+    image_dtype: str = Field(description = "The dtype of the input image.")
+    image_filename: str = Field(description = "The filename of the input image.")
+
+class InputImageAxes(BaseModel):
+    """The axes of the input image"""
+    axes: str = Field(description="The axes of the input image, for example 'cyx', 'cyxz', 'tczyx'...")
 
 
 def create_customer_service(db_path):
@@ -171,44 +190,56 @@ def create_customer_service(db_path):
             inputs.insert(0, question_with_history.channel_info)
         if not question_with_history.channel_info or question_with_history.channel_info.id == "bioimage.io":
             try:
-                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, ModelZooInfoScript, SearchModelByImage])
+                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, ModelZooInfoScript, SearchAndRunModelByImage])
             except Exception as e:
                 # try again
-                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, ModelZooInfoScript, SearchModelByImage])
+                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, ModelZooInfoScript, SearchAndRunModelByImage])
         else:
             try:
-                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, SearchModelByImage])
+                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, SearchAndRunModelByImage])
             except Exception as e:
                 # try again
-                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, SearchModelByImage])
+                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, SearchAndRunModelByImage])
         print(type(req))
         if isinstance(req, DirectResponse):
             return req.response
-        elif isinstance(req, SearchModelByImage):
-            loop = asyncio.get_running_loop()
+        elif isinstance(req, SearchAndRunModelByImage):
             try:
                 decoded_image_data, image_ext = decode_base64(question_with_history.image_data)
-                image_path = f'tmp-user-image.{image_ext}'
-                with open(image_path, 'wb') as f:
-                    f.write(decoded_image_data)
-                db_hits = search_torch_db(image_path, "yxc", "./tmp/image_db")
-                response_string = db_hits[0][-1]['config']['bioimageio']['nickname']
-                return(response_string)
             except Exception as e:
                 return f"Failed to decode the image, error: {e}"
-            # print(f"Executing the script:\n{req.script}")
-            print(f"Executing the image search: ")
-            result = await loop.run_in_executor(None, execute_code, req.script, {"resources": resource_items})
-            print(f"Script execution result:\n{result}")
-            # response = await role.aask(ModelZooInfoScriptResults(
-                # stdout=result["stdout"],
-                # stderr=result["stderr"],
-                # request=req.request,
-                # user_info=req.user_info
-            # ), FinalResponse)
-            # references = f"""<details><summary>Source Code</summary>\n\n<code>\nScript: \n{req.script}\n\nResults: \n{result["stdout"]}\nError: {result["stderr"]}\n</code>\n\n</details>"""
-            # response = response.response + "\n\n" + references
-            return response
+            image_path = f'tmp-user-image.{image_ext}'
+            with open(image_path, 'wb') as f:
+                f.write(decoded_image_data)
+            image_processor = ImageProcessor()
+            arr = image_processor.read_image(image_path)
+            desc = InputImageDescription(
+                image_shape = str(arr.shape),
+                image_dtype = str(arr.dtype),
+                image_filename = image_path
+            )
+            req = await role.aask(desc, InputImageAxes)
+            print(req.axes)
+            axes = req.axes
+            axes = 'yxc'
+            db_hits = search_torch_db(image_processor, image_path, axes, "./tmp/image_db")
+            response_string = db_hits[0][-1]['config']['bioimageio']['nickname']
+            rdf = db_hits[0][-1]
+            model_id = rdf['id']
+            bioengine_runner = BioengineRunner()
+            await bioengine_runner.setup()
+            import numpy as np
+            arr = arr.mean(axis=2)[:,:,None]
+            output = await bioengine_runner.run_model(arr, model_id, rdf, axes)
+            print(output.shape)
+            fig, axes = plt.subplots(ncols=2)
+            axes[0].imshow(arr[:,:,0])
+            axes[0].set_title('Input image')
+            axes[1].imshow(output[:, :, 0])
+            axes[1].set_title('Output image')
+            fig.savefig('tmp-output.png')
+            base64_output = encode_base64('tmp-output.png')
+            return f"Running model {response_string} through the BioEngine \noutput image shape: {output.shape}\n![result_image]({base64_output})"
 
         elif isinstance(req, DocumentRetrievalInput):
             if req.channel_id == "all":
@@ -468,6 +499,7 @@ async def register_chat_service(server):
     server_url = server.config['public_base_url']
 
     print(f"The BioImage.IO Chatbot is available at: {server_url}/{server.config['workspace']}/apps/bioimageio-chatbot-client/index")
+
 
 if __name__ == "__main__":
     # asyncio.run(main())

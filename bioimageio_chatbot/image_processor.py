@@ -8,8 +8,8 @@ import requests
 import torch
 import torch.nn as nn
 import numpy as np
+from xarray import DataArray
 from tqdm.auto import tqdm
-
 
 
 class Embedder():
@@ -135,11 +135,15 @@ class ImageProcessor():
         except Exception as e:
             raise Exception(f"Error saving output to {self.output_path}: {str(e)}")
 
-    def get_torch_image(self, input_image_path, input_axes):
+    def read_image(self, input_image_path) -> np.ndarray:
         if input_image_path.endswith('.npy'):
             input_image = np.load(input_image_path)
         else:
             input_image = cv2.imread(input_image_path)
+        return input_image
+
+    def get_torch_image(self, input_image_path, input_axes):
+        input_image = self.read_image(input_image_path)
         resized_image = self.resize_image(input_image, input_axes, output_format = "bcyx")
         resized_image = resized_image.astype(np.float32)
         torch_image = torch.from_numpy(resized_image).to(torch.float32)
@@ -231,9 +235,9 @@ def get_similarity_vec(vec1: np.ndarray, vec2: np.ndarray) -> float:
 
 
 def search_torch_db(
+        image_processor: ImageProcessor,
         input_image_path: str, input_image_axes: str,
         db_path: str, top_n: int = 5) -> str:
-    image_processor = ImageProcessor()
     db = get_torch_db(db_path, image_processor)
     user_torch_image = image_processor.get_torch_image(
         input_image_path, input_image_axes)
@@ -253,8 +257,172 @@ def search_torch_db(
     return [db[i] for i in hit_indices]
 
 
+def is_channel_first(shape):
+    if len(shape) == 5:  # with batch dimension
+        shape = shape[1:]
+    min_dim = np.argmin(list(shape))
+    if min_dim == 0:  # easy case: channel first
+        return True
+    elif min_dim == len(shape) - 1:  # easy case: channel last
+        return False
+    else:  # hard case: can't figure it out, just guess channel first
+        return True
+
+
+def get_default_image_axes(shape, input_tensor_axes):
+    ndim = len(shape)
+    has_z_axis = "z" in input_tensor_axes
+    if ndim == 2:
+        axes = "yx"
+    elif ndim == 3 and has_z_axis:
+        axes = "zyx"
+    elif ndim == 3:
+        channel_first = is_channel_first(shape)
+        axes = "cyx" if channel_first else "yxc"
+    elif ndim == 4 and has_z_axis:
+        channel_first = is_channel_first(shape)
+        axes = "czyx" if channel_first else "zyxc"
+    elif ndim == 4:
+        channel_first = is_channel_first(shape)
+        axes = "bcyx" if channel_first else "byxc"
+    elif ndim == 5:
+        channel_first = is_channel_first(shape)
+        axes = "bczyx" if channel_first else "bzyxc"
+    else:
+        raise ValueError(f"Invalid number of image dimensions: {ndim}")
+    return axes
+
+
+def map_axes(
+    input_array,
+    input_axes,
+    output_axes,
+    # spatial axes: drop at middle coordnate, other axes (channel or batch): drop at 0 coordinate
+    drop_function=lambda ax_name, ax_len: ax_len // 2 if ax_name in "zyx" else 0
+):
+    assert len(input_axes) == input_array.ndim, f"Number of axes {len(input_axes)} and dimension of input {input_array.ndim} don't match"
+    shape = {ax_name: sh for ax_name, sh in zip(input_axes, input_array.shape)}
+    output = DataArray(input_array, dims=tuple(input_axes))
+    
+    # drop axes not part of the output
+    drop_axis_names = tuple(set(input_axes) - set(output_axes))
+    drop_axes = {ax_name: drop_function(ax_name, shape[ax_name]) for ax_name in drop_axis_names}
+    output = output[drop_axes]
+    
+    # expand axes missing from the input
+    missing_axes = tuple(set(output_axes) - set(input_axes))
+    output = output.expand_dims(dim=missing_axes)
+    
+    # transpose to the desired axis order
+    output = output.transpose(*tuple(output_axes))
+    
+    # return numpy array
+    return output.values
+
+
+def transform_input(image: np.ndarray, image_axes: str, output_axes: str):
+    """Transform the input image into an output tensor with output_axes
+    
+    Args:
+        image: the input image
+        image_axes: the axes of the input image as simple string
+        output_axes: the axes of the output tensor that will be returned
+    """
+    return map_axes(image, image_axes, output_axes)
+
+
+class BioengineRunner():
+    def __init__(
+            self,
+            server_url: str = "https://hypha.bioimage.io",
+            method_timeout: int = 30,
+            ):
+        self.server_url = server_url
+        self.method_timeout = method_timeout
+
+    async def setup(self):
+        from imjoy_rpc.hypha import connect_to_server
+        server = await connect_to_server(
+            {"name": "client", "server_url": "https://hypha.bioimage.io", "method_timeout": 30}
+        )
+        self.triton = await server.get_service("triton-client")
+
+    async def bioengine_execute(self, model_id, inputs=None, return_rdf=False, weight_format=None):
+        kwargs = {"model_id": model_id, "inputs": inputs, "return_rdf": return_rdf, "weight_format": weight_format}
+        ret = await self.triton.execute(
+            inputs=[kwargs],
+            model_name="bioengine-model-runner",
+            serialization="imjoy"
+        )
+        return ret["result"]
+
+    async def get_model_rdf(self, model_id) -> dict:
+        ret = await self.bioengine_execute(model_id, return_rdf=True)
+        return ret["rdf"]
+
+    async def shape_check(self, transformed, rdf):
+        shape_spec = rdf['inputs'][0]['shape']
+        expected_axes = rdf['inputs'][0]['axes']
+        if isinstance(shape_spec, list):
+            expected_shape = tuple(shape_spec)
+            if len(expected_shape) != len(transformed.shape):
+                print(
+                    f"Transformed input image dimension {len(expected_shape)}"
+                    f"does not match the expected dimension ({len(expected_shape)})."
+                )
+                return False
+            for idx in range(len(expected_shape)):
+                if expected_axes[idx] == "c":
+                    if transformed.shape[idx] != expected_shape[idx]:
+                        print(
+                            f"Transformed input image channels {transformed.shape[idx]}"
+                            f"does not match the expected channels ({expected_shape[idx]})."
+                        )
+                        return False
+        return True
+
+    async def run_model(
+            self, image: np.ndarray, model_id: str, rdf: dict,
+            image_axes=None, weight_format=None):
+        img = image
+        input_spec = rdf['inputs'][0]
+        input_tensor_axes = input_spec['axes']
+        print("input_tensor_axes", input_tensor_axes)
+        if image_axes is None:
+            shape = img.shape
+            image_axes = get_default_image_axes(shape, input_tensor_axes)
+            print(f"Image axes were not provided. They were automatically determined to be {image_axes}")
+        else:
+            print(f"Image axes were provided as {image_axes}")
+        assert len(image_axes) == img.ndim
+        print("Transforming input image...")
+        img = transform_input(img, image_axes, input_tensor_axes)
+        print(f"Input image was transformed into shape {img.shape} to fit the model")
+        print("Data loaded, running model...")
+        if not (await self.shape_check(img, rdf)):
+            return False
+        try:
+            result = await self.bioengine_execute(
+                model_id, inputs=[img], weight_format=weight_format)
+        except Exception as exp:
+            print(f"Failed to run, please check your input dimensions and axes. See the console for more details.")
+            print(f"Failed to run the model ({model_id}) in the BioEngine, error: {exp}")
+            return False
+        if not result['success']:
+            print(f"Failed to run, please check your input dimensions and axes. See the console for more details.")
+            print(f"Failed to run the model ({model_id}) in the BioEngine, error: {result['error']}")
+            return False
+        output = result['outputs'][0]
+        print(f"🎉Model execution completed! Got output tensor of shape {output.shape}")
+        output_tensor_axes = rdf['outputs'][0]['axes']
+        transformed_output = map_axes(output, output_tensor_axes, image_axes)
+        return transformed_output
+
+
+
 if __name__ == "__main__":
     input_img = "./tmp/content.png"
     input_axes = "yxc"
     db_path = "./tmp/image_db"
-    search_torch_db(input_img, input_axes, db_path)
+    image_processor = ImageProcessor()
+    search_torch_db(image_processor, input_img, input_axes, db_path)
