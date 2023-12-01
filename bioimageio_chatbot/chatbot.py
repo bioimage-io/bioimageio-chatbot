@@ -17,10 +17,21 @@ from bioimageio_chatbot.knowledge_base import load_knowledge_base
 from bioimageio_chatbot.utils import get_manifest
 import pkg_resources
 import base64
+from bioimageio_chatbot.image_processor import search_torch_db
+
+import base64
 
 def decode_base64(encoded_data):
-    decoded_data = base64.b64decode(encoded_data.split(',')[1])
-    return decoded_data
+    # Split the string on the comma
+    header, encoded_content = encoded_data.split(',')
+    # Decode the base64 content
+    decoded_data = base64.b64decode(encoded_content)
+    # Extract the file extension from the header
+    # Assuming the header is in the format 'data:image/png;base64'
+    file_extension = header.split(';')[0].split('/')[1]
+
+    return decoded_data, file_extension
+
     
 def load_model_info():
     response = requests.get("https://bioimage-io.github.io/collection-bioimage-io/collection.json")
@@ -116,6 +127,12 @@ class QuestionWithHistory(BaseModel):
     chat_history: Optional[List[Dict[str, str]]] = Field(None, description="The chat history.")
     user_profile: Optional[UserProfile] = Field(None, description="The user's profile. You should use this to personalize the response based on the user's background and occupation.")
     channel_info: Optional[ChannelInfo] = Field(None, description="The selected channel of the user's question. If provided, rely only on the selected channel when answering the user's question.")
+    image_data: Optional[str] = Field(None, description = "The uploaded image data") # gkreder
+
+class SearchModelByImage(BaseModel):
+    """Searching the bioimage models against the user input image"""
+    request: str = Field(description="The user's request")
+
 
 def create_customer_service(db_path):
     debug = os.environ.get("BIOIMAGEIO_DEBUG") == "true"
@@ -154,18 +171,45 @@ def create_customer_service(db_path):
             inputs.insert(0, question_with_history.channel_info)
         if not question_with_history.channel_info or question_with_history.channel_info.id == "bioimage.io":
             try:
-                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, ModelZooInfoScript])
+                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, ModelZooInfoScript, SearchModelByImage])
             except Exception as e:
                 # try again
-                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, ModelZooInfoScript])
+                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, ModelZooInfoScript, SearchModelByImage])
         else:
             try:
-                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput])
+                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, SearchModelByImage])
             except Exception as e:
                 # try again
-                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput])
+                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, SearchModelByImage])
+        print(type(req))
         if isinstance(req, DirectResponse):
             return req.response
+        elif isinstance(req, SearchModelByImage):
+            loop = asyncio.get_running_loop()
+            try:
+                decoded_image_data, image_ext = decode_base64(question_with_history.image_data)
+                image_path = f'tmp-user-image.{image_ext}'
+                with open(image_path, 'wb') as f:
+                    f.write(decoded_image_data)
+                db_hits = search_torch_db(image_path, "yxc", "./tmp/image_db")
+                response_string = db_hits[0][-1]['config']['bioimageio']['nickname']
+                return(response_string)
+            except Exception as e:
+                return f"Failed to decode the image, error: {e}"
+            # print(f"Executing the script:\n{req.script}")
+            print(f"Executing the image search: ")
+            result = await loop.run_in_executor(None, execute_code, req.script, {"resources": resource_items})
+            print(f"Script execution result:\n{result}")
+            # response = await role.aask(ModelZooInfoScriptResults(
+                # stdout=result["stdout"],
+                # stderr=result["stderr"],
+                # request=req.request,
+                # user_info=req.user_info
+            # ), FinalResponse)
+            # references = f"""<details><summary>Source Code</summary>\n\n<code>\nScript: \n{req.script}\n\nResults: \n{result["stdout"]}\nError: {result["stderr"]}\n</code>\n\n</details>"""
+            # response = response.response + "\n\n" + references
+            return response
+
         elif isinstance(req, DocumentRetrievalInput):
             if req.channel_id == "all":
                 docs_with_score = []
@@ -326,13 +370,12 @@ async def register_chat_service(server):
 
         event_bus.on("stream", stream_callback)
 
-
-        if image_data:
-            await status_callback({"type": "text", "content": f"\n![Uploaded Image]({image_data})\n"})
-            try:
-                decoded_image_data = decode_base64(image_data)
-            except Exception as e:
-                return f"Failed to decode the image, error: {e}"
+        # if image_data:
+        #     await status_callback({"type": "text", "content": f"\n![Uploaded Image]({image_data})\n"})
+        #     try:
+        #         decoded_image_data = decode_base64(image_data)
+        #     except Exception as e:
+        #         return f"Failed to decode the image, error: {e}"
 
         # Get the channel id by its name
         if channel == 'auto':
@@ -348,6 +391,15 @@ async def register_chat_service(server):
             channel_info = ChannelInfo.parse_obj(channel_info)
         # user_profile = {"name": "lulu", "occupation": "data scientist", "background": "machine learning and AI"}
         m = QuestionWithHistory(question=text, chat_history=chat_history, user_profile=UserProfile.parse_obj(user_profile),channel_info=channel_info)
+        if image_data:
+            m.image_data = image_data
+            response = await customer_service.handle(Message(content=m.json(), data=m, role="User", session_id=session_id))
+            return(response[-1].content)
+            # await status_callback({"type": "text", "content": f"\n![Uploaded Image]({image_data})\n"})
+            # try:
+                # decoded_image_data = decode_base64(image_data)
+            # except Exception as e:
+                # return f"Failed to decode the image, error: {e}"
         try:
             response = await customer_service.handle(Message(content=m.json(), data=m , role="User", session_id=session_id))
             # get the content of the last response

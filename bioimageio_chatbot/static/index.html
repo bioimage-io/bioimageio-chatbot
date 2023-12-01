@@ -12,6 +12,9 @@
   <link rel="icon" type="image/x-icon" href="https://bioimage.io/static/icons/favicon.ico">
   <style>
     /* Custom CSS */
+    img {
+      max-width: 400px;
+    }
     .file-selected {
       background-color: #036ffc;
       border-radius: 4px;
@@ -598,7 +601,14 @@
           background: userBackground
         };
 
-        appendUserMessage(textMessage);
+        if(imageData){
+          userMessage = textMessage + marked(`\n\n![Uploaded Image](${imageData})\n`, { renderer: renderer });
+        }
+        else{
+          userMessage = textMessage;
+        }
+
+        appendUserMessage(userMessage);
 
         // Show 'Thinking...' status while waiting for the server's response
         showThinkingStatus();
@@ -640,6 +650,7 @@
           // Call the chat function with text and image data
           response = await svc.chat(textMessage, chat_history, user_profile, selectedChannel, statusCallback, sessionId, imageData);
           console.log(response)
+          
           chat_history.push({ role: 'user', content: textMessage });
           chat_history.push({ role: 'assistant', content: response });
           showReadyStatus();

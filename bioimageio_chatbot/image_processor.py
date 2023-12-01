@@ -1,37 +1,82 @@
-import typing as T
-import numpy as np
-import cv2
-from keras.applications.vgg16 import preprocess_input
-from keras.applications.vgg16 import VGG16
-from keras.models import Model
-from bioimageio_chatbot.chatbot import load_model_info
-import yaml
-import requests
 import os
-import torch
-import lpips
-from tqdm.auto import tqdm
+import typing as T
 import pickle as pkl
 
+import cv2
+import yaml
+import requests
+import torch
+import torch.nn as nn
+import numpy as np
+from tqdm.auto import tqdm
 
-class VGG16Model:
+
+
+class Embedder():
     def __init__(self):
-        self.model = VGG16(weights='imagenet', include_top=True)
-        self.model = Model(inputs=self.model.inputs, outputs=self.model.layers[-2].output)
+        pass
 
-    def get_vector_embedding(self, image: np.ndarray, verbose = 0):
-        try:
-            vector_embedding = self.model.predict(image, verbose = verbose)
-            return vector_embedding
-        except Exception as e:
-            raise Exception(f"Error getting vector embedding: {str(e)}")
+    def embed_image(self, image: np.ndarray) -> np.ndarray:
+        pass
+
+    @property
+    def vector_size(self) -> int:
+        pass
+
+    @property
+    def input_format(self) -> str:
+        return "bcyx"
+
+
+class ResNet50Embedder(Embedder):
+    def __init__(self):
+        from torchvision.models import resnet50, ResNet50_Weights
+        self.model = resnet50(weights=ResNet50_Weights.IMAGENET1K_V2)
+        self.model.fc = nn.Identity()
+
+    def embed_image(self, image: np.ndarray) -> np.ndarray:
+        """Embeds an image using the ResNet50 model.
+        Args:
+            image: A numpy array of shape (b, 3, y, x)
+        """
+        tensor = torch.from_numpy(image)
+        vector = self.model(tensor)
+        array = vector.detach().numpy()
+        array = array.flatten()
+        return array
+
+    @property
+    def vector_size(self) -> int:
+        return 2048
+
+
+class VGG16Embedder(Embedder):
+    def __init__(self):
+        from torchvision.models import vgg16, VGG16_Weights
+        self.model = vgg16(weights=VGG16_Weights.IMAGENET1K_V1)
+        self.model.classifier[6] = nn.Identity()
+
+    def embed_image(self, image: np.ndarray) -> np.ndarray:
+        """Embeds an image using the VGG16 model.
+        Args:
+            image: A numpy array of shape (b, 3, y, x)
+        """
+        tensor = torch.from_numpy(image)
+        vector = self.model(tensor)
+        array = vector.detach().numpy()
+        array = array.flatten()
+        return array
+
+    @property
+    def vector_size(self) -> int:
+        return 4096
 
 
 class ImageProcessor():
-    def __init__(self):
+    def __init__(self, embedder: Embedder = None):
         self.vector_embedding = None
         self.image = None
-        self.model = VGG16Model()
+        self.embedder = embedder or VGG16Embedder()
 
     def load_image(self, image_path):
         try:
@@ -75,13 +120,12 @@ class ImageProcessor():
         resized_image = np.transpose(resized_image, output_tup)
         return resized_image
 
-    def embed_image(
-            self, input_image, current_format: str,
-            model_format: str = "byxc"):
+    def embed_image(self, input_image, current_format: str):
         resized_image = self.resize_image(
-            input_image, current_format, output_format=model_format)
-        preprocessed_image = preprocess_input(resized_image)
-        vector_embedding = self.model.get_vector_embedding(preprocessed_image)
+            input_image,
+            current_format,
+            output_format=self.embedder.input_format)
+        vector_embedding = self.embedder.embed_image(resized_image)
         self.vector_embedding = vector_embedding
         return vector_embedding
 
@@ -96,9 +140,9 @@ class ImageProcessor():
             input_image = np.load(input_image_path)
         else:
             input_image = cv2.imread(input_image_path)
-        resized_image = self.resize_image(input_image, input_axes, output_format = "bcyx") # https://github.com/richzhang/PerceptualSimilarity
-        preprocessed_image = preprocess_input(resized_image)
-        torch_image = torch.from_numpy(preprocessed_image.copy()).to(torch.float32)
+        resized_image = self.resize_image(input_image, input_axes, output_format = "bcyx")
+        resized_image = resized_image.astype(np.float32)
+        torch_image = torch.from_numpy(resized_image).to(torch.float32)
         return torch_image
 
 
@@ -149,7 +193,8 @@ def get_model_torch_images(rdf_dict: dict, db_path : str) -> (list, list):
     return torch_images, model_metadata
 
 
-def get_torch_db(db_path: str, embedder, force_build: bool = False) -> list[(torch.Tensor, dict)]:
+def get_torch_db(db_path: str, processor: ImageProcessor, force_build: bool = False) -> list[(torch.Tensor, dict)]:
+    from bioimageio_chatbot.chatbot import load_model_info
     out_db_path = os.path.join(db_path, 'db.pkl')
     if (not force_build) and os.path.exists(out_db_path):
         db = pkl.load(open(out_db_path, 'rb'))
@@ -170,20 +215,12 @@ def get_torch_db(db_path: str, embedder, force_build: bool = False) -> list[(tor
         all_torch_images.extend(model_torch_images)
         all_metadata.extend(model_metadata)
         for img in model_torch_images:
-            vec = embedder.embed_image(img.numpy(), "bcyx")
+            vec = processor.embed_image(img.numpy(), "bcyx")
             all_embeddings.append(vec)
     db = list(zip(all_torch_images, all_embeddings, all_metadata))
     with open(out_db_path, 'wb') as f:
         pkl.dump(db, f)
     return db
-
-
-def get_similarity(img1: torch.Tensor, img2: torch.Tensor) -> float:
-    loss_fn_vgg = lpips.LPIPS(net='vgg', verbose=False)
-    diff = loss_fn_vgg(img1, img2)
-    diff = diff.detach().numpy()[0][0][0][0]
-    sim = 1 - diff  # Closer to 1 = more similar
-    return sim
 
 
 def get_similarity_vec(vec1: np.ndarray, vec2: np.ndarray) -> float:
@@ -196,11 +233,11 @@ def get_similarity_vec(vec1: np.ndarray, vec2: np.ndarray) -> float:
 def search_torch_db(
         input_image_path: str, input_image_axes: str,
         db_path: str, top_n: int = 5) -> str:
-    image_embedder = ImageProcessor()
-    db = get_torch_db(db_path, image_embedder)
-    user_torch_image = image_embedder.get_torch_image(
+    image_processor = ImageProcessor()
+    db = get_torch_db(db_path, image_processor)
+    user_torch_image = image_processor.get_torch_image(
         input_image_path, input_image_axes)
-    user_embedding = image_embedder.embed_image(
+    user_embedding = image_processor.embed_image(
         user_torch_image.numpy(), "bcyx")
     print('Searching DB...')
     sims = [get_similarity_vec(user_embedding, embedding) for (_, embedding, _) in tqdm(db)]
@@ -213,21 +250,11 @@ def search_torch_db(
         similarity = sims[hit_idx]
         print(f"({i_hit}) - {nickname} - similarity: {similarity}\n")
     print("-----------------------------------")
+    return [db[i] for i in hit_indices]
 
 
 if __name__ == "__main__":
-    # embedder = ImageProcessor()
-    # embedded_vector = embedder.embed_image("/Users/gkreder/Downloads/image_db/input_images/chatty-frog.npy", "byxc", "byxc")
-    # resized_vector = embedder.resize_image("/Users/gkreder/Downloads/image_db/input_images/chatty-frog.npy", "byxc", "byxc")
-
-    # image_embedder = ImageProcessor()
-    # user_img_path = "/Users/gkreder/Downloads/content.png"
-    # user_img = cv2.imread(user_img_path)
-    # user_img_axes = "yxc"
-    # print(image_embedder.resize_image(user_img, user_img_axes))
-    # db_path = create_torch_db("/Users/gkreder/Downloads/image_db")
-    # input_img = "/Users/gkreder/Downloads/microscopy-fruit-fly-neurosciencenews.jpeg"
-    input_img = "./user_input.jpeg"
+    input_img = "./tmp/content.png"
     input_axes = "yxc"
-    db_path = "./image_db"
+    db_path = "./tmp/image_db"
     search_torch_db(input_img, input_axes, db_path)
