@@ -370,6 +370,14 @@
         label.classList.remove('file-selected');
       }
     }
+
+    function removeFileSelected() {
+      var input = document.getElementById('fileUpload');
+      var label = document.getElementById('paperclipIcon');
+      input.value = '';
+      label.classList.remove('file-selected');
+    }
+
     $(document).ready(async function () {
       let svc;
       let token = null;
@@ -576,8 +584,10 @@
           reader.onloadend = function () {
             const imageData = reader.result; // Extract base64 data
             sendChatMessage(message, imageData);
+            removeFileSelected();
           };
           reader.readAsDataURL(selectedFile);
+          
         } else {
           // No file selected, send only text message
           sendChatMessage(message, null);
