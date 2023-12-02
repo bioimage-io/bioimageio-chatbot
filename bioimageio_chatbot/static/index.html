@@ -329,6 +329,7 @@
       </div>
       <div class="card-footer text-center">
         <!-- Helper message for personalized answers -->
+        <p class="mt-3">Warning: BioImage.IO Chatbot can make mistakes. Consider checking important information.</p>
         <p class="mt-3">Tips: Customize your profile to get personalized answers based on your background.</p>
         <a href="https://ai4life.eurobioimaging.eu/" target="_blank"><img
             src="https://ai4life.eurobioimaging.eu/wp-content/uploads/2022/09/AI4Life-logo_giraffe-nodes-2048x946.png"
@@ -749,7 +750,7 @@
           // remove message- from the messageId and convert to integer
           const messageIndex = parseInt(messageId.replace('message-', ''));
           // get the chat history until messageIndex
-          const chatMessages = chat_history.slice(0, messageIndex + 1);
+          const chatMessages = chat_history.slice(0, messageIndex);
           const feedbackData = {
             type: feedbackType,
             feedback: feedbackMessage,
