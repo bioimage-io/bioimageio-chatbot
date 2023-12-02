@@ -3,7 +3,7 @@ name: Publish to PyPI
 on:
   workflow_dispatch:
     # Optional inputs, you can add more according to your needs
-    inputs: []
+    inputs:
       # version:
       #   description: 'Version of the package to release'
       #   required: true
