@@ -23,7 +23,7 @@ jobs:
         pip install -U wheel
         python3 -m pip install --upgrade build
         rm -rf ./build
-        rm ./dist/*
+        rm -rf ./dist/*
         python3 -m build
   
     - name: Publish to PyPI
