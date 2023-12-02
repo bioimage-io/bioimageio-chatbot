@@ -1,0 +1,33 @@
+name: Publish to PyPI
+
+on:
+  workflow_dispatch:
+    # Optional inputs, you can add more according to your needs
+    inputs: []
+      # version:
+      #   description: 'Version of the package to release'
+      #   required: true
+      #   default: '1.0.0'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v2
+
+    # Add steps for any necessary setup, like installing dependencies
+    - name: Build
+      run: |
+        pip install -U twine
+        pip install -U wheel
+        python3 -m pip install --upgrade build
+        rm -rf ./build
+        rm ./dist/*
+        python3 -m build
+  
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@master
+      with:
+        user: __token__
+        password: ${{ secrets.PYPI_API_TOKEN }}
