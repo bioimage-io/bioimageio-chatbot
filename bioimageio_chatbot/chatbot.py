@@ -303,12 +303,15 @@ async def register_chat_service(server):
     async def report(user_report, context=None):
         if login_required and context and context.get("user"):
             assert check_permission(context.get("user")), "You don't have permission to report the chat history."
+        # get the chatbot version
+        version = pkg_resources.get_distribution('bioimageio-chatbot').version
         chat_his_dict = {'type':user_report['type'],
                          'feedback':user_report['feedback'],
                          'conversations':user_report['messages'], 
                          'session_id':user_report['session_id'], 
                         'timestamp': str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), 
-                        'user': context.get('user')}
+                        'user': context.get('user'),
+                        'version': version}
         session_id = user_report['session_id'] + secrets.token_hex(4)
         filename = f"report-{session_id}.json"
         # Create a chat_log.json file inside the session folder
@@ -364,9 +367,11 @@ async def register_chat_service(server):
         if session_id:
             chat_history.append({ 'role': 'user', 'content': text })
             chat_history.append({ 'role': 'assistant', 'content': response })
+            version = pkg_resources.get_distribution('bioimageio-chatbot').version
             chat_his_dict = {'conversations':chat_history, 
                      'timestamp': str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), 
-                     'user': context.get('user')}
+                     'user': context.get('user'),
+                     'version': version}
             filename = f"chatlogs-{session_id}.json"
             chat_log_full_path = os.path.join(chat_logs_path, filename)
             await save_chat_history(chat_log_full_path, chat_his_dict)
