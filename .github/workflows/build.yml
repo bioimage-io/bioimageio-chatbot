@@ -30,9 +30,9 @@ jobs:
       - name: Run Init
         run: python -m bioimageio_chatbot init
       - name: Test server
-        run: |
-        export OPENAI_API_KEY=sk-xxxxxxxx
-        python -m bioimageio_chatbot start-server --host=0.0.0.0 --port=9000 & wget http://127.0.0.1:9000/public/apps/bioimageio-chatbot-client/index
+        env:
+          OPENAI_API_KEY: sk-xxxxxxxx
+        run: python -m bioimageio_chatbot start-server --host=0.0.0.0 --port=9000 & wget http://127.0.0.1:9000/public/apps/bioimageio-chatbot-client/index
       # - name: Build vector database
       #   if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       #   run: |
