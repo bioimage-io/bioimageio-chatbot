@@ -739,7 +739,7 @@
           // remove message- from the messageId and convert to integer
           const messageIndex = parseInt(messageId.replace('message-', ''));
           // get the chat history until messageIndex
-          const chatMessages = chat_history.slice(0, messageIndex + 1);
+          const chatMessages = chat_history.slice(0, messageIndex);
           const feedbackData = {
             type: feedbackType,
             feedback: feedbackMessage,
