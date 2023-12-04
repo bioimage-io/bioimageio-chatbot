@@ -91,11 +91,13 @@ class DocumentSearchInput(BaseModel):
     relevant_context: List[DocWithScore] = Field(description="Chunks of context retrieved from the documentation that are relevant to the user's original question.")
     user_info: Optional[str] = Field("", description="The user's info for personalizing the response.")
     format: Optional[str] = Field(None, description="The format of the document.")
-
+    preliminary_response: Optional[str] = Field(None, description="The preliminary response to the user's question. This will be combined with the retrieved documents to produce the final response.")
+    
 class FinalResponse(BaseModel):
-    """The final response to the user's question based on the documentation search results. 
+    """The final response to the user's question based on the preliminary response and the documentation search results. 
     If the documentation search results are relevant to the user's question, provide a text response to the question based on the search results.
-    If the documentation search results contains only low relevance scores or if the question isn't relevant to the search results, return 'I don't know'."""
+    If the documentation search results contains only low relevance scores or if the question isn't relevant to the search results, return the preliminary response.
+    Importantly, if you can't confidently provide a relevant response to the user's question, return 'I don't know'."""
     response: str = Field(description="The answer to the user's question based on the search results. Can be either a detailed response in markdown format if the search results are relevant to the user's question or 'I don't know'.")
 
 class ChannelInfo(BaseModel):
@@ -137,9 +139,10 @@ def create_customer_service(db_path):
         """Input for searching knowledge bases and finding documents relevant to the user's request."""
         query: str = Field(description="The query used to retrieve documents related to the user's request.")
         request: str = Field(description="The user's detailed request")
+        preliminary_response: str = Field(description="The preliminary response to the user's question. This will be combined with the retrieved documents to produce the final response.")
         user_info: Optional[str] = Field("", description="Brief user info summary including name, background, etc., for personalizing responses to the user.")
         channel_id: str = Field(description=f"The channel_id of the knowledge base to search. It MUST be the same as the user provided channel_id. If not specified, either select 'all' to search through all the available knowledge base channels or select one from the available channels which are:\n{channels_info}. If you are not sure which channel to select, select 'all'.")
-
+        
     class ModelZooInfoScript(BaseModel):
         """Create a Python Script to get information about details of models, applications, datasets, etc. in the model zoo."""
         script: str = Field(description="The script to be executed which uses a predefined local variable `resources` containing a list of dictionaries with all the resources in the model zoo (including models, applications, datasets etc.). The response to the query should be printed to stdout. Details about the local variable `resources`:\n" + resource_item_stats)
@@ -183,7 +186,7 @@ def create_customer_service(db_path):
                 docs_with_score = sorted(docs_with_score, key=lambda x: x.score, reverse=True)
                 # only keep the top 3 documents
                 docs_with_score = docs_with_score[:3]
-                search_input = DocumentSearchInput(user_question=req.request, relevant_context=docs_with_score, user_info=req.user_info, format=None)
+                search_input = DocumentSearchInput(user_question=req.request, relevant_context=docs_with_score, user_info=req.user_info, format=None, preliminary_response=req.preliminary_response)
                 response = await role.aask(search_input, FinalResponse)
             else:
                 docs_store = docs_store_dict[req.channel_id]
@@ -193,7 +196,7 @@ def create_customer_service(db_path):
                 results_with_scores = await docs_store.asimilarity_search_with_relevance_scores(req.query, k=3)
                 docs_with_score = [DocWithScore(doc=doc.page_content, score=score, metadata=doc.metadata, base_url=base_url) for doc, score in results_with_scores]
                 print(f"Retrieved documents:\n{docs_with_score[0].doc[:20] + '...'} (score: {docs_with_score[0].score})\n{docs_with_score[1].doc[:20] + '...'} (score: {docs_with_score[1].score})\n{docs_with_score[2].doc[:20] + '...'} (score: {docs_with_score[2].score})")
-                search_input = DocumentSearchInput(user_question=req.request, relevant_context=docs_with_score, user_info=req.user_info, format=collection_info.get('format'))
+                search_input = DocumentSearchInput(user_question=req.request, relevant_context=docs_with_score, user_info=req.user_info, format=collection_info.get('format'), preliminary_response=req.preliminary_response)
                 response = await role.aask(search_input, FinalResponse)
             if debug:
                 source_func = lambda doc: f"\nSource: {doc.metadata.get('source', 'N/A')}"  # Use get() to provide a default value if 'source' is not present
