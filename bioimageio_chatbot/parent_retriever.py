@@ -8,6 +8,7 @@ from langchain.docstore.in_memory import InMemoryDocstore
 import faiss
 import uuid
 import pickle
+import statistics
 from typing import List
 
 from langchain.callbacks.manager import CallbackManagerForRetrieverRun
@@ -27,6 +28,7 @@ class MultiVectorRetriever(BaseRetriever):
     id_key: str = "doc_id"
     search_kwargs: dict = Field(default_factory=dict)
     """Keyword arguments to pass to the search function."""
+    k: int = 8
 
     def _get_relevant_documents(
         self, query: str, *, run_manager: CallbackManagerForRetrieverRun
@@ -38,7 +40,7 @@ class MultiVectorRetriever(BaseRetriever):
         Returns:
             List of relevant documents
         """
-        sub_docs = self.vectorstore.similarity_search(query, k=8, **self.search_kwargs)
+        sub_docs = self.vectorstore.similarity_search(query, k=self.k, **self.search_kwargs)
         # We do this to maintain the order of the ids that are returned
         ids = []
         for d in sub_docs:
@@ -47,6 +49,38 @@ class MultiVectorRetriever(BaseRetriever):
         docs = self.docstore.mget(ids)
         return [d for d in docs if d is not None]
     
+    async def _aget_relevant_documents(
+        self, query: str, *, run_manager: CallbackManagerForRetrieverRun
+    ) -> List[Document]:
+        """Get documents relevant to a query.
+        Args:
+            query: String to find relevant documents for
+            run_manager: The callbacks handler to use
+        Returns:
+            List of relevant documents
+        """
+        sub_docs_with_scores = await self.vectorstore.asimilarity_search_with_relevance_scores(query, k=self.k, **self.search_kwargs)
+        # We do this to maintain the order of the ids that are returned
+        ids = []
+        scores = {}
+        for d, s in sub_docs_with_scores:
+            if d.metadata[self.id_key] not in ids:
+                d_id = d.metadata[self.id_key]
+                ids.append(d_id)
+                if d_id in scores:
+                    scores[d_id].append(s)
+                else:
+                    scores[d_id] = [s]
+        
+        docs = self.docstore.mget(ids)
+        ret = []
+        for i in range(len(docs)):
+            d = docs[i]
+            if d is not None:
+                ret.append((d, max(scores[ids[i]])))
+        # rerank ret by score
+        ret = sorted(ret, key=lambda x: x[1], reverse=True)
+        return ret
     
     
 def build_parent_retriever(docs, index_name, embeddings, child_splitter, save_dir=None, id_key = "doc_id"):
@@ -110,9 +144,9 @@ if __name__ == "__main__":
         docs.extend(l.load())
         
     parent_splitter = RecursiveCharacterTextSplitter(chunk_size=2000)
-    docs = parent_splitter.split_documents(docs)
     child_splitter = CharacterTextSplitter(chunk_size=100, chunk_overlap=20)
     
+    docs = parent_splitter.split_documents(docs)
     retriever = build_parent_retriever(docs, index_name="test", embeddings=OpenAIEmbeddings(), child_splitter=child_splitter, save_dir="./data/test_parent_retriever")
     sub_docs = retriever.vectorstore.similarity_search("Community Partner")
     print(sub_docs[0].page_content)

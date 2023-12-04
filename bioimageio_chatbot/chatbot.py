@@ -120,7 +120,8 @@ class QuestionWithHistory(BaseModel):
 def create_customer_service(db_path):
     debug = os.environ.get("BIOIMAGEIO_DEBUG") == "true"
     collections = get_manifest()['collections']
-    docs_store_dict = load_knowledge_base(db_path)
+    retriever_dict = load_knowledge_base(db_path)
+    
     collection_info_dict = {collection['id']: collection for collection in collections}
     resource_items = load_model_info()
     types = set()
@@ -170,29 +171,35 @@ def create_customer_service(db_path):
             if req.channel_id == "all":
                 docs_with_score = []
                 # loop through all the channels
-                for channel_id in docs_store_dict.keys():
-                    docs_store = docs_store_dict[channel_id]
+                for channel_id in retriever_dict.keys():
+                    retriever = retriever_dict[channel_id]
                     collection_info = collection_info_dict[channel_id]
                     base_url = collection_info.get('base_url')
                     print(f"Retrieving documents from database {channel_id} with query: {req.query}")
-                    results_with_scores = await docs_store.asimilarity_search_with_relevance_scores(req.query, k=2)
+                    results_with_scores = await retriever.aget_relevant_documents(req.query)
                     new_docs_with_score = [DocWithScore(doc=doc.page_content, score=score, metadata=doc.metadata, base_url=base_url) for doc, score in results_with_scores]
                     docs_with_score.extend(new_docs_with_score)
-                    print(f"Retrieved documents:\n{new_docs_with_score[0].doc[:20] + '...'} (score: {new_docs_with_score[0].score})\n{new_docs_with_score[1].doc[:20] + '...'} (score: {new_docs_with_score[1].score})")
+                    for i in range(len(docs_with_score)):
+                        print(f"Retrieved documents:\n{docs_with_score[i].doc[:20] + '...'} (score: {docs_with_score[i].score})")
+                    # print(f"Retrieved documents:\n{new_docs_with_score[0].doc[:20] + '...'} (score: {new_docs_with_score[0].score})\n{new_docs_with_score[1].doc[:20] + '...'} (score: {new_docs_with_score[1].score})")
                 # rank the documents by relevance score
-                docs_with_score = sorted(docs_with_score, key=lambda x: x.score, reverse=True)
-                # only keep the top 3 documents
+                # docs_with_score = sorted(docs_with_score, key=lambda x: x.score, reverse=True)
+                # only keep the top 3 documents if len(docs_with_score) > 3, otherwise keep all
                 docs_with_score = docs_with_score[:3]
                 search_input = DocumentSearchInput(user_question=req.request, relevant_context=docs_with_score, user_info=req.user_info, format=None)
                 response = await role.aask(search_input, FinalResponse)
             else:
-                docs_store = docs_store_dict[req.channel_id]
+                retriever = retriever_dict[req.channel_id]
                 collection_info = collection_info_dict[req.channel_id]
                 base_url = collection_info.get('base_url')
                 print(f"Retrieving documents from database {req.channel_id} with query: {req.query}")
-                results_with_scores = await docs_store.asimilarity_search_with_relevance_scores(req.query, k=3)
+                results_with_scores = await retriever.aget_relevant_documents(req.query)
                 docs_with_score = [DocWithScore(doc=doc.page_content, score=score, metadata=doc.metadata, base_url=base_url) for doc, score in results_with_scores]
-                print(f"Retrieved documents:\n{docs_with_score[0].doc[:20] + '...'} (score: {docs_with_score[0].score})\n{docs_with_score[1].doc[:20] + '...'} (score: {docs_with_score[1].score})\n{docs_with_score[2].doc[:20] + '...'} (score: {docs_with_score[2].score})")
+                docs_with_score = docs_with_score[:3]
+                # print all the retrieved documents
+                for i in range(len(docs_with_score)):
+                    print(f"Retrieved documents:\n{docs_with_score[i].doc[:20] + '...'} (score: {docs_with_score[i].score})")
+                # print(f"Retrieved documents:\n{docs_with_score[0].doc[:20] + '...'} (score: {docs_with_score[0].score})\n{docs_with_score[1].doc[:20] + '...'} (score: {docs_with_score[1].score})\n{docs_with_score[2].doc[:20] + '...'} (score: {docs_with_score[2].score})")
                 search_input = DocumentSearchInput(user_question=req.request, relevant_context=docs_with_score, user_info=req.user_info, format=collection_info.get('format'))
                 response = await role.aask(search_input, FinalResponse)
             if debug:
