@@ -176,7 +176,7 @@ def create_vector_knowledge_base(output_dir=None, collections=None):
                 documents = pickle.load(f)
         else:    
             docs_dir = download_docs("./data", url)
-            documents = parse_docs(os.path.join(docs_dir, collection.get('directory', '')))
+            documents = parse_docs(os.path.join(docs_dir, collection.get('directory', '')),md_separator=collection.get('md_separator', None), pdf_separator=collection.get('pdf_separator', None), chunk_size=collection.get('chunk_size', 1000), chunk_overlap=collection.get('chunk_overlap', 10))
         if len(documents) > 10000:
             print(f"Waring: {len(documents)} documents found in {url}.")
         # save the vector db to output_dir

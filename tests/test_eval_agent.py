@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional, Union
 from schema_agents.role import Role
 from tvalmetrics import RagScoresCalculator
 from itertools import cycle
+from bs4 import BeautifulSoup
 import pandas as pd
 import asyncio
 import yaml
@@ -40,10 +41,40 @@ class EvalScores(BaseModel):
     similarity_score: float = Field(description="Float between 0 and 5 representing the similarity score, where 5 means the same and 0 means not similar, how similar in meaning is the `llm_answer` to the `reference_answer`?")
     context_scores: Optional[ContextScores] = Field(description="Scores of evaluating retrieval based llm answer.")
     
-    
-def load_query_answer():
+def extract_original_content(input_content):
+    soup = BeautifulSoup(input_content, 'html.parser')
+
+    # Check if the content is a table
+    table = soup.find('table')
+    if table:
+        # Extract content from the table
+        rows = table.find_all('tr')[1:]
+        original_contents = []
+
+        for row in rows:
+            # Find all the cells in the row
+            cells = row.find_all('td')
+
+            # Check if there are at least two cells in the row
+            if len(cells) >= 2:
+                # Extract content from the second cell (index 1)
+                content = cells[1].get_text(strip=True)
+                original_contents.append(content)
+    else:
+        # Check if the content is in source code format
+        code = soup.find('code')
+        if code:
+            # Extract content from the source code
+            original_contents = [code.get_text(strip=True)]
+        else:
+            # Content format not recognized
+            original_contents = None
+
+    return original_contents
+
+def load_query_answer(eval_file):
     # read Knowledge-Retrieval-Evaluation - Hoja 1 csv file
-    query_answer = pd.read_csv(os.path.join(dir_path, "Knowledge-Retrieval-Evaluation - Hoja 1.csv"))
+    query_answer = pd.read_csv(os.path.join(dir_path, eval_file))
     return query_answer
 
 def create_chatgpt():
@@ -61,28 +92,51 @@ def create_chatgpt():
     )
     return chatgpt
 
-async def get_answers():
-    query_answer = pd.read_csv(os.path.join(dir_path, "Knowledge-Retrieval-Evaluation-Results.csv"))
+async def get_answers(excel_file, eval_index=None):
+    query_answer = pd.read_csv(excel_file)
     customer_service = create_customer_service(KNOWLEDGE_BASE_PATH)
+    chatgpt = create_chatgpt()
     chat_history = []
-    # get query_answer from yaml file
-    for i in range(len(query_answer)):
+    if eval_index is None:
+        eval_index = range(len(query_answer))
+    for i in eval_index:#len(query_answer)):
+        print(f"\n==================\nProcessing {i}th question...")
         question = query_answer.iloc[i]["Question"]
         # chatgpt answer
-        chatgpt = create_chatgpt()
         chatgpt_answer = await chatgpt.handle(Message(content=question, role="User"))
         query_answer.loc[i, 'ChatGPT3.5 Answer (Without Context)'] = chatgpt_answer[0].content
         # BMZ chatbot
+        event_bus = customer_service.get_event_bus()
+        event_bus.register_default_events()
         profile = UserProfile(name="", occupation="", background="")
         m = QuestionWithHistory(question=question, chat_history=chat_history, user_profile=UserProfile.parse_obj(profile), channel_id=None)
         llm_answer = await customer_service.handle(Message(content=m.json(), data=m , role="User"))
+        
+        # separate llm_answer into answer and reference using "<details><summary>References</summary>" as separator
+        llm_answer_list = llm_answer[0].content.split("<details><summary>")
         # add a column to query_answer, content is llm_answer[0].content
-        query_answer.loc[i, 'BMZ Chatbot Answer'] = llm_answer[0].content
+        query_answer.loc[i, 'BMZ Chatbot Answer'] = llm_answer_list[0]
+        if len(llm_answer_list) > 1:
+            query_answer.loc[i, 'BMZ Chatbot Answer References'] = llm_answer_list[1]
+        else:
+            query_answer.loc[i, 'BMZ Chatbot Answer References'] = ""
+        print(f"Finish processing {i}th question!")
     # save query_answer to original csv file
-    query_answer.to_csv(os.path.join(dir_path, "Knowledge-Retrieval-Evaluation-Results.csv"))
-    print("Updated Knowledge-Retrieval-Evaluation-Results.csv")
+    query_answer.to_csv(os.path.join(dir_path, excel_file))
+    print("Update {excel_file} successfully!}")
+
+async def get_ground_truth(excel_file):
+    query_answer = pd.read_csv(excel_file)
+    prompt_chatgpt = "Here is the contexts I found from the documentation: ```\n{contextx}\n```\nNow based on the given context, please answer the question: ```\n{question}\n```."
+    for i in range(len(query_answer)):
+        chatgpt = create_chatgpt()
+        prompt = prompt_chatgpt.format(contextx=query_answer.iloc[i]["Documentation"], question=query_answer.iloc[i]["Question"])
+        ground_truth_answer = await chatgpt.handle(Message(content=prompt, role="User"))
+        query_answer.loc[i, 'ChatGPT3.5 Answer (With Context)- GT?'] = ground_truth_answer[0].content
+    # save query_answer to original csv file
+    query_answer.to_csv(os.path.join(dir_path, excel_file))
     
-async def start_evaluate():
+async def start_evaluate(eval_file, eval_index=None):
     async def bot_answer_evaluate(req: EvalInput, role: Role) -> EvalScores:
         """Return the answer to the question."""
         response = await role.aask(req, EvalScores)
@@ -99,47 +153,100 @@ async def start_evaluate():
     event_bus = evalBot.get_event_bus()
     event_bus.register_default_events()
     
-    query_answer = load_query_answer()
+    query_answer = load_query_answer(eval_file)
     question_list = list(query_answer['Question'])
-    reference_answer_list = list(query_answer['ChatGPT3.5 Answer (With Context)'])
+    ground_truth_answer_list = list(query_answer['ChatGPT3.5 Answer (With Context)- GT?'])
     chatgpt_answer_list = list(query_answer['ChatGPT3.5 Answer (Without Context)'])
+    gpt4_direct_answer_list = list(query_answer['ChatGPT 4 Answer'])
     BMZ_chatbot_answer_list = list(query_answer['BMZ Chatbot Answer'])
     
-    
-    for i in range(len(question_list)):
+    if eval_index is None:
+        eval_index = range(len(question_list))
+    for i in eval_index:#len(question_list)):
+        print(f"Evaluating {i}th question...")
         question = question_list[i]
-        reference_answer = reference_answer_list[i]
+        reference_answer = ground_truth_answer_list[i]
         gpt_direct_answer = chatgpt_answer_list[i]
+        gpt4_direct_answer = gpt4_direct_answer_list[i]
         chatbot_answer = BMZ_chatbot_answer_list[i]
-        retrieved_context= query_answer.iloc[i]["Documentation"]
-        # read text in retrieved_context, and split it into a list of contexts by []
-        retrieved_context_list = retrieved_context.split('[')
-        
-        
+        reference_table= query_answer.iloc[i]["BMZ Chatbot Answer References"]
+        if pd.isna(reference_table) or reference_table == "":
+            retrieved_context_list = []
+        else:
+            retrieved_context_list = extract_original_content(reference_table)
         # gpt3direct 
         eval_input_gpt3_direct = EvalInput(question=question, reference_answer=reference_answer, llm_answer=gpt_direct_answer)
         scores_gpt3_direct = await evalBot.handle(Message(content= eval_input_gpt3_direct.json(), data= eval_input_gpt3_direct, role="User"))
+        # gpt4direct
+        eval_input_gpt4_direct = EvalInput(question=question, reference_answer=reference_answer, llm_answer=gpt4_direct_answer)
+        scores_gpt4_direct = await evalBot.handle(Message(content= eval_input_gpt4_direct.json(), data= eval_input_gpt4_direct, role="User"))
         
         # chatbot answer
-        eval_input_chatbot = EvalInput(question=question, reference_answer=reference_answer, llm_answer=chatbot_answer, retrieved_context_list=retrieved_context_list)
-        scores_chatbot = await evalBot.handle(Message(content= eval_input_chatbot.json(), data= eval_input_chatbot, role="User"))
-        SimilaryScore = scores_chatbot[0].data.similarity_score
-        RetrievalPrecision = sum(scores_chatbot[0].data.context_scores.retrieval_precision) / len(scores_chatbot[0].data.context_scores.retrieval_precision)
-        AugmentationAccuracy = sum(scores_chatbot[0].data.context_scores.augmentation_accuracy) / len(scores_chatbot[0].data.context_scores.augmentation_accuracy)
-        AugmentationPrecision = sum(scores_chatbot[0].data.context_scores.augmentation_accuracy) / len(scores_chatbot[0].data.context_scores.augmentation_accuracy)
-        AugmentationConsistency = sum(scores_chatbot[0].data.context_scores.augmentation_consistency.main_point_derived_from_context_list) / len(scores_chatbot[0].data.context_scores.augmentation_consistency.main_point_derived_from_context_list)
-        # save scores to a new dataframe
-        query_answer.loc[i, 'ChatGPT-3.5 Direct Answer Similarity Score'] = scores_gpt3_direct[0].data.similarity_score
-        query_answer.loc[i, 'Chatbot Answer Similarity Score'] = SimilaryScore
-        query_answer.loc[i, 'Chatbot Answer Retrieval Precision'] = RetrievalPrecision
-        query_answer.loc[i, 'Chatbot Answer Augmentation Accuracy'] = AugmentationAccuracy
-        query_answer.loc[i, 'Chatbot Answer Augmentation Precision'] = AugmentationPrecision
-        query_answer.loc[i, 'Chatbot Answer Augmentation Consistency'] = AugmentationConsistency
+        eval_input_chatbot = EvalInput(question=question, reference_answer=reference_answer, llm_answer=chatbot_answer, retrieved_context_list=retrieved_context_list[1:])
+        try:
+            scores_chatbot = await evalBot.handle(Message(content= eval_input_chatbot.json(), data= eval_input_chatbot, role="User"))
         
+            SimilaryScore = scores_chatbot[0].data.similarity_score
+            RetrievalPrecision = sum(scores_chatbot[0].data.context_scores.retrieval_precision) / len(scores_chatbot[0].data.context_scores.retrieval_precision)
+            AugmentationAccuracy = sum(scores_chatbot[0].data.context_scores.augmentation_accuracy) / len(scores_chatbot[0].data.context_scores.augmentation_accuracy)
+            AugmentationPrecision = sum(scores_chatbot[0].data.context_scores.augmentation_accuracy) / len(scores_chatbot[0].data.context_scores.augmentation_accuracy)
+            AugmentationConsistency = sum(scores_chatbot[0].data.context_scores.augmentation_consistency.main_point_derived_from_context_list) / len(scores_chatbot[0].data.context_scores.augmentation_consistency.main_point_derived_from_context_list)
+        # if there is an error, set all scores to 'NA'
+        except Exception as e:
+            print(e)
+            # if Error code is 400, it means the question is too long, so we need to split the question into two parts
+            # if e.code == 400:
+                
+            try:
+                too_long_context = retrieved_context_list[-1][:15000]
+                # replace the last context with the first part of the too long context
+                retrieved_context_list[-1] = too_long_context
+                eval_input_chatbot = EvalInput(question=question, reference_answer=reference_answer, llm_answer=chatbot_answer, retrieved_context_list=retrieved_context_list[1:])
+                scores_chatbot = await evalBot.handle(Message(content= eval_input_chatbot.json(), data= eval_input_chatbot, role="User"))
+    
+                SimilaryScore = scores_chatbot[0].data.similarity_score
+                RetrievalPrecision = sum(scores_chatbot[0].data.context_scores.retrieval_precision) / len(scores_chatbot[0].data.context_scores.retrieval_precision)
+                AugmentationAccuracy = sum(scores_chatbot[0].data.context_scores.augmentation_accuracy) / len(scores_chatbot[0].data.context_scores.augmentation_accuracy)
+                AugmentationPrecision = sum(scores_chatbot[0].data.context_scores.augmentation_accuracy) / len(scores_chatbot[0].data.context_scores.augmentation_accuracy)
+                AugmentationConsistency = sum(scores_chatbot[0].data.context_scores.augmentation_consistency.main_point_derived_from_context_list) / len(scores_chatbot[0].data.context_scores.augmentation_consistency.main_point_derived_from_context_list)
+            except Exception as e:
+                print(e)
+                SimilaryScore = 'NA'
+                RetrievalPrecision = 'NA'
+                AugmentationAccuracy = 'NA'
+                AugmentationPrecision = 'NA'
+                AugmentationConsistency = 'NA'
+            
+        # save scores to a new dataframe
+        query_answer.loc[i, 'ChatGPT3.5 Answer (Without Context)- Answer Similarity Score'] = scores_gpt3_direct[0].data.similarity_score
+        query_answer.loc[i, 'GPT4 Direct Answer - Answer Similarity Score'] = scores_gpt4_direct[0].data.similarity_score
+        query_answer.loc[i, 'BMZ Chatbot Answer - Similarity Score'] = SimilaryScore
+        query_answer.loc[i, 'BMZ Chatbot Answer - Retrieval Precision'] = RetrievalPrecision
+        query_answer.loc[i, 'BMZ Chatbot Answer - Augmentation Accuracy'] = AugmentationAccuracy
+        query_answer.loc[i, 'BMZ Chatbot Answer - Augmentation Precision'] = AugmentationPrecision
+        query_answer.loc[i, 'BMZ Chatbot Answer - Augmentation Consistency'] = AugmentationConsistency
+        print(f"Finish evaluating {i}th question!")
+        # save query_answer to a new csv file
+        query_answer.to_csv(os.path.join(dir_path, eval_file))
     # save query_answer to original csv file
-    query_answer.to_csv(os.path.join(dir_path, "Knowledge-Retrieval-Evaluation-Results.csv"))
-       
+    # query_answer.to_csv(os.path.join(dir_path, eval_file))
+    
+async def get_answer_and_evaluate(excel, eval_index=None):
+    # run get_answers
+    await get_answers(excel, eval_index)
+    # run start_evaluate
+    await start_evaluate(excel, eval_index)
+    print("Finish evaluating!")
+    
 if __name__ == "__main__":
-    
-    asyncio.run(start_evaluate())
-    
+    # file = os.path.join(dir_path, "Knowledge-Retrieval-Evaluation - Hoja 1-2.csv")
+    file_with_gt = os.path.join(dir_path, "Knowledge-Retrieval-Evaluation-Results-temp2.csv")
+    # asyncio.run(get_ground_truth(file_with_gt))
+    # load query_answer
+    query_answer = load_query_answer(file_with_gt)
+    # find the index of questions which 'BMZ Chatbot Answer - Similarity Score' is lower than 3
+    # eval_index = query_answer[query_answer['BMZ Chatbot Answer - Similarity Score'] < 3].index
+    eval_index=range(50,51)
+    # asyncio.run(get_answers(file_with_gt))
+    # asyncio.run(start_evaluate(file_with_gt))
+    asyncio.run(get_answer_and_evaluate(file_with_gt, eval_index))
