@@ -186,38 +186,7 @@ def create_vector_knowledge_base(output_dir=None, collections=None):
         print(f"Creating embeddings (#documents={len(documents)}))")
         child_splitter = RecursiveCharacterTextSplitter(separators=["\n\n", "\n", ". "], chunk_size=manifest.get('child_chunk_size', 250), chunk_overlap=collection.get('child_chunk_overlap', 0))
         build_parent_retriever(documents, index_name=collection['id'], embeddings=embeddings, child_splitter=child_splitter, save_dir=output_dir)
-
-
-
-        # # Choose an appropriate batch size
-        # batch_size = 1000 
-
-        # # Initialize an empty list to store all the batch_embedding_pairs
-        # all_embedding_pairs = []
-        # all_metadata = []
-
-        # total_length = len(documents)
-
-        # # Loop over your documents in batches
-        # for batch_start in range(0, total_length, batch_size):
-        #     batch_end = min(batch_start + batch_size, total_length)
-        #     batch_texts = documents[batch_start:batch_end]
-
-        #     # Generate embeddings for the batch of texts
-        #     batch_embeddings = embeddings.embed_documents([t.page_content for t in batch_texts])
-        #     batch_embedding_pairs = zip([t.page_content for t in batch_texts], batch_embeddings)
-
-        #     # Append the batch_embedding_pairs to the all_embedding_pairs list
-        #     all_embedding_pairs.extend(batch_embedding_pairs)
-        #     all_metadata.extend([t.metadata for t in batch_texts])
-
-        #     print(f"Processed {batch_end}/{total_length} documents")
-
-        # # Create the FAISS index from all the embeddings
-        # vectordb = FAISS.from_embeddings(all_embedding_pairs, embeddings, metadatas=all_metadata)
-        # print("Saving the vector database...")
-        # vectordb.save_local(output_dir, index_name=collection['id'])
-        print("Created a vector database from the downloaded documents.")
+        print(f"Saved {len(documents)} documents to {output_dir}/{collection['id']}.faiss")
 
 if __name__ == "__main__":
     create_vector_knowledge_base()
