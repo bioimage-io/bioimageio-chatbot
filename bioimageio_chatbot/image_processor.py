@@ -34,13 +34,14 @@ class ResNet50Embedder(Embedder):
         from torchvision.models import resnet50, ResNet50_Weights
         self.model = resnet50(weights=ResNet50_Weights.IMAGENET1K_V2)
         self.model.fc = nn.Identity()
+        self.model.eval()
 
     def embed_image(self, image: np.ndarray) -> np.ndarray:
         """Embeds an image using the ResNet50 model.
         Args:
             image: A numpy array of shape (b, 3, y, x)
         """
-        tensor = torch.from_numpy(image)
+        tensor = torch.from_numpy(image).to(torch.float32)
         vector = self.model(tensor)
         array = vector.detach().numpy()
         array = array.flatten()
@@ -56,13 +57,14 @@ class VGG16Embedder(Embedder):
         from torchvision.models import vgg16, VGG16_Weights
         self.model = vgg16(weights=VGG16_Weights.IMAGENET1K_V1)
         self.model.classifier[6] = nn.Identity()
+        self.model.eval()
 
     def embed_image(self, image: np.ndarray) -> np.ndarray:
         """Embeds an image using the VGG16 model.
         Args:
             image: A numpy array of shape (b, 3, y, x)
         """
-        tensor = torch.from_numpy(image)
+        tensor = torch.from_numpy(image).to(torch.float32)
         vector = self.model(tensor)
         array = vector.detach().numpy()
         array = array.flatten()
@@ -151,6 +153,7 @@ class ImageProcessor():
             input_image,
             current_format,
             output_format=self.embedder.input_format)
+        
         vector_embedding = self.embedder.embed_image(resized_image)
         self.vector_embedding = vector_embedding
         return vector_embedding
