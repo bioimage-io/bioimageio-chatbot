@@ -10,6 +10,7 @@ import torch.nn as nn
 import numpy as np
 from xarray import DataArray
 from tqdm.auto import tqdm
+from skimage import exposure
 
 
 class Embedder():
@@ -83,9 +84,6 @@ class ImageProcessor():
             self.image = np.load(image_path)
         except Exception as e:
             raise Exception(f"Error loading image from {self.image_path}: {str(e)}")
-
-
-    def paint_image(input_image, input_format = "bcxy", output_channels = 3):
         
 
     def resize_image(self, input_image, current_format, output_format = "byxc", output_dims_xy = (224,224)):
@@ -111,23 +109,36 @@ class ImageProcessor():
         if resized_image.shape[0] > 1:  # flatten the 'b' dimension
             resized_image = np.mean(resized_image, axis=0, keepdims='b' in output_format)
         
-        final_img = paint_image(resized_image, input_format = output_format_sorted, output_channels = 3)
+        # final_img = paint_image(resized_image, input_format = output_format_sorted, output_channels = 3)
         
-        # num_channels = resized_image.shape[1]
-        # if num_channels == 1:
-        #     # Grayscale to RGB: Repeat the single channel 3 times
-        #     resized_image = np.repeat(resized_image, 3, axis=1)
-        # elif num_channels == 2:
-        #     # If there are 2 channels, add a third channel by repeating one of the existing ones
-        #     # Adding a third channel by repeating the second channel
-        #     resized_image = np.concatenate((resized_image, resized_image[:, 1:2, :, :]), axis=1)
-        # elif num_channels > 3:
-        #     # If there are more than 3 channels, select the first 3 channels
-        #     resized_image = resized_image[:, :3, :, :]
+        # resized_image = np.mean()
+        channel_index = current_axes.lower().index('c')
+        num_channels = resized_image.shape[channel_index]
+        # channel_colors = [(0,0,1), (0,1,0), (1,0,0), (0,0.5,0.5), (0.5,0,0.5), (0.5,0.5,0)]
+        # painted_image = np.zeros((output_channels, input_image.shape[input_format.index("x")], input_image.shape[input_format.index("y")]))
+        out_image = np.zeros((resized_image.shape[current_axes.index('x')], resized_image.shape[current_axes.index('y')]))
+        for i_c in range(num_channels):
+            channel_image = resized_image.take(indices = i_c, axis = channel_index)
+            # channel_rgb = np.array(channel_colors[i_c])
+            # channel_colormap = create_colormap(channel_rgb, empty_val_rgb='black')
+            img_adapteq = exposure.equalize_adapthist(resized_image.astype('uint8'), clip_limit=0.01)
+            out_image += img_adapteq[0,0,:,:]
+        out_image = out_image / num_channels
+        for a in output_format:
+            if a.lower() not in current_axes.lower():
+                out_image = np.expand_dims(out_image, axis=0)
+                current_axes = a.lower() + current_axes
+
+            # channel_color_image = channel_rgb[:, np.newaxis, np.newaxis] * img_adapteq
+            # painted_image += channel_color_image
         
         
         output_tup = tuple(current_axes.index(c) for c in output_format) # reshape to output format
         resized_image = np.transpose(resized_image, output_tup)
+        channel_index = current_axes.lower().index('c')
+        print(resized_image.shape)
+        color_expansion = np.take(resized_image, channel_index)
+        resized_image = np.concatenate([color_expansion] * 3, axis= channel_index)
         return resized_image
 
     def embed_image(self, input_image, current_format: str):
