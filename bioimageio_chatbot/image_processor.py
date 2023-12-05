@@ -266,8 +266,8 @@ def get_similarity_vec(vec1: np.ndarray, vec2: np.ndarray) -> float:
 def search_torch_db(
         image_processor: ImageProcessor,
         input_image_path: str, input_image_axes: str,
-        db_path: str, top_n: int = 5) -> str:
-    db = get_torch_db(db_path, image_processor)
+        db_path: str, top_n: int = 5, verbose : bool = True, force_build : bool = False) -> str:
+    db = get_torch_db(db_path, image_processor, force_build = force_build)
     user_torch_image = image_processor.get_torch_image(
         input_image_path, input_image_axes)
     user_embedding = image_processor.embed_image(
@@ -276,14 +276,23 @@ def search_torch_db(
     sims = [get_similarity_vec(user_embedding, embedding) for (_, embedding, _) in tqdm(db)]
     hit_indices = sorted(
         range(len(sims)), key=lambda i: sims[i], reverse=True)[:top_n]
-    print("-----------------------------------\nTop Hits\n-----------------------------------")
+    out_string = []
+    out_string.append("-----------------------------------\nTop Hits\n-----------------------------------")
     for i_hit, hit_idx in enumerate(hit_indices):
         entry = db[hit_idx][-1]
         nickname = entry['config']['bioimageio']['nickname']
         similarity = sims[hit_idx]
-        print(f"({i_hit}) - {nickname} - similarity: {similarity}\n")
-    print("-----------------------------------")
+        out_string.append(f"({i_hit}) - {nickname} - similarity: {similarity}\n")
+    out_string.append("-----------------------------------")
+    if verbose:
+        print(' '.join(out_string))
     return [db[i] for i in hit_indices]
+
+def get_axes(db_path : str, model_name : str):
+    with open(os.path.join(db_path, 'rdf_sources', f"{model_name}.yaml"), 'r') as f:
+        rdf_dict = yaml.safe_load(f.read())
+    input_axes = rdf_dict['inputs'][0]['axes']
+    return(input_axes)
 
 
 def is_channel_first(shape):
