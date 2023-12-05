@@ -86,11 +86,12 @@ class ImageProcessor():
             raise Exception(f"Error loading image from {self.image_path}: {str(e)}")
         
 
-    def resize_image(self, input_image, current_format, output_format = "byxc", output_dims_xy = (224,224)):
+    def resize_image(self, input_image, current_format, output_format = "byxc", output_dims_xy = (224,224), grayscale = True):
         # input_image = np.load(input_image_path)
         # self.load_image(input_image_path)
         # input_image = self.image
         current_axes = current_format.lower()
+        output_format = output_format.lower()
         if 'b' not in current_axes:
             input_image = np.expand_dims(input_image, axis=0)
             current_axes = 'b' + current_axes
@@ -101,45 +102,49 @@ class ImageProcessor():
             input_image = np.mean(input_image, current_format.index('z'), keepdims='z' in output_format)
             current_axes = current_axes.replace('z', '')
         output_format_sorted = ''.join(sorted(output_format))
-        assert ''.join(sorted(current_axes)) == output_format_sorted
-        index_tup = tuple(current_axes.index(c) for c in output_format_sorted) # reshape to bcyx
+        # assert ''.join(sorted(current_axes)) == output_format_sorted
+        assert ''.join(sorted(current_axes)) == 'bcxy'
+        index_tup = tuple(current_axes.index(c) for c in 'bcxy') # reshape to bcyx
         input_image = np.transpose(input_image, index_tup)
-        current_axes = output_format_sorted
+        current_axes = 'bcxy'
         resized_image = np.array([[cv2.resize(img_xy, output_dims_xy) for img_xy in img_cxy] for img_cxy in input_image])
         if resized_image.shape[0] > 1:  # flatten the 'b' dimension
             resized_image = np.mean(resized_image, axis=0, keepdims='b' in output_format)
         
-        # final_img = paint_image(resized_image, input_format = output_format_sorted, output_channels = 3)
-        
-        # resized_image = np.mean()
-        channel_index = current_axes.lower().index('c')
+        channel_index = current_axes.index('c')
         num_channels = resized_image.shape[channel_index]
-        # channel_colors = [(0,0,1), (0,1,0), (1,0,0), (0,0.5,0.5), (0.5,0,0.5), (0.5,0.5,0)]
-        # painted_image = np.zeros((output_channels, input_image.shape[input_format.index("x")], input_image.shape[input_format.index("y")]))
-        out_image = np.zeros((resized_image.shape[current_axes.index('x')], resized_image.shape[current_axes.index('y')]))
+        channel_colors = [(0,0,1), (0,1,0), (1,0,0), (0,0.5,0.5), (0.5,0,0.5), (0,0.5,0.5)]
+        temp_image_shape = [resized_image.shape[current_axes.index('x')], resized_image.shape[current_axes.index('y')]]
+        if not grayscale:
+            temp_image_shape = [3] + temp_image_shape
+        out_image = np.zeros(temp_image_shape)
         for i_c in range(num_channels):
             channel_image = resized_image.take(indices = i_c, axis = channel_index)
-            # channel_rgb = np.array(channel_colors[i_c])
-            # channel_colormap = create_colormap(channel_rgb, empty_val_rgb='black')
-            img_adapteq = exposure.equalize_adapthist(resized_image.astype('uint8'), clip_limit=0.01)
-            out_image += img_adapteq[0,0,:,:]
-        out_image = out_image / num_channels
-        for a in output_format:
-            if a.lower() not in current_axes.lower():
-                out_image = np.expand_dims(out_image, axis=0)
-                current_axes = a.lower() + current_axes
-
-            # channel_color_image = channel_rgb[:, np.newaxis, np.newaxis] * img_adapteq
-            # painted_image += channel_color_image
-        
-        
+            img_adapteq = exposure.equalize_adapthist(channel_image.astype('uint8'), clip_limit=0.01)
+            if grayscale:
+                out_image += img_adapteq[0,:,:]
+            else:
+                channel_rgb = np.array(channel_colors[i_c])
+                # channel_colormap = create_colormap(channel_rgb, empty_val_rgb='black')
+                for i_cc, cc in enumerate(channel_rgb):
+                    out_image[i_cc,:,:] += cc * img_adapteq[0,:,:]
+        if grayscale:
+            out_image = out_image / num_channels
+            out_image = np.expand_dims(out_image, axis = 0)
+            out_image = np.repeat(out_image, 3, axis = 0)
+        current_axes = 'cxy'                
+        for c in output_format:
+            if c not in current_axes:
+                out_image = np.expand_dims(out_image, axis = 0)
+                current_axes = c.lower() + current_axes
+        for c in current_axes:
+            if c not in output_format:
+                out_image = np.mean(out_image, current_format.index(c))
+                current_axes = current_axes.replace(c, '')
         output_tup = tuple(current_axes.index(c) for c in output_format) # reshape to output format
-        resized_image = np.transpose(resized_image, output_tup)
-        channel_index = current_axes.lower().index('c')
-        print(resized_image.shape)
-        color_expansion = np.take(resized_image, channel_index)
-        resized_image = np.concatenate([color_expansion] * 3, axis= channel_index)
-        return resized_image
+        resized_image = np.transpose(out_image, output_tup)
+        current_axes = output_format.lower()
+        return(resized_image)
 
     def embed_image(self, input_image, current_format: str):
         resized_image = self.resize_image(
