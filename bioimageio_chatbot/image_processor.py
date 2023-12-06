@@ -105,6 +105,7 @@ class ImageProcessor():
                 current_format = ''.join([x for x in current_format if x != c])
         rearranged = rearranged.transpose([current_format.index(c) for c in standard_format])
         rearranged = cv2.normalize(rearranged, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8) # gkreder
+        # rearranged = rearranged.astype(np.uint8) # gkreder
         return(rearranged)
 
         
@@ -211,7 +212,7 @@ def get_model_rdf(m: dict, db_path: str) -> T.Optional[dict]:
     return rdf_dict
 
 
-def get_model_torch_images(rdf_dict: dict, db_path : str) -> (list, list):
+def get_model_torch_images(rdf_dict: dict, db_path : str, grayscale : bool = False) -> (list, list):
     image_embedder = ImageProcessor()
     mislabeled_axes = {'impartial-shark' : 'yx'} # impartial shark has mislabeled axes
     nickname = rdf_dict['config']['bioimageio']['nickname']
@@ -232,13 +233,14 @@ def get_model_torch_images(rdf_dict: dict, db_path : str) -> (list, list):
             if response.status_code == 200:
                 with open(input_image_file, 'wb') as file:
                     file.write(response.content)
-        torch_image = image_embedder.get_torch_image(input_image_file, input_axes)
+        torch_image = image_embedder.get_torch_image(input_image_file, input_axes, grayscale = grayscale)
         torch_images.append(torch_image)
         model_metadata.append(rdf_dict)
     return torch_images, model_metadata
 
 
-def get_torch_db(db_path: str, processor: ImageProcessor, force_build: bool = False) -> list[(torch.Tensor, dict)]:
+def get_torch_db(db_path: str, processor: ImageProcessor, force_build: bool = False,
+                 grayscale : bool = False) -> list[(torch.Tensor, dict)]:
     from bioimageio_chatbot.chatbot import load_model_info
     out_db_path = os.path.join(db_path, 'db.pkl')
     if (not force_build) and os.path.exists(out_db_path):
@@ -256,7 +258,7 @@ def get_torch_db(db_path: str, processor: ImageProcessor, force_build: bool = Fa
         if not rdf_dict:
             continue
         model_torch_images, model_metadata = get_model_torch_images(
-            rdf_dict, db_path)
+            rdf_dict, db_path, grayscale=grayscale)
         all_torch_images.extend(model_torch_images)
         all_metadata.extend(model_metadata)
         for img in model_torch_images:
@@ -278,10 +280,11 @@ def get_similarity_vec(vec1: np.ndarray, vec2: np.ndarray) -> float:
 def search_torch_db(
         image_processor: ImageProcessor,
         input_image_path: str, input_image_axes: str,
-        db_path: str, top_n: int = 5, verbose : bool = True, force_build : bool = False) -> str:
-    db = get_torch_db(db_path, image_processor, force_build = force_build)
+        db_path: str, top_n: int = 5, verbose : bool = True, 
+        force_build : bool = False, grayscale : bool = False) -> str:
+    db = get_torch_db(db_path, image_processor, force_build = force_build, grayscale=grayscale)
     user_torch_image = image_processor.get_torch_image(
-        input_image_path, input_image_axes)
+        input_image_path, input_image_axes, grayscale=grayscale)
     user_embedding = image_processor.embed_image(
         user_torch_image.numpy(), "bcyx")
     if verbose:
@@ -304,7 +307,9 @@ def search_torch_db(
         print(' '.join(out_string))
     return [list(db[i]) + [similarities[i_hit]] for i_hit, i in enumerate(hit_indices)]
 
-def get_axes(db_path : str, model_name : str):
+def get_axes(db_path : str, model_name : str, mislabeled_axes = {'impartial-shark' : 'yx'}):
+    if model_name in mislabeled_axes:
+        return(mislabeled_axes[model_name])
     with open(os.path.join(db_path, 'rdf_sources', f"{model_name}.yaml"), 'r') as f:
         rdf_dict = yaml.safe_load(f.read())
     input_axes = rdf_dict['inputs'][0]['axes']
