@@ -1,6 +1,7 @@
 import os
 import typing as T
 import pickle as pkl
+import sys
 
 import cv2
 import yaml
@@ -87,71 +88,82 @@ class ImageProcessor():
         except Exception as e:
             raise Exception(f"Error loading image from {self.image_path}: {str(e)}")
         
+    def standardize_image(self, input_image: np.ndarray, input_format: str, standard_format: str = 'byxcz'):
+        current_format = input_format.lower()
+        rearranged = input_image.copy()
+        for i_c, c in enumerate(standard_format):
+            if c not in current_format:
+                rearranged = np.expand_dims(rearranged, axis = 0)
+                current_format = c + current_format
+            if c == 'b':
+                rearranged = np.mean(rearranged, axis = current_format.index(c), keepdims=True)
+            if c == 'z':
+                rearranged = np.mean(rearranged, axis = current_format.index(c), keepdims=True)
+        for c in current_format:
+            if c not in standard_format:
+                rearranged = np.mean(rearranged, axis = current_format.index(c), keepdims = False)
+                current_format = ''.join([x for x in current_format if x != c])
+        rearranged = rearranged.transpose([current_format.index(c) for c in standard_format])
+        rearranged = cv2.normalize(rearranged, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8) # gkreder
+        return(rearranged)
 
-    def resize_image(self, input_image, current_format, output_format = "byxc", output_dims_xy = (224,224), grayscale = True):
-        # input_image = np.load(input_image_path)
-        # self.load_image(input_image_path)
-        # input_image = self.image
-        current_axes = current_format.lower()
-        output_format = output_format.lower()
-        if 'b' not in current_axes:
-            input_image = np.expand_dims(input_image, axis=0)
-            current_axes = 'b' + current_axes
-        if 'c' not in current_axes:
-            input_image = np.expand_dims(input_image, axis=0)
-            current_axes = 'c' + current_axes
-        if 'z' in current_axes:
-            input_image = np.mean(input_image, current_format.index('z'), keepdims='z' in output_format)
-            current_axes = current_axes.replace('z', '')
-        output_format_sorted = ''.join(sorted(output_format))
-        # assert ''.join(sorted(current_axes)) == output_format_sorted
-        assert ''.join(sorted(current_axes)) == 'bcxy'
-        index_tup = tuple(current_axes.index(c) for c in 'bcxy') # reshape to bcyx
-        input_image = np.transpose(input_image, index_tup)
-        current_axes = 'bcxy'
-        resized_image = np.array([[cv2.resize(img_xy, output_dims_xy) for img_xy in img_cxy] for img_cxy in input_image])
-        if resized_image.shape[0] > 1:  # flatten the 'b' dimension
-            resized_image = np.mean(resized_image, axis=0, keepdims='b' in output_format)
         
-        channel_index = current_axes.index('c')
-        num_channels = resized_image.shape[channel_index]
-        channel_colors = [(0,0,1), (0,1,0), (1,0,0), (0,0.5,0.5), (0.5,0,0.5), (0,0.5,0.5)]
-        temp_image_shape = [resized_image.shape[current_axes.index('x')], resized_image.shape[current_axes.index('y')]]
-        if not grayscale:
-            temp_image_shape = [3] + temp_image_shape
-        out_image = np.zeros(temp_image_shape)
-        for i_c in range(num_channels):
-            channel_image = resized_image.take(indices = i_c, axis = channel_index)
-            img_adapteq = exposure.equalize_adapthist(channel_image.astype('uint8'), clip_limit=0.01)
-            if grayscale:
-                out_image += img_adapteq[0,:,:]
-            else:
-                channel_rgb = np.array(channel_colors[i_c])
-                # channel_colormap = create_colormap(channel_rgb, empty_val_rgb='black')
-                for i_cc, cc in enumerate(channel_rgb):
-                    out_image[i_cc,:,:] += cc * img_adapteq[0,:,:]
-        if grayscale:
-            out_image = out_image / num_channels
-            out_image = np.expand_dims(out_image, axis = 0)
-            out_image = np.repeat(out_image, 3, axis = 0)
-        current_axes = 'cxy'                
-        for c in output_format:
-            if c not in current_axes:
-                out_image = np.expand_dims(out_image, axis = 0)
-                current_axes = c.lower() + current_axes
-        for c in current_axes:
-            if c not in output_format:
-                out_image = np.mean(out_image, current_format.index(c))
-                current_axes = current_axes.replace(c, '')
-        output_tup = tuple(current_axes.index(c) for c in output_format) # reshape to output format
-        resized_image = np.transpose(out_image, output_tup)
-        current_axes = output_format.lower()
-        return(resized_image)
 
-    def embed_image(self, input_image, current_format: str):
+    def resize_image(self, input_image: np.ndarray, input_format: str, grayscale : bool, output_format="byxc", output_dims_xy=(224, 224)):
+        """Resizes and converts to an RGB output image with optional grayscaling"""
+        input_format = input_format.lower()
+        output_format = output_format.lower()
+        for c in 'xyc':
+            assert c in output_format
+        # Rearrange the dimensions to a standard format (e.g., "byxcz")
+        standard_format = "byxcz"
+        rearranged = self.standardize_image(input_image, input_format, standard_format=standard_format)
+        current_format = standard_format
+
+        # Resize image
+        resized_channels = []
+        num_channels = rearranged.shape[standard_format.index('c')]
+        # "byxcz"
+        composite_rgb = np.zeros((output_dims_xy[1], output_dims_xy[0], 3))
+        colors = [(1, 0, 0), (0, 1, 0), (0, 0, 1), (1, 1, 0)]
+        for i in range(num_channels):
+            # "byxcz"
+            channel_img = rearranged[(0, slice(None), slice(None), i, 0)]
+            resized_channel_img = cv2.resize(channel_img, output_dims_xy[::-1])
+            resized_channels.append(resized_channel_img)
+            composite_rgb += resized_channel_img[:,:,None] * np.array(colors[i]).reshape(1, 1, 3)
+        composite_rgb = cv2.normalize(composite_rgb, None, 0, 255, cv2.NORM_MINMAX)
+        composite_rgb = composite_rgb.astype(np.uint8)
+        resized = np.stack(resized_channels, axis=-1) # yxc
+        current_format = 'yxc'
+        if grayscale:
+            composite_rgb = cv2.cvtColor(composite_rgb, cv2.COLOR_BGR2GRAY)
+            if num_channels == 1:
+                composite_rgb = cv2.cvtColor(composite_rgb, cv2.COLOR_GRAY2BGR)
+                composite_rgb = cv2.normalize(composite_rgb, None, 0, 255, cv2.NORM_MINMAX)
+            else:
+                composite_rgb = cv2.cvtColor(composite_rgb, cv2.COLOR_GRAY2BGR)
+        # # Convert to grayscale and back to RGB if required
+        # if grayscale:
+        #     if num_channels > 1:
+        #         resized = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
+        #         resized = cv2.cvtColor(resized, cv2.COLOR_GRAY2BGR)
+        # elif num_channels == 1:
+        #     resized = cv2.cvtColor(np.uint8(resized), cv2.COLOR_GRAY2BGR)
+        # elif num_channels == 4:
+        #     resized = cv2.cvtColor(np.uint8(resized[:,:,:3]), cv2.COLOR_GRAY2BGR)
+        for c in output_format:
+            if c not in current_format:
+                composite_rgb = np.expand_dims(composite_rgb, axis = 0)
+                current_format = c + current_format
+        output_image = composite_rgb.transpose([current_format.index(c) for c in output_format])
+        return output_image
+
+    def embed_image(self, input_image, current_format: str, grayscale : bool = False):
         resized_image = self.resize_image(
             input_image,
             current_format,
+            grayscale = grayscale,
             output_format=self.embedder.input_format)
         
         vector_embedding = self.embedder.embed_image(resized_image)
@@ -171,9 +183,9 @@ class ImageProcessor():
             input_image = cv2.imread(input_image_path)
         return input_image
 
-    def get_torch_image(self, input_image_path, input_axes):
+    def get_torch_image(self, input_image_path, input_axes, grayscale : bool = False):
         input_image = self.read_image(input_image_path)
-        resized_image = self.resize_image(input_image, input_axes, output_format = "bcyx")
+        resized_image = self.resize_image(input_image, input_axes, grayscale=grayscale, output_format = "bcyx")
         resized_image = resized_image.astype(np.float32)
         torch_image = torch.from_numpy(resized_image).to(torch.float32)
         return torch_image
@@ -272,21 +284,25 @@ def search_torch_db(
         input_image_path, input_image_axes)
     user_embedding = image_processor.embed_image(
         user_torch_image.numpy(), "bcyx")
-    print('Searching DB...')
-    sims = [get_similarity_vec(user_embedding, embedding) for (_, embedding, _) in tqdm(db)]
+    if verbose:
+        print('Searching DB...')
+    db_iterable = tqdm(db) if verbose else db
+    sims = [get_similarity_vec(user_embedding, embedding) for (_, embedding, _) in db_iterable]
     hit_indices = sorted(
         range(len(sims)), key=lambda i: sims[i], reverse=True)[:top_n]
     out_string = []
     out_string.append("-----------------------------------\nTop Hits\n-----------------------------------")
+    similarities = []
     for i_hit, hit_idx in enumerate(hit_indices):
         entry = db[hit_idx][-1]
         nickname = entry['config']['bioimageio']['nickname']
         similarity = sims[hit_idx]
+        similarities.append(similarity)
         out_string.append(f"({i_hit}) - {nickname} - similarity: {similarity}\n")
     out_string.append("-----------------------------------")
     if verbose:
         print(' '.join(out_string))
-    return [db[i] for i in hit_indices]
+    return [list(db[i]) + [similarities[i_hit]] for i_hit, i in enumerate(hit_indices)]
 
 def get_axes(db_path : str, model_name : str):
     with open(os.path.join(db_path, 'rdf_sources', f"{model_name}.yaml"), 'r') as f:
@@ -367,6 +383,52 @@ def transform_input(image: np.ndarray, image_axes: str, output_axes: str):
         output_axes: the axes of the output tensor that will be returned
     """
     return map_axes(image, image_axes, output_axes)
+
+def guess_image_axes(shape):
+    axes = []
+    common_channel_sizes = [1, 3, 4, 5]  # Common channel sizes are 1 (grayscale), 3 (RGB), and 4 (RGBA)
+    shapes_left = sorted([[x, i_x] for i_x, x in enumerate(shape)], key = lambda tup : tup[0], reverse = True, )
+    dimensions_left = 'yxcbz'
+    def enter(c, axes, shapes_left, dimensions_left):
+        axes = [x for x in axes]
+        axes.append([c] + shapes_left[0])
+        shapes_left = [x for i_x, x in enumerate(shapes_left) if i_x > 0]
+        dimensions_left = ''.join([x for x in dimensions_left if x != c])
+        return(axes, shapes_left, dimensions_left)
+    for c in ['y', 'x']:
+        if c in dimensions_left:
+            axes, shapes_left, dimensions_left = enter(c, axes, shapes_left, dimensions_left)
+    safety_counter = 0
+    while len(shapes_left) > 0:
+        if shapes_left[0][0] in common_channel_sizes and 'c' in dimensions_left:
+            axes, shapes_left, dimensions_left = enter('c', axes, shapes_left, dimensions_left)
+        elif 'z' in dimensions_left and len(shapes_left) > 1 and max([x[1] for i_x, x in enumerate(shapes_left) if i_x > 0]) == 1:
+            axes, shapes_left, dimensions_left = enter('z', axes, shapes_left, dimensions_left)
+        elif 'b' in dimensions_left:
+            axes, shapes_left, dimensions_left = enter('b', axes, shapes_left, dimensions_left)
+        else:
+            axes, shapes_left, dimensions_left = enter('z', axes, shapes_left, dimensions_left)
+        if len(dimensions_left) == 0:
+            break
+        safety_counter += 1
+        if safety_counter > 10:
+            break
+    out_axes = ""
+    axes = sorted(axes, key = lambda tup : tup[-1])
+    out_axes = ''.join([x[0] for x in axes])
+    return(out_axes)
+# test_shapes = [
+#     (256, 256),
+#     (1, 256, 256),
+#     (1, 3, 256, 256),
+#     (1, 1, 30, 225, 225),
+#     (1, 256, 256, 4),
+#     (3,255,255),
+#     (255,255,3),
+#     (225, 3, 260)
+# ]
+# for shape in test_shapes:
+#     print(f"Shape: {shape} -> Axes: {guess_image_axes(shape)}")
 
 
 class BioengineRunner():
