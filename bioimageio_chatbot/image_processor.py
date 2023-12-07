@@ -3,6 +3,7 @@ import typing as T
 import pickle as pkl
 import sys
 
+import scipy
 import matplotlib.pyplot as plt
 import cv2
 import yaml
@@ -13,6 +14,7 @@ import numpy as np
 from xarray import DataArray
 from tqdm.auto import tqdm
 from skimage import exposure
+import matplotlib as mpl
 
 
 class Embedder():
@@ -281,7 +283,7 @@ def get_similarity_vec(vec1: np.ndarray, vec2: np.ndarray) -> float:
 def search_torch_db(
         image_processor: ImageProcessor,
         input_image_path: str, input_image_axes: str,
-        db_path: str, top_n: int = 5, verbose : bool = True, 
+        db_path: str, top_n: int = 5, verbose : bool = False, 
         force_build : bool = False, grayscale : bool = True) -> str:
     db = get_torch_db(db_path, image_processor, force_build = force_build, grayscale=grayscale)
     user_torch_image = image_processor.get_torch_image(
@@ -390,7 +392,7 @@ def transform_input(image: np.ndarray, image_axes: str, output_axes: str):
     """
     return map_axes(image, image_axes, output_axes)
 
-def guess_image_axes(shape):
+def guess_image_axes(shape : tuple[int]):
     axes = []
     common_channel_sizes = [1, 3, 4, 5]  # Common channel sizes are 1 (grayscale), 3 (RGB), and 4 (RGBA)
     shapes_left = sorted([[x, i_x] for i_x, x in enumerate(shape)], key = lambda tup : tup[0], reverse = True, )
@@ -449,16 +451,20 @@ def get_db_inputs(db_path, model_name):
 def test_images(input_files : list, out_dir : str, out_suffix : str, db_path: str, 
                 mislabeled_axes : dict = {'impartial-shark' : 'yx'}, 
                 known_axes : bool = False,
-                single_output_file : bool = False):
+                single_output_file : bool = False,
+                num_output_cols : int = 3):
     os.makedirs(out_dir, exist_ok=True)
+    mpl.rcParams['axes.titlesize'] = 10
+    mpl.rcParams['xtick.labelsize'] = 5
+    mpl.rcParams['ytick.labelsize'] = 5
     image_processor = ImageProcessor()
     if single_output_file:
-        fig, axes = plt.subplots(len(input_files), 5, figsize=(15, 3.2 * len(input_files)))
+        fig, axes = plt.subplots(len(input_files), 4 + num_output_cols, figsize=(15, 3.2 * len(input_files)))
         out_fig_fname = os.path.join(out_dir, f"{out_suffix}.svg")
     for i_fname, fname_abs in enumerate(tqdm(input_files)):
         fname = os.path.basename(fname_abs)
         if not single_output_file:
-            fig, axes = plt.subplots(1, 5, figsize = (15, 3.2))
+            fig, axes = plt.subplots(1, 4 + num_output_cols, figsize = (15, 3.2))
             out_fig_fname = os.path.join(out_dir, f"{out_suffix}_{os.path.splitext(fname)[0]}.svg")
         if len(input_files) == 1 or not single_output_file:
             current_row = axes
@@ -500,12 +506,15 @@ def test_images(input_files : list, out_dir : str, out_suffix : str, db_path: st
         new_y0 = pos_axes3.y0 + ( height_diff / 2)
         current_row[3].set_position([pos_axes3.x0, new_y0, new_width, new_height])
 
-        best_hit_image_path, best_hit_axes = get_db_inputs(db_path, best_hit)
-        if best_hit in mislabeled_axes:
-            best_hit_axes = mislabeled_axes[best_hit]
-        best_hit_image_standardized = image_processor.standardize_image(np.load(best_hit_image_path), input_format = best_hit_axes, standard_format="yxc")
-        current_row[4].imshow(best_hit_image_standardized)
-        current_row[4].set_title(f"{best_hit}")
+        for i, hit in enumerate(res[0 : num_output_cols]):
+            hit_name = hit[-2]['config']['bioimageio']['nickname']
+            hit_image_path, hit_axes = get_db_inputs(db_path, hit_name)
+            if hit_name in mislabeled_axes:
+                hit_axes = mislabeled_axes[hit_name]
+            hit_image_standardized = image_processor.standardize_image(np.load(hit_image_path), input_format = hit_axes, standard_format = "yxc")
+            current_row[4 + i].imshow(hit_image_standardized)
+            current_row[4 + i].set_title(f"{hit_name}\n({hit[-1]:.3f})")
+        
         if not single_output_file:
             plt.savefig(out_fig_fname, bbox_inches = 'tight')
             plt.close()
@@ -517,10 +526,68 @@ def test_images(input_files : list, out_dir : str, out_suffix : str, db_path: st
 def min_distance_to_representative(vector : list, representative_db : list):
     min_distance = np.inf
     for _, _, rep_vector in representative_db:
-        distance = cosine(vector, rep_vector)
+        distance = scipy.spatial.distance.cosine(vector, rep_vector)
         if distance < min_distance:
             min_distance = distance
     return min_distance
+
+def draft_get_representative_images(input_files : list, verbose : bool = False,
+                              grayscale : bool = True, random_seed : int = 2010,
+                              threshold_distance : float = 0.25, safety_iter : int = 100):
+    image_processor = ImageProcessor()
+    embedded_db = []
+    if verbose:
+        print(f"Embedding input images")
+        sys.stdout.flush()
+    input_files_interable = tqdm(input_files) if verbose else input_files
+    for input_image_path in input_files_interable:
+        fname = os.path.basename(input_image_path)
+        input_image = image_processor.read_image(input_image_path)
+        input_axes = guess_image_axes(input_image.shape)
+        embedded_image = image_processor.embed_image(input_image, input_axes, grayscale = grayscale)
+        embedded_db.append((fname, input_image_path, embedded_image))
+
+    n = len(embedded_db)
+    distances = np.zeros((n, n))
+    if verbose:
+        print('Calculating distance matrix')
+        sys.stdout.flush()
+    dist_iterable = tqdm(range(n)) if verbose else range(n)
+    for i in dist_iterable:
+        for j in range(n):
+            if i != j:
+                cos_dist = scipy.spatial.distance.cosine(embedded_db[i][2], embedded_db[j][2])
+                distances[i, j] = cos_dist
+                distances[j, i] = cos_dist
+            else:
+                distances[i, j] = 0.0
+    
+    np.random.seed(random_seed)
+    first_choice = np.random.choice(n, replace=False)
+    # representative_db = [embedded_db[first_choice]]
+    representative_indices = [first_choice]
+    current_dists = np.array([distances[x].max() for x in representative_indices])
+    current_idxs = np.array([distances[x].argmax() for x in representative_indices])
+
+    if verbose:
+        print('Assembling representative set')
+    rep_iterable = tqdm(range(n)) if verbose else range(n)
+    for i in rep_iterable:
+        i_max = current_dists.argmax()
+        max_dist = current_dists[i_max]
+        if max_dist < threshold_distance:
+            break
+
+        new_rep_idx = current_idxs[i_max]
+        representative_indices.append(new_rep_idx)
+        distances[:, new_rep_idx] = np.inf
+        distances[new_rep_idx, :] = np.inf
+        current_dists = np.array([distances[x].max() for x in representative_indices])
+        current_idxs = np.array([distances[x].argmax() for x in representative_indices])
+    
+    representative_db = [embedded_db[idx] for idx in representative_indices]
+    return([v[1] for v in representative_db])
+    
 
 def get_representative_images(input_files : list, verbose : bool = False,
                               grayscale : bool = True, random_seed : int = 2010,
@@ -528,6 +595,8 @@ def get_representative_images(input_files : list, verbose : bool = False,
     image_processor = ImageProcessor()
     embedded_db = []
     input_files_interable = tqdm(input_files) if verbose else input_files
+    if verbose:
+        print(f"Embedding input images")
     for input_image_path in input_files_interable:
         fname = os.path.basename(input_image_path)
         input_image = image_processor.read_image(input_image_path)
@@ -537,6 +606,13 @@ def get_representative_images(input_files : list, verbose : bool = False,
     np.random.seed(random_seed)
     representative_db = []
     safety_counter = 0
+
+    # Initialize tqdm for the while loop
+    max_safety_count = safety_iter * len(input_files)
+    if verbose:
+        print(f"Embedded database includes {len(embedded_db)} vectors")
+        safety_progress = tqdm(total=max_safety_count, desc="Safety Counter Progress", disable=not verbose)
+
     # Add vectors to representative_db until the condition is met
     while True:
         # random_vector = choice(embedded_db)
@@ -547,8 +623,12 @@ def get_representative_images(input_files : list, verbose : bool = False,
         # Check if all vectors in embedded_db have been compared
         if all(min_distance_to_representative(vector[2], representative_db) <= threshold_distance for vector in embedded_db):
             break
+        if verbose:
+            safety_progress.update(1)
         safety_counter += 1
         if safety_counter > safety_iter * len(input_files):
+            if verbose:
+                safety_progress.close()
             sys.exit('Error - sampling loop iterations exceeded past safety number')
     return([v[1] for v in representative_db])
 
