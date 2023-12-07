@@ -3,6 +3,7 @@ import typing as T
 import pickle as pkl
 import sys
 
+import matplotlib.pyplot as plt
 import cv2
 import yaml
 import requests
@@ -160,7 +161,7 @@ class ImageProcessor():
         output_image = composite_rgb.transpose([current_format.index(c) for c in output_format])
         return output_image
 
-    def embed_image(self, input_image, current_format: str, grayscale : bool = False):
+    def embed_image(self, input_image, current_format: str, grayscale : bool = True):
         resized_image = self.resize_image(
             input_image,
             current_format,
@@ -184,7 +185,7 @@ class ImageProcessor():
             input_image = cv2.imread(input_image_path)
         return input_image
 
-    def get_torch_image(self, input_image_path, input_axes, grayscale : bool = False):
+    def get_torch_image(self, input_image_path, input_axes, grayscale : bool = True):
         input_image = self.read_image(input_image_path)
         resized_image = self.resize_image(input_image, input_axes, grayscale=grayscale, output_format = "bcyx")
         resized_image = resized_image.astype(np.float32)
@@ -212,7 +213,7 @@ def get_model_rdf(m: dict, db_path: str) -> T.Optional[dict]:
     return rdf_dict
 
 
-def get_model_torch_images(rdf_dict: dict, db_path : str, grayscale : bool = False) -> (list, list):
+def get_model_torch_images(rdf_dict: dict, db_path : str, grayscale : bool = True) -> (list, list):
     image_embedder = ImageProcessor()
     mislabeled_axes = {'impartial-shark' : 'yx'} # impartial shark has mislabeled axes
     nickname = rdf_dict['config']['bioimageio']['nickname']
@@ -240,7 +241,7 @@ def get_model_torch_images(rdf_dict: dict, db_path : str, grayscale : bool = Fal
 
 
 def get_torch_db(db_path: str, processor: ImageProcessor, force_build: bool = False,
-                 grayscale : bool = False) -> list[(torch.Tensor, dict)]:
+                 grayscale : bool = True) -> list[(torch.Tensor, dict)]:
     from bioimageio_chatbot.chatbot import load_model_info
     out_db_path = os.path.join(db_path, 'db.pkl')
     if (not force_build) and os.path.exists(out_db_path):
@@ -281,7 +282,7 @@ def search_torch_db(
         image_processor: ImageProcessor,
         input_image_path: str, input_image_axes: str,
         db_path: str, top_n: int = 5, verbose : bool = True, 
-        force_build : bool = False, grayscale : bool = False) -> str:
+        force_build : bool = False, grayscale : bool = True) -> str:
     db = get_torch_db(db_path, image_processor, force_build = force_build, grayscale=grayscale)
     user_torch_image = image_processor.get_torch_image(
         input_image_path, input_image_axes, grayscale=grayscale)
@@ -434,6 +435,123 @@ def guess_image_axes(shape):
 # ]
 # for shape in test_shapes:
 #     print(f"Shape: {shape} -> Axes: {guess_image_axes(shape)}")
+
+def get_db_inputs(db_path, model_name):
+    image_dir = os.path.join(db_path, 'input_images')
+    rdf_dir = os.path.join(db_path, 'rdf_sources')
+    if np.any([~os.path.exists(x) for x in [image_dir, rdf_dir]]):
+        ip = ImageProcessor()
+        db = get_torch_db(db_path, ip)
+    input_axes = get_axes(db_path, model_name)
+    input_image_name = os.path.join(image_dir, f"{model_name}.npy")
+    return(input_image_name, input_axes)
+
+def test_images(input_files : list, out_dir : str, out_suffix : str, db_path: str, 
+                mislabeled_axes : dict = {'impartial-shark' : 'yx'}, 
+                known_axes : bool = False,
+                single_output_file : bool = False):
+    os.makedirs(out_dir, exist_ok=True)
+    image_processor = ImageProcessor()
+    if single_output_file:
+        fig, axes = plt.subplots(len(input_files), 5, figsize=(15, 3.2 * len(input_files)))
+        out_fig_fname = os.path.join(out_dir, f"{out_suffix}.svg")
+    for i_fname, fname_abs in enumerate(tqdm(input_files)):
+        fname = os.path.basename(fname_abs)
+        if not single_output_file:
+            fig, axes = plt.subplots(1, 5, figsize = (15, 3.2))
+            out_fig_fname = os.path.join(out_dir, f"{out_suffix}_{os.path.splitext(fname)[0]}.svg")
+        if len(input_files) == 1 or not single_output_file:
+            current_row = axes
+        else:
+            current_row = axes[i_fname]
+        input_image = image_processor.read_image(fname_abs)
+        if known_axes:
+            input_axes = get_axes(db_path, fname.replace('.npy', '')) # gkreder
+        else:
+            input_axes = guess_image_axes(input_image.shape)
+        input_image_standardized = image_processor.standardize_image(input_image, input_axes, standard_format='yxc')
+        torch_image_grayscale = image_processor.get_torch_image(fname_abs, input_axes, grayscale=True)
+        torch_image_color = image_processor.get_torch_image(fname_abs, input_axes, grayscale=False)
+        output_image_grayscale = image_processor.standardize_image(torch_image_grayscale.numpy(), input_format = "bcyx", standard_format="yxc")
+        output_image_color = image_processor.standardize_image(torch_image_color.numpy(), input_format = "bcyx", standard_format="yxc")
+        res = search_torch_db(image_processor, fname_abs, input_axes, db_path, verbose = False, grayscale = True)
+        best_hit = res[0][-2]['config']['bioimageio']['nickname']
+        best_score = res[0][-1]
+
+        show_images = [(input_image_standardized, f"{fname}"),
+                       (output_image_grayscale, "Input (Grayscale)"),
+                       (output_image_color, "Input (RGB)")]
+        for i_ax in range(3):
+            current_row[i_ax].imshow(show_images[i_ax][0])
+            current_row[i_ax].set_title(show_images[i_ax][1])
+        current_row[3].barh([len(res) - i for i in range(len(res))], [x[-1] for x in res])
+        for i, hit in enumerate(res):
+            value = hit[-1]
+            hit_name = hit[-2]['config']['bioimageio']['nickname']
+            current_row[3].set_title(f"Best sim: {best_score:.3f}")
+            current_row[3].text(value / 2, len(res) - i, hit_name, ha='center', va='center', rotation='horizontal', color = 'white', size = 6)
+        current_row[3].set_yticks([i+1 for i in range(len(res))])
+        current_row[3].set_yticklabels([str(len(res) - i) for i in range(len(res))])
+        pos_axes2 = current_row[2].get_position()
+        pos_axes3 = current_row[3].get_position()
+        new_width = pos_axes2.x1 - pos_axes2.x0
+        new_height = pos_axes2.y1 - pos_axes2.y0
+        height_diff = (pos_axes3.y1 - pos_axes3.y0) - new_height
+        new_y0 = pos_axes3.y0 + ( height_diff / 2)
+        current_row[3].set_position([pos_axes3.x0, new_y0, new_width, new_height])
+
+        best_hit_image_path, best_hit_axes = get_db_inputs(db_path, best_hit)
+        if best_hit in mislabeled_axes:
+            best_hit_axes = mislabeled_axes[best_hit]
+        best_hit_image_standardized = image_processor.standardize_image(np.load(best_hit_image_path), input_format = best_hit_axes, standard_format="yxc")
+        current_row[4].imshow(best_hit_image_standardized)
+        current_row[4].set_title(f"{best_hit}")
+        if not single_output_file:
+            plt.savefig(out_fig_fname, bbox_inches = 'tight')
+            plt.close()
+    if single_output_file:
+        plt.savefig(out_fig_fname, bbox_inches = "tight")
+        plt.close()
+    return(fig, axes)
+
+def min_distance_to_representative(vector : list, representative_db : list):
+    min_distance = np.inf
+    for _, _, rep_vector in representative_db:
+        distance = cosine(vector, rep_vector)
+        if distance < min_distance:
+            min_distance = distance
+    return min_distance
+
+def get_representative_images(input_files : list, verbose : bool = False,
+                              grayscale : bool = True, random_seed : int = 2010,
+                              threshold_distance : float = 0.25, safety_iter : int = 100):
+    image_processor = ImageProcessor()
+    embedded_db = []
+    input_files_interable = tqdm(input_files) if verbose else input_files
+    for input_image_path in input_files_interable:
+        fname = os.path.basename(input_image_path)
+        input_image = image_processor.read_image(input_image_path)
+        input_axes = guess_image_axes(input_image.shape)
+        embedded_image = image_processor.embed_image(input_image, input_axes, grayscale = grayscale)
+        embedded_db.append((fname, input_image_path, embedded_image))
+    np.random.seed(random_seed)
+    representative_db = []
+    safety_counter = 0
+    # Add vectors to representative_db until the condition is met
+    while True:
+        # random_vector = choice(embedded_db)
+        random_idx = np.random.choice(len(embedded_db), replace = False)
+        random_vector = embedded_db[random_idx]
+        if min_distance_to_representative(random_vector[2], representative_db) > threshold_distance:
+            representative_db.append(random_vector)
+        # Check if all vectors in embedded_db have been compared
+        if all(min_distance_to_representative(vector[2], representative_db) <= threshold_distance for vector in embedded_db):
+            break
+        safety_counter += 1
+        if safety_counter > safety_iter * len(input_files):
+            sys.exit('Error - sampling loop iterations exceeded past safety number')
+    return([v[1] for v in representative_db])
+
 
 
 class BioengineRunner():
