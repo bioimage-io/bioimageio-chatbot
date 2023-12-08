@@ -8,6 +8,7 @@ from xarray import DataArray
 from tqdm.auto import tqdm
 from PIL import Image
 import xml.etree.ElementTree as ET
+from schema_agents.provider.openai_api import retry
 
 import asyncio
 from schema_agents.role import Role
@@ -32,12 +33,12 @@ class LabeledImage(UnlabeledImage):
     @validator('axes')
     def validate_axes_length(cls, v, values):
         if 'shape' in values and len(v) != len(values['shape']):
-            raise ValueError("The length of axes MUST exact match the number of dimensions in the image's shape")
+            raise ValueError(f"The number of characters in the axes label string MUST exact match the number of dimensions in the image's shape. The number of dimensions in {values['shape']} is {len(values['shape'])} but the number of characters in the axes label string ({v}) is {len(v)}")
         for c in v:
             if c not in ['b', 'x', 'y', 'z', 'c', 't']:
                 raise ValueError("Please confine your axis labels to the characters 'b', 'x', 'y', 'z', 'c', 't'")
-        if 't' in v and np.any([c not in v for c in ['z', 'b', 'x', 'y']]):
-            raise ValueError("Please prioritize using 'z', 'b', 'x', or 'y' over 't' as an axis label. The label 't' should only be used as as last resort.")
+        # if 't' in v and np.any([c not in v for c in ['z', 'b', 'x', 'y']]):
+        #     raise ValueError("Please prioritize using 'z', 'b', 'x', or 'y' over 't' as an axis label. The label 't' should only be used as as last resort.")
         if np.any([v.count(c) > 1 for c in v]):
             raise ValueError("Every unique character can be used only once in the axes labels")
         return v
@@ -49,27 +50,47 @@ class LabeledImages(BaseModel):
     """A list of images whose axes have been labeled"""
     labeled_images : list[LabeledImage] = Field(description="The labeled images")
 
+# axis_guessing_logic = """(1) The largest dimensions will always be 'x' and 'y'. (2) The channel dimension ('c') will usually not be larger than 5"""
+axis_guessing_logic = ""
 class AxisGuess(BaseModel):
-    """The best guess for what each axis in the image corresponds to"""
-    axes : list[str] = Field(description = "The axis label for each dimension in the image's shape")
+    """The best guess for what each axis in the image corresponds to. If there are two dimensions of size 1, they likely correspond to batch ('b') and channel ('c')"""
+    axes : list[str] = Field(description = f"The axis label for each dimension in the image's shape. {axis_guessing_logic}")
 
 async def guess_image_axes(image : UnlabeledImage, role : Role = None) -> LabeledImage:
-    """Guesses the axis labels based on the image shape"""
+    """Guesses the axis labels based on the image shape using common sense by looking at the dimension sizes compared to each other"""
     # response = await role.aask(image, LabeledImage)
     response = role.aask(image.shape, AxisGuess)
     labeled_image = LabeledImage(shape = image.shape, axes = response.axes)
     return(labeled_image)
 
+async def retry_aask(role, ui, output_type):
+    @retry(5)
+    async def inner():
+        return await role.aask(ui, output_type)
+    return await inner()
+
 async def guess_all_axes(unlabeled_images : UnlabeledImages, role : Role = None) -> LabeledImages:
     """Labels the axes in all images in the input list of unlabeled images"""
     labeled_images = []
+
+
     # guessing_tasks = (role.aask(ui, LabeledImage) for ui in unlabeled_images.unlabeled_images)
-    # labeled_images = asyncio.gather(*guessing_tasks)
-    for unlabeled_image in unlabeled_images.unlabeled_images:
-        labeled_image = await role.aask(unlabeled_image, LabeledImage)
-        labeled_images.append(labeled_image)
-    labeled_image = LabeledImages(labeled_images=labeled_images)
-    return(labeled_image)
+    # labeled_images = await asyncio.gather(*guessing_tasks)
+    # # for unlabeled_image in unlabeled_images.unlabeled_images:
+    #     # labeled_image = await role.aask(unlabeled_image, LabeledImage)
+    #     # labeled_images.append(labeled_image)
+    # labeled_images = LabeledImages(labeled_images=labeled_images)
+
+    guessing_tasks = (retry_aask(role, ui, LabeledImage) for ui in unlabeled_images.unlabeled_images)
+    labeled_images = await asyncio.gather(*guessing_tasks)
+    # for unlabeled_image in unlabeled_images.unlabeled_images:
+        # labeled_image = await role.aask(unlabeled_image, LabeledImage)
+        # labeled_images.append(labeled_image)
+    labeled_images = LabeledImages(labeled_images=labeled_images)
+
+
+
+    return(labeled_images)
 
 def create_svg_table(input_images, true_shapes, true_axes, guessed_axes):
     ET.register_namespace("", "http://www.w3.org/2000/svg")
@@ -89,7 +110,7 @@ def create_svg_table(input_images, true_shapes, true_axes, guessed_axes):
                                 **{'text-anchor': 'start'})
         element.text = text
     # Add table headers
-    headers = ["Image", "True Shape", "True Axes", "Guessed Axes"]
+    headers = ["Image", "True Shape", "True Axes", "Agent Guessed Axes"]
     x_position = 0
     for i, header in enumerate(headers):
         add_text(svg, x_position + 5, header_height - 10, header, font_size='14')
@@ -97,7 +118,13 @@ def create_svg_table(input_images, true_shapes, true_axes, guessed_axes):
     # Add rows for each image
     for i, (img, shape, true_ax, guessed_ax) in enumerate(zip(input_images, true_shapes, true_axes, guessed_axes)):
         y_position = header_height + i * row_height
-        row_color = '#90ee90' if true_ax == guessed_ax else '#ffcccb'  # Lighter shades of green and red
+        # row_color = '#90ee90' if true_ax == guessed_ax else '#ffcccb'  # Lighter shades of green and red
+        if true_ax == guessed_ax:
+            row_color = '#90ee90' # light green
+        elif true_ax.replace('x', '[').replace('y', 'x').replace('[', 'y') == guessed_ax: # (everything is same except for x and y)
+            row_color = "#ccccff" # light blue
+        else:
+            row_color = '#ffcccb' # light red
         # Background color for row
         ET.SubElement(svg, 'rect', x='0', y=str(y_position), 
                       width='1000', height=str(row_height), 
