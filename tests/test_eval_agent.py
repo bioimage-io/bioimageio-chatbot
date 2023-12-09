@@ -274,7 +274,7 @@ async def start_evaluate_paral(eval_file, eval_index=None):
     query_answer = load_query_answer(eval_file)
     question_list = list(query_answer['Question'])
     ground_truth_answer_list = list(query_answer['GPT-4-turbo Answer (With Context)- GT'])
-    chatgpt_answer_list = list(query_answer['GPT-3.5-tubor Answer  (Without Context)'])
+    chatgpt_answer_list = list(query_answer['GPT-3.5-tubor Answer (Without Context)'])
     gpt4_direct_answer_list = list(query_answer['GPT-4 Answer'])
     BMZ_chatbot_answer_list = list(query_answer['BMZ Chatbot Answer'])
     
@@ -329,18 +329,18 @@ async def start_evaluate_paral(eval_file, eval_index=None):
             
         except Exception as e:
             tasks = [
-                evalBot.handle(Message(content=eval_input_gpt3_direct.json(), data=eval_input_gpt3_direct, role="User")),
-                evalBot.handle(Message(content=eval_input_gpt4_direct.json(), data=eval_input_gpt4_direct, role="User")),
+                # evalBot.handle(Message(content=eval_input_gpt3_direct.json(), data=eval_input_gpt3_direct, role="User")),
+                # evalBot.handle(Message(content=eval_input_gpt4_direct.json(), data=eval_input_gpt4_direct, role="User")),
                 evalBot.handle(Message(content=eval_input_chatbot.json(), data=eval_input_chatbot, role="User"))
             ]
             results = await asyncio.gather(*tasks)
             
-            scores_gpt3_direct, scores_gpt4_direct, scores_chatbot = results
-            # scores_chatbot = results
+            # scores_gpt3_direct, scores_gpt4_direct, scores_chatbot = results
+            scores_chatbot = results[0]
             
             SimilaryScore = scores_chatbot[0].data.similarity_score
-            query_answer.loc[i, 'GPT-3.5-tubor Answer (Without Context)- Answer Similarity Score'] = scores_gpt3_direct[0].data.similarity_score
-            query_answer.loc[i, 'GPT4 Direct Answer - Answer Similarity Score'] = scores_gpt4_direct[0].data.similarity_score
+            # query_answer.loc[i, 'GPT-3.5-tubor Answer (Without Context)- Answer Similarity Score'] = scores_gpt3_direct[0].data.similarity_score
+            # query_answer.loc[i, 'GPT4 Direct Answer - Answer Similarity Score'] = scores_gpt4_direct[0].data.similarity_score
             query_answer.loc[i, 'BMZ Chatbot Answer - Similarity Score'] = SimilaryScore
 
     # Create a list of tasks
