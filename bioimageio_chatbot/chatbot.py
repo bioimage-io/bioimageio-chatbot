@@ -148,9 +148,9 @@ def create_customer_service(db_path):
     resource_item_stats = f"""Each item contains the following fields: {list(resource_items[0].keys())}\nThe available resource types are: {types}\nSome example tags: {tags}\nHere is an example: {resource_items[0]}"""
     class DocumentRetrievalInput(BaseModel):
         """Input for searching knowledge bases and finding documents relevant to the user's request."""
-        query: str = Field(description="The query used to retrieve documents related to the user's request.")
         request: str = Field(description="The user's detailed request")
         preliminary_response: str = Field(description="The preliminary response to the user's question. This will be combined with the retrieved documents to produce the final response.")
+        query: str = Field(description="The query used to retrieve documents related to the user's request. Take preliminary_response as reference to generate query if needed.")
         user_info: Optional[str] = Field("", description="Brief user info summary including name, background, etc., for personalizing responses to the user.")
         channel_id: str = Field(description=f"The channel_id of the knowledge base to search. It MUST be the same as the user provided channel_id. If not specified, either select 'all' to search through all the available knowledge base channels or select one from the available channels which are:\n{channels_info}. If you are not sure which channel to select, select 'all'.")
         
@@ -190,18 +190,22 @@ def create_customer_service(db_path):
                     base_url = collection_info.get('base_url')
                     print(f"Retrieving documents from database {channel_id} with query: {req.query}")
                     results_with_scores = await retriever.aget_relevant_documents(req.query)
+                    # results_with_scores = await retriever.vectorstore.asimilarity_search_with_relevance_scores(req.query, k=8)
                     new_docs_with_score = [DocWithScore(doc=doc.page_content, score=score, metadata=doc.metadata, base_url=base_url) for doc, score in results_with_scores]
                     docs_with_score.extend(new_docs_with_score)
                     # rank the documents by relevance score
-                    docs_with_score = docs_with_score[:6]
+                    # docs_with_score = docs_with_score[:3]
                     for i in range(len(docs_with_score)):
                         print(f"Retrieved documents:\n{docs_with_score[i].doc[:20] + '...'} (score: {docs_with_score[i].score})")
                     # print(f"Retrieved documents:\n{new_docs_with_score[0].doc[:20] + '...'} (score: {new_docs_with_score[0].score})\n{new_docs_with_score[1].doc[:20] + '...'} (score: {new_docs_with_score[1].score})")
-                docs_index = list(range(len(docs_with_score)))
-                get_relevant_context_input = GetRelevantContextInput(docs=docs_with_score, docs_indices=docs_index, user_question=req.request)
-                relevant_contexts = await role.aask(get_relevant_context_input, RelevantContextIndex)
-                picked_docs_indics = relevant_contexts.picked_docs_indices   
-                docs_with_score = [docs_with_score[i] for i in picked_docs_indics]
+                # docs_index = list(range(len(docs_with_score)))
+                # get_relevant_context_input = GetRelevantContextInput(docs=docs_with_score, docs_indices=docs_index, user_question=req.request)
+                # relevant_contexts = await role.aask(get_relevant_context_input, RelevantContextIndex)
+                # picked_docs_indics = relevant_contexts.picked_docs_indices   
+                # docs_with_score = [docs_with_score[i] for i in picked_docs_indics]
+                # rank the documents by relevance score
+                docs_with_score = sorted(docs_with_score, key=lambda x: x.score, reverse=True)
+                docs_with_score = docs_with_score[:5]
                 search_input = DocumentSearchInput(user_question=req.request, relevant_context=docs_with_score, user_info=req.user_info, format=None, preliminary_response=req.preliminary_response)
                 response = await role.aask(search_input, FinalResponse)
             else:
@@ -211,16 +215,16 @@ def create_customer_service(db_path):
                 print(f"Retrieving documents from database {req.channel_id} with query: {req.query}")
                 results_with_scores = await retriever.aget_relevant_documents(req.query)
                 docs_with_score = [DocWithScore(doc=doc.page_content, score=score, metadata=doc.metadata, base_url=base_url) for doc, score in results_with_scores]
-                # docs_with_score = docs_with_score[:3]
+                docs_with_score = docs_with_score[:3]
                 # print all the retrieved documents
                 for i in range(len(docs_with_score)):
                     print(f"Retrieved documents:\n{docs_with_score[i].doc[:20] + '...'} (score: {docs_with_score[i].score})")
                 # print(f"Retrieved documents:\n{docs_with_score[0].doc[:20] + '...'} (score: {docs_with_score[0].score})\n{docs_with_score[1].doc[:20] + '...'} (score: {docs_with_score[1].score})\n{docs_with_score[2].doc[:20] + '...'} (score: {docs_with_score[2].score})")
-                docs_index = list(range(len(docs_with_score)))
-                get_relevant_context_input = GetRelevantContextInput(docs=docs_with_score, docs_indices=docs_index, user_question=req.request)
-                relevant_contexts = await role.aask(get_relevant_context_input, RelevantContextIndex)
-                picked_docs_indics = relevant_contexts.picked_docs_indices   
-                docs_with_score = [docs_with_score[i] for i in picked_docs_indics]
+                # docs_index = list(range(len(docs_with_score)))
+                # get_relevant_context_input = GetRelevantContextInput(docs=docs_with_score, docs_indices=docs_index, user_question=req.request)
+                # relevant_contexts = await role.aask(get_relevant_context_input, RelevantContextIndex)
+                # picked_docs_indics = relevant_contexts.picked_docs_indices   
+                # docs_with_score = [docs_with_score[i] for i in picked_docs_indics]
                 search_input = DocumentSearchInput(user_question=req.request, relevant_context=docs_with_score, user_info=req.user_info, format=collection_info.get('format'))
                 response = await role.aask(search_input, FinalResponse)
             if debug:
