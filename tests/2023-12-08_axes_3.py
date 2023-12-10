@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import torch.nn as nn
 import numpy as np
 from xarray import DataArray
-from tqdm.auto import tqdm
 from PIL import Image
 import xml.etree.ElementTree as ET
 from schema_agents.provider.openai_api import retry
@@ -14,34 +13,37 @@ import asyncio
 from schema_agents.role import Role
 from schema_agents.schema import Message
 from pydantic import BaseModel, Field, validator
-from typing import List
 
 from bioimageio_chatbot.image_processor import *
 
+
+class AxisGuess(BaseModel):
+    """The best guess for what each axis in the image corresponds to. The largest dimensions will be 'x' and 'y'. The 'c' dimension will not be larger than 5. The numbers of dimensions in the shape tuple MUST match the number of axis labels"""
+    labels : list[str] = Field(description = f"The axis label for each dimension in the image's shape.")
 
 class UnlabeledImage(BaseModel):
     """An input image"""
     shape : list[int] = Field(description="The image's shape")
 
-#  Common choices of dimension labels include 'b', 'x', 'y', 'z' respectively meaning 'batch', 'width', 'height', 'z'. You should always prioritize picking 'z' over 't' as an axis label if in doubt.
-
-# Be more explicit about the logic involved
-
 class LabeledImage(UnlabeledImage):
-    """An image whose axes have been labeled according to its shape e.g. 'bcyx'. The labels should intuitively make sense. The length of this string MUST exactly match the number of dimensions in the image's shape. You should avoid using the label 't' if possible"""
-    axes : str = Field(description = "A string representing the axes of the image (for example 'cyx', 'bxyc'). Each entry corresponds to the axis label of the image along the corresponding dimension. 't' is the least likely axis to appear in any image. The image's axes labels. The length of this string MUST match the number of dimensions in the image's `shape`.")
+    """An image whose axes have been labeled according to its shape e.g. ['b','c','y','x']. The labels should intuitively make sense. The length of this list MUST exactly match the number of dimensions in the image's shape. You should avoid using the label 't' if possible. The 'c' dimension should not be larger than 5"""
+    axes : AxisGuess = Field(description = "A list representing the axes of the image (for example ['c','y','x'], ['b','x','y','c']). Each entry corresponds to the axis label of the image along the corresponding dimension. 't' is the least likely axis to appear in any image. The length of this string MUST match the number of dimensions in the image's `shape`. If in doubt between labeling a dimension as 'z' or 'c', 'c' should be assigned to the smaller dimension.")
     @validator('axes')
     def validate_axes_length(cls, v, values):
-        if 'shape' in values and len(v) != len(values['shape']):
-            raise ValueError(f"The number of characters in the axes label string MUST exact match the number of dimensions in the image's shape. The number of dimensions in {values['shape']} is {len(values['shape'])} but the number of characters in the axes label string ({v}) is {len(v)}")
-        for c in v:
+        if 'shape' in values:
+            if len(v.labels) != len(values['shape']):
+                raise ValueError(f"The number of characters in the axes label string MUST exact match the number of dimensions in the image's shape. The number of dimensions in {values['shape']} is {len(values['shape'])} but the number of characters in the axes label string ({v}) is {len(v.labels)}")
+            if 'c' in v.labels and values['shape'][v.labels.index('c')] > 5:
+                raise ValueError(f"Error, the number of channels ('c' dimension) should not be greater than 5.")
+        for c in v.labels:
             if c not in ['b', 'x', 'y', 'z', 'c', 't']:
                 raise ValueError("Please confine your axis labels to the characters 'b', 'x', 'y', 'z', 'c', 't'")
-        # if 't' in v and np.any([c not in v for c in ['z', 'b', 'x', 'y']]):
-        #     raise ValueError("Please prioritize using 'z', 'b', 'x', or 'y' over 't' as an axis label. The label 't' should only be used as as last resort.")
-        if np.any([v.count(c) > 1 for c in v]):
+        if 't' in v.labels and np.any([c not in v.labels for c in ['z', 'b', 'x', 'y']]):
+            raise ValueError("Please prioritize using 'z', 'b', 'x', or 'y' over 't' as an axis label. The label 't' should only be used as as last resort.")
+        if np.any([v.labels.count(c) > 1 for c in v.labels]):
             raise ValueError("Every unique character can be used only once in the axes labels")
         return v
+    
 class UnlabeledImages(BaseModel):
     """A list of unlabeled images"""
     unlabeled_images : list[UnlabeledImage] = Field(description="The unlabled images")
@@ -50,14 +52,8 @@ class LabeledImages(BaseModel):
     """A list of images whose axes have been labeled"""
     labeled_images : list[LabeledImage] = Field(description="The labeled images")
 
-# axis_guessing_logic = """(1) The largest dimensions will always be 'x' and 'y'. (2) The channel dimension ('c') will usually not be larger than 5"""
-axis_guessing_logic = ""
-class AxisGuess(BaseModel):
-    """The best guess for what each axis in the image corresponds to. If there are two dimensions of size 1, they likely correspond to batch ('b') and channel ('c')"""
-    axes : list[str] = Field(description = f"The axis label for each dimension in the image's shape. {axis_guessing_logic}")
-
 async def guess_image_axes(image : UnlabeledImage, role : Role = None) -> LabeledImage:
-    """Guesses the axis labels based on the image shape using common sense by looking at the dimension sizes compared to each other"""
+    """Guesses the axis labels based on the image shape. The largest dimensions will be 'x' and 'y'. The 'c' dimension will not be larger than 5. The numbers of dimensions in the shape tuple must the number of axis labels"""
     # response = await role.aask(image, LabeledImage)
     response = role.aask(image.shape, AxisGuess)
     labeled_image = LabeledImage(shape = image.shape, axes = response.axes)
@@ -72,24 +68,13 @@ async def retry_aask(role, ui, output_type):
 async def guess_all_axes(unlabeled_images : UnlabeledImages, role : Role = None) -> LabeledImages:
     """Labels the axes in all images in the input list of unlabeled images"""
     labeled_images = []
-
-
-    # guessing_tasks = (role.aask(ui, LabeledImage) for ui in unlabeled_images.unlabeled_images)
-    # labeled_images = await asyncio.gather(*guessing_tasks)
-    # # for unlabeled_image in unlabeled_images.unlabeled_images:
-    #     # labeled_image = await role.aask(unlabeled_image, LabeledImage)
-    #     # labeled_images.append(labeled_image)
-    # labeled_images = LabeledImages(labeled_images=labeled_images)
-
+    for unlabeled_image in unlabeled_images.unlabeled_images:
+        labeled_image = await role.aask(unlabeled_image, LabeledImage)
+        labeled_images.append(labeled_image)
+    
     guessing_tasks = (retry_aask(role, ui, LabeledImage) for ui in unlabeled_images.unlabeled_images)
     labeled_images = await asyncio.gather(*guessing_tasks)
-    # for unlabeled_image in unlabeled_images.unlabeled_images:
-        # labeled_image = await role.aask(unlabeled_image, LabeledImage)
-        # labeled_images.append(labeled_image)
     labeled_images = LabeledImages(labeled_images=labeled_images)
-
-
-
     return(labeled_images)
 
 def create_svg_table(input_images, true_shapes, true_axes, guessed_axes):
@@ -162,7 +147,7 @@ async def main(svg_output_fname : str):
     message_input = UnlabeledImages(unlabeled_images = [UnlabeledImage(shape = s) for s in true_shapes])
     m = Message(content = 'guess the image axes for each image in the list', data = message_input, role = 'User')
     responses = await customer_service.handle(m)
-    guessed_axes = [x.axes for x in responses[0].data.labeled_images]
+    guessed_axes = [''.join(x.axes.labels) for x in responses[0].data.labeled_images]
     svg_content = create_svg_table(input_images, true_shapes, true_axes, guessed_axes)
     with open(svg_output_fname, "w") as file:
         file.write(svg_content)
@@ -171,8 +156,6 @@ async def main(svg_output_fname : str):
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
-    # f = await main()
-    svg_output_fname = "output.svg"
+    svg_output_fname = "model-zoo_guess-results.svg"
     loop.create_task(main(svg_output_fname))
     loop.run_forever()
-    # loop.run_until_complete(f)
