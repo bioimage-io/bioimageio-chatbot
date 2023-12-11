@@ -310,15 +310,6 @@ class ImageProcessor():
                 composite_rgb = cv2.normalize(composite_rgb, None, 0, 255, cv2.NORM_MINMAX)
             else:
                 composite_rgb = cv2.cvtColor(composite_rgb, cv2.COLOR_GRAY2BGR)
-        # # Convert to grayscale and back to RGB if required
-        # if grayscale:
-        #     if num_channels > 1:
-        #         resized = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
-        #         resized = cv2.cvtColor(resized, cv2.COLOR_GRAY2BGR)
-        # elif num_channels == 1:
-        #     resized = cv2.cvtColor(np.uint8(resized), cv2.COLOR_GRAY2BGR)
-        # elif num_channels == 4:
-        #     resized = cv2.cvtColor(np.uint8(resized[:,:,:3]), cv2.COLOR_GRAY2BGR)
         for c in output_format:
             if c not in current_format:
                 composite_rgb = np.expand_dims(composite_rgb, axis = 0)
@@ -823,7 +814,7 @@ class BioengineRunner():
             expected_shape = tuple(shape_spec)
             if len(expected_shape) != len(transformed.shape):
                 print(
-                    f"Transformed input image dimension {len(expected_shape)}"
+                    f"Transformed input image dimension ({len(expected_shape)}) "
                     f"does not match the expected dimension ({len(expected_shape)})."
                 )
                 return False
@@ -831,7 +822,7 @@ class BioengineRunner():
                 if expected_axes[idx] == "c":
                     if transformed.shape[idx] != expected_shape[idx]:
                         print(
-                            f"Transformed input image channels {transformed.shape[idx]}"
+                            f"Transformed input image channels ({transformed.shape[idx]}) "
                             f"does not match the expected channels ({expected_shape[idx]})."
                         )
                         return False
@@ -843,6 +834,8 @@ class BioengineRunner():
         img = image
         input_spec = rdf['inputs'][0]
         input_tensor_axes = input_spec['axes']
+        input_x = input_spec['shape'][input_tensor_axes.lower().index('x')]
+        input_y = input_spec['shape'][input_tensor_axes.lower().index('y')] 
         print("input_tensor_axes", input_tensor_axes)
         if image_axes is None:
             shape = img.shape
@@ -852,23 +845,42 @@ class BioengineRunner():
             print(f"Image axes were provided as {image_axes}")
         assert len(image_axes) == img.ndim
         print("Transforming input image...")
-        img = transform_input(img, image_axes, input_tensor_axes)
+        # img = transform_input(img, image_axes, input_tensor_axes)
+        image_processor = ImageProcessor()
+        img = image_processor.resize_image(img, image_axes, grayscale = False, 
+                                           output_format=input_tensor_axes, output_dims_xy=(input_x, input_y))
         print(f"Input image was transformed into shape {img.shape} to fit the model")
         print("Data loaded, running model...")
         if not (await self.shape_check(img, rdf)):
             return False
-        try:
-            result = await self.bioengine_execute(
-                model_id, inputs=[img], weight_format=weight_format)
-        except Exception as exp:
-            print(f"Failed to run, please check your input dimensions and axes. See the console for more details.")
-            print(f"Failed to run the model ({model_id}) in the BioEngine, error: {exp}")
-            return False
-        if not result['success']:
-            print(f"Failed to run, please check your input dimensions and axes. See the console for more details.")
-            print(f"Failed to run the model ({model_id}) in the BioEngine, error: {result['error']}")
-            return False
-        output = result['outputs'][0]
+        if 'cellpose' not in model_id:
+            try:
+                result = await self.bioengine_execute(
+                    model_id, inputs=[img], weight_format=weight_format)
+            except Exception as exp:
+                print(f"Failed to run, please check your input dimensions and axes. See the console for more details.")
+                print(f"Failed to run the model ({model_id}) in the BioEngine, error: {exp}")
+                return False
+            if not result['success']:
+                print(f"Failed to run, please check your input dimensions and axes. See the console for more details.")
+                print(f"Failed to run the model ({model_id}) in the BioEngine, error: {result['error']}")
+                return False
+            output = result['outputs'][0]
+        else:
+            try:
+                from imjoy_rpc.hypha import connect_to_server
+                cellpose_server = await connect_to_server(
+                    {'server_url' : "https://ai.imjoy.io"}
+                )
+                triton = server.get_service('triton-client')
+                param = {'diameter' : 30, 'model_type' : "cyto"}
+                results = triton.execute(inputs=[img,param], model_name = "cellpose-python", decode_bytes=True)
+                mask = results.get('mask', None)
+                if mask:
+                    output = mask[0]
+            except Exception as exp:
+                print(f"Failed to run. See the console for more details.")
+                return False
         print(f"🎉Model execution completed! Got output tensor of shape {output.shape}")
         output_tensor_axes = rdf['outputs'][0]['axes']
         transformed_output = map_axes(output, output_tensor_axes, image_axes)

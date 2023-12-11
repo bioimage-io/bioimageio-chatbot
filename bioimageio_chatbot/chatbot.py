@@ -19,7 +19,7 @@ from imjoy_rpc.hypha import login, connect_to_server
 
 from bioimageio_chatbot.knowledge_base import load_knowledge_base
 from bioimageio_chatbot.utils import get_manifest
-from bioimageio_chatbot.image_processor import search_torch_db, BioengineRunner, ImageProcessor
+from bioimageio_chatbot.image_processor import search_torch_db, BioengineRunner, ImageProcessor, guess_image_axes
 
 
 def decode_base64(encoded_data):
@@ -212,24 +212,33 @@ def create_customer_service(db_path):
             with open(image_path, 'wb') as f:
                 f.write(decoded_image_data)
             image_processor = ImageProcessor()
+            axes = await guess_image_axes([image_path])
+            axes = axes[0]
             arr = image_processor.read_image(image_path)
-            desc = InputImageDescription(
-                image_shape = str(arr.shape),
-                image_dtype = str(arr.dtype),
-                image_filename = image_path
-            )
-            req = await role.aask(desc, InputImageAxes)
-            print(req.axes)
-            axes = req.axes
-            axes = 'yxc'
+            # desc = InputImageDescription(
+            #     image_shape = str(arr.shape),
+            #     image_dtype = str(arr.dtype),
+            #     image_filename = image_path
+            # )
+            # req = await role.aask(desc, InputImageAxes)
+            # print(req.axes)
+            # axes = req.axes
+            # axes = 'yxc'
+            print(axes)
             db_hits = search_torch_db(image_processor, image_path, axes, "./tmp/image_db")
-            response_string = db_hits[0][-1]['config']['bioimageio']['nickname']
-            rdf = db_hits[0][-1]
-            model_id = rdf['id']
+            response_string = db_hits[0][-2]['config']['bioimageio']['nickname']
+            rdf = db_hits[0][-2]
+            if 'cellpose' in response_string:
+                model_id = 'cellpose'
+            else:
+                model_id = rdf['id']
+            print(rdf)
+            print(model_id)
             bioengine_runner = BioengineRunner()
             await bioengine_runner.setup()
             import numpy as np
             arr = arr.mean(axis=2)[:,:,None]
+            # output = await bioengine_runner.run_model(arr, model_id, rdf, axes)
             output = await bioengine_runner.run_model(arr, model_id, rdf, axes)
             print(output.shape)
             fig, axes = plt.subplots(ncols=2)
