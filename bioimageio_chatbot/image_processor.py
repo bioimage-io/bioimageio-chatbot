@@ -65,7 +65,7 @@ async def agent_guess_image_axes(image : UnlabeledImage, role : Role = None) -> 
     # response = await role.aask(image, LabeledImage)
     response = role.aask(image.shape, AxisGuess)
     labeled_image = LabeledImage(shape = image.shape, axes = response.axes)
-    return(labeled_image)
+    return labeled_image
 
 async def retry_aask(role, ui, output_type):
     @retry(5)
@@ -83,7 +83,7 @@ async def agent_guess_all_axes(unlabeled_images : UnlabeledImages, role : Role =
     guessing_tasks = (retry_aask(role, ui, LabeledImage) for ui in unlabeled_images.unlabeled_images)
     labeled_images = await asyncio.gather(*guessing_tasks)
     labeled_images = LabeledImages(labeled_images=labeled_images)
-    return(labeled_images)
+    return labeled_images
 
 
 async def guess_image_axes(input_files : list):
@@ -99,7 +99,7 @@ async def guess_image_axes(input_files : list):
     m = Message(content = 'guess the image axes for each image in the list', data = message_input, role = 'User')
     responses = await axis_guesser.handle(m)
     guessed_axes = [''.join(x.axes.labels) for x in responses[0].data.labeled_images]
-    return(guessed_axes)
+    return guessed_axes
 
 
 def create_svg_table_unknown(input_images, shapes, guessed_axes):
@@ -272,7 +272,7 @@ class ImageProcessor():
         rearranged = rearranged.transpose([current_format.index(c) for c in standard_format])
         rearranged = cv2.normalize(rearranged, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8) # gkreder
         # rearranged = rearranged.astype(np.uint8) # gkreder
-        return(rearranged)
+        return rearranged
 
         
 
@@ -507,11 +507,11 @@ def search_torch_db(
 
 def get_axes(db_path : str, model_name : str, mislabeled_axes = {'impartial-shark' : 'yx'}):
     if model_name in mislabeled_axes:
-        return(mislabeled_axes[model_name])
+        return mislabeled_axes[model_name]
     with open(os.path.join(db_path, 'rdf_sources', f"{model_name}.yaml"), 'r') as f:
         rdf_dict = yaml.safe_load(f.read())
     input_axes = rdf_dict['inputs'][0]['axes']
-    return(input_axes)
+    return input_axes
 
 
 def is_channel_first(shape):
@@ -600,7 +600,7 @@ def guess_image_axes_deterministic(input_image_files : list[str]):
             axes.append([c] + shapes_left[0])
             shapes_left = [x for i_x, x in enumerate(shapes_left) if i_x > 0]
             dimensions_left = ''.join([x for x in dimensions_left if x != c])
-            return(axes, shapes_left, dimensions_left)
+            return axes, shapes_left, dimensions_left
         for c in ['y', 'x']:
             if c in dimensions_left:
                 axes, shapes_left, dimensions_left = enter(c, axes, shapes_left, dimensions_left)
@@ -623,7 +623,7 @@ def guess_image_axes_deterministic(input_image_files : list[str]):
         axes = sorted(axes, key = lambda tup : tup[-1])
         out_axes = ''.join([x[0] for x in axes])
         guessed_axes.append(out_axes)
-    return(guessed_axes)
+    return guessed_axes
 
 def get_db_inputs(db_path, model_name):
     image_dir = os.path.join(db_path, 'input_images')
@@ -633,7 +633,7 @@ def get_db_inputs(db_path, model_name):
         db = get_torch_db(db_path, ip)
     input_axes = get_axes(db_path, model_name)
     input_image_name = os.path.join(image_dir, f"{model_name}.npy")
-    return(input_image_name, input_axes)
+    return (input_image_name, input_axes)
 
 async def test_images(input_files : list, out_dir : str, out_suffix : str, db_path: str, 
                 mislabeled_axes : dict = {'impartial-shark' : 'yx'}, 
@@ -711,7 +711,7 @@ async def test_images(input_files : list, out_dir : str, out_suffix : str, db_pa
     if single_output_file:
         plt.savefig(out_fig_fname, bbox_inches = "tight")
         plt.close()
-    return(fig, axes)
+    return (fig, axes)
 
 def min_distance_to_representative(vector : list, representative_db : list):
     min_distance = np.inf
@@ -771,7 +771,7 @@ async def get_representative_images(input_files : list, verbose : bool = False,
             if verbose:
                 safety_progress.close()
             sys.exit('Error - sampling loop iterations exceeded past safety number')
-    return([v[1] for v in representative_db])
+    return [v[1] for v in representative_db]
 
 
 
@@ -802,6 +802,22 @@ class BioengineRunner():
             serialization="imjoy"
         )
         return ret["result"]
+    
+    async def bioengine_run_cellpose(self, image = None, diameter = 30, model_type = "cyto"):
+        # from imjoy_rpc.hypha import connect_to_server
+        # cellpose_server = await connect_to_server(
+        #     {'server_url' : "https://ai.imjoy.io"}
+        # )
+        # triton = server.get_service('triton-client')
+        param = {'diameter' : diameter, 'model_type' : model_type}
+        results = self.triton.execute(inputs=[image,param], model_name = "cellpose-python", decode_bytes=True)
+        mask = results.get('mask', None)
+        if mask:
+            output = mask[0]
+            return output
+        else:
+            raise ValueError("Failed to run cellpose model")
+
 
     async def get_model_rdf(self, model_id) -> dict:
         ret = await self.bioengine_execute(model_id, return_rdf=True)
@@ -868,16 +884,7 @@ class BioengineRunner():
             output = result['outputs'][0]
         else:
             try:
-                from imjoy_rpc.hypha import connect_to_server
-                cellpose_server = await connect_to_server(
-                    {'server_url' : "https://ai.imjoy.io"}
-                )
-                triton = server.get_service('triton-client')
-                param = {'diameter' : 30, 'model_type' : "cyto"}
-                results = triton.execute(inputs=[img,param], model_name = "cellpose-python", decode_bytes=True)
-                mask = results.get('mask', None)
-                if mask:
-                    output = mask[0]
+                output = await self.bioengine_run_cellpose(img)
             except Exception as exp:
                 print(f"Failed to run. See the console for more details.")
                 return False

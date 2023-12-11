@@ -6,6 +6,7 @@ import base64
 import asyncio
 import secrets
 import datetime
+from enum import Enum
 
 import requests
 import aiofiles
@@ -138,9 +139,22 @@ class QuestionWithHistory(BaseModel):
     channel_info: Optional[ChannelInfo] = Field(None, description="The selected channel of the user's question. If provided, rely only on the selected channel when answering the user's question.")
     image_data: Optional[str] = Field(None, description = "The uploaded image data") # gkreder
 
+class TaskChoice(str, Enum):
+    semantic_segmentation = "semantic-segmentation"
+    instance_segmentation = "instance-segmentation"
+    object_detection = "object-detection"
+    image_classification = "image-classification"
+    denoising = "denoising"
+    image_restoration = "image-restoration"
+    image_reconstruction = "image-reconstruction"
+    in_silico_labeling = "in-silico-labeling"
+    unknown = "unknown"
+
+
 class SearchAndRunModelByImage(BaseModel):
     """Search bioimage model zoo for the best model to analyze user's image and run the model according to user's request"""
     request: str = Field(description="The user's request")
+    task: TaskChoice = Field(description="The best guess for the image analysis task associated with the input image. If the user query doesn't contain any information about the desired task, set it to `unknown`")
 
 class InputImageDescription(BaseModel):
     """"Some description of the input image"""
@@ -204,6 +218,8 @@ def create_customer_service(db_path):
         if isinstance(req, DirectResponse):
             return req.response
         elif isinstance(req, SearchAndRunModelByImage):
+            if req.task == TaskChoice.unknown:
+                return "Please describe your desired image analysis task in more detail and re-upload the image to try again"
             try:
                 decoded_image_data, image_ext = decode_base64(question_with_history.image_data)
             except Exception as e:
@@ -226,6 +242,9 @@ def create_customer_service(db_path):
             # axes = 'yxc'
             print(axes)
             db_hits = search_torch_db(image_processor, image_path, axes, "./tmp/image_db")
+            print(db_hits)
+            db_hits = [x for x in db_hits if 'tags' in x[-2] and req.task in x[-2]['tags']]
+            # check tags in rdf_source to see task type
             response_string = db_hits[0][-2]['config']['bioimageio']['nickname']
             rdf = db_hits[0][-2]
             if 'cellpose' in response_string:
