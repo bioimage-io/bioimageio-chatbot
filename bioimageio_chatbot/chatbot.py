@@ -78,6 +78,11 @@ class DirectResponse(BaseModel):
     """Direct response to a user's question."""
     response: str = Field(description="The response to the user's question answering what that asked for.")
 
+class LearnResponse(BaseModel):
+    """Pedagogical response to user's question if the user's question is related to learning, the response should include such as key terms and important concepts about the topic."""
+    response: str = Field(description="The response to user's question, make sure the response is pedagogical and educational.")
+    user_info: Optional[str] = Field("", description="The user's info for personalizing response.")
+    
 class DocWithScore(BaseModel):
     """A document with an associated relevance score."""
     doc: str = Field(description="The document retrieved.")
@@ -97,7 +102,7 @@ class FinalResponse(BaseModel):
     """The final response to the user's question based on the preliminary response and the documentation search results. 
     If the documentation search results are relevant to the user's question, provide a text response to the question based on the search results.
     If the documentation search results contains only low relevance scores or if the question isn't relevant to the search results, return the preliminary response.
-    Importantly, if you can't confidently provide a relevant response to the user's question, return 'I don't know'."""
+    Importantly, if you can't confidently provide a relevant response to the user's question, return 'Sorry I didn't find relevant information in model zoo, please try again.'."""
     response: str = Field(description="The answer to the user's question based on the search results. Can be either a detailed response in markdown format if the search results are relevant to the user's question or 'I don't know'.")
 
 class ChannelInfo(BaseModel):
@@ -137,14 +142,14 @@ def create_customer_service(db_path):
     resource_item_stats = f"""Each item contains the following fields: {list(resource_items[0].keys())}\nThe available resource types are: {types}\nSome example tags: {tags}\nHere is an example: {resource_items[0]}"""
     class DocumentRetrievalInput(BaseModel):
         """Input for searching knowledge bases and finding documents relevant to the user's request."""
-        query: str = Field(description="The query used to retrieve documents related to the user's request.")
         request: str = Field(description="The user's detailed request")
         preliminary_response: str = Field(description="The preliminary response to the user's question. This will be combined with the retrieved documents to produce the final response.")
+        query: str = Field(description="The query used to retrieve documents related to the user's request. Take preliminary_response as reference to generate query if needed.")
         user_info: Optional[str] = Field("", description="Brief user info summary including name, background, etc., for personalizing responses to the user.")
         channel_id: str = Field(description=f"The channel_id of the knowledge base to search. It MUST be the same as the user provided channel_id. If not specified, either select 'all' to search through all the available knowledge base channels or select one from the available channels which are:\n{channels_info}. If you are not sure which channel to select, select 'all'.")
         
     class ModelZooInfoScript(BaseModel):
-        """Create a Python Script to get information about details of models, applications, datasets, etc. in the model zoo."""
+        """Create a Python Script to get information about details of models, applications, datasets, etc. in the model zoo. Remember some items in the model zoo may not have all the fields, so you need to handle the missing fields."""
         script: str = Field(description="The script to be executed which uses a predefined local variable `resources` containing a list of dictionaries with all the resources in the model zoo (including models, applications, datasets etc.). The response to the query should be printed to stdout. Details about the local variable `resources`:\n" + resource_item_stats)
         request: str = Field(description="The user's detailed request")
         user_info: Optional[str] = Field("", description="Brief user info summary including name, background, etc., for personalizing responses to the user.")
@@ -155,12 +160,21 @@ def create_customer_service(db_path):
         # The channel info will be inserted at the beginning of the inputs
         if question_with_history.channel_info:
             inputs.insert(0, question_with_history.channel_info)
-        if not question_with_history.channel_info or question_with_history.channel_info.id == "bioimage.io":
+        if question_with_history.channel_info is not None and question_with_history.channel_info.id == "learn":
+            
             try:
-                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, ModelZooInfoScript])
+                req = await role.aask(inputs, LearnResponse)
             except Exception as e:
                 # try again
-                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, ModelZooInfoScript])
+                req = await role.aask(inputs, LearnResponse)
+            return req.response
+            
+        if not question_with_history.channel_info or question_with_history.channel_info.id == "bioimage.io":
+            try:
+                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, ModelZooInfoScript, LearnResponse])
+            except Exception as e:
+                # try again
+                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, ModelZooInfoScript, LearnResponse])
         else:
             try:
                 req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput])
@@ -168,6 +182,8 @@ def create_customer_service(db_path):
                 # try again
                 req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput])
         if isinstance(req, DirectResponse):
+            return req.response
+        elif isinstance(req, LearnResponse):
             return req.response
         elif isinstance(req, DocumentRetrievalInput):
             if req.channel_id == "all":
@@ -343,15 +359,20 @@ async def register_chat_service(server):
                 return f"Failed to decode the image, error: {e}"
 
         # Get the channel id by its name
-        if channel == 'auto':
-            channel = None
-        if channel:
-            assert channel in channel_id_by_name, f"Channel {channel} is not found, available channels are {list(channel_id_by_name.keys())}"
-            channel_id = channel_id_by_name[channel]
+        if channel == 'learn':
+            channel_id = 'learn'
         else:
-            channel_id = None
-
-        channel_info = channel_id and {"id": channel_id, "name": channel, "description": description_by_id[channel_id]}
+            if channel == 'auto':
+                channel = None
+            if channel:
+                assert channel in channel_id_by_name, f"Channel {channel} is not found, available channels are {list(channel_id_by_name.keys())}"
+                channel_id = channel_id_by_name[channel]
+            else:
+                channel_id = None
+        if channel == 'learn':
+            channel_info = {"id": channel_id, "name": channel, "description": "Learning assistant"}
+        else:
+            channel_info = channel_id and {"id": channel_id, "name": channel, "description": description_by_id[channel_id]}
         if channel_info:
             channel_info = ChannelInfo.parse_obj(channel_info)
         # user_profile = {"name": "lulu", "occupation": "data scientist", "background": "machine learning and AI"}
@@ -386,6 +407,8 @@ async def register_chat_service(server):
             assert check_permission(context.get("user")), "You don't have permission to use the chatbot, please sign up and wait for approval"
         return "pong"
 
+    channels = [collection['name'] for collection in collections]
+    channels.append("learn")
     hypha_service_info = await server.register_service({
         "name": "BioImage.IO Chatbot",
         "id": "bioimageio-chatbot",
@@ -396,7 +419,7 @@ async def register_chat_service(server):
         "ping": ping,
         "chat": chat,
         "report": report,
-        "channels": [collection['name'] for collection in collections]
+        "channels": channels,
     })
     
     version = pkg_resources.get_distribution('bioimageio-chatbot').version
