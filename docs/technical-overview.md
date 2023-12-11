@@ -29,21 +29,21 @@ The schema-based agent operates on the function-call LLM [8], and uses input and
 ![role_create](./screenshots/role_create.png)
 *Figure 4. Creation of a chatbot role class named ‘CustomerServiceRole’ by defining fields of the role class.*
 
-### Response Modes
+### Information Retrieval
 
-Three distinct response modes have been designed to optimize the chatbot's utility:
-
-1. **Direct Response**: For straightforward queries, the chatbot generates concise and accurate answers directly from its pre-configured profile (see Figure 6).
+For straightforward queries, the chatbot generates concise and accurate answers directly from its pre-configured profile (see Figure 6).
 
     ![direct-response](./screenshots/direct-response.png)
     *Figure 6. Direct response for simple queries.*
 
-2. **Response with Text-Based Retrieval**: For complex or specific questions, the chatbot extracts key queries from the user's question and retrieves information from relevant documentation (see Figure 7).
+In addition, there are two information retrieval modes:
+
+1. **Response with Text-Based Retrieval**: For complex or specific questions, the chatbot extracts key queries from the user's question and retrieves information from relevant documentation (see Figure 7).
 
     ![retrieval-text](./screenshots/retrieval-text.png)
     *Figure 7. Text-based retrieval from the knowledge base.*
 
-3. **Response with Script Generation and Execution**: For advanced queries requiring specific model details or actions, the chatbot dynamically generates and executes tailored scripts (see Figure 8).
+2. **Response with Script Generation and Execution**: For advanced queries requiring specific model details or actions, the chatbot dynamically generates and executes tailored scripts (see Figure 8).
 
     ![script-gen-exe-retrieval](./screenshots/script-gen-exe-retrieval.png)
     *Figure 8. Script generation and execution for advanced queries.*
