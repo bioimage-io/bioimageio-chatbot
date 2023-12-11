@@ -60,7 +60,7 @@ class LabeledImages(BaseModel):
     """A list of images whose axes have been labeled"""
     labeled_images : list[LabeledImage] = Field(description="The labeled images")
 
-async def guess_image_axes(image : UnlabeledImage, role : Role = None) -> LabeledImage:
+async def agent_guess_image_axes(image : UnlabeledImage, role : Role = None) -> LabeledImage:
     """Guesses the axis labels based on the image shape. The largest dimensions will be 'x' and 'y'. The 'c' dimension will not be larger than 5. The numbers of dimensions in the shape tuple must the number of axis labels"""
     # response = await role.aask(image, LabeledImage)
     response = role.aask(image.shape, AxisGuess)
@@ -73,7 +73,7 @@ async def retry_aask(role, ui, output_type):
         return await role.aask(ui, output_type)
     return await inner()
 
-async def guess_all_axes(unlabeled_images : UnlabeledImages, role : Role = None) -> LabeledImages:
+async def agent_guess_all_axes(unlabeled_images : UnlabeledImages, role : Role = None) -> LabeledImages:
     """Labels the axes in all images in the input list of unlabeled images"""
     labeled_images = []
     for unlabeled_image in unlabeled_images.unlabeled_images:
@@ -84,6 +84,23 @@ async def guess_all_axes(unlabeled_images : UnlabeledImages, role : Role = None)
     labeled_images = await asyncio.gather(*guessing_tasks)
     labeled_images = LabeledImages(labeled_images=labeled_images)
     return(labeled_images)
+
+
+async def guess_image_axes(input_files : list):
+    image_processor = ImageProcessor()
+    axis_guesser = Role(name = "AxisGuesser",
+                profile = "Axis Guesser",
+                goal="Your goal as AxisGuesser is read the shapes of input images and guess their axis labels using common sense.",
+            constraints=None,
+            actions=[agent_guess_image_axes, agent_guess_all_axes])
+    event_bus = axis_guesser.get_event_bus()
+    event_bus.register_default_events()
+    message_input = UnlabeledImages(unlabeled_images = [UnlabeledImage(shape = image_processor.read_image(fname).shape) for fname in input_files])
+    m = Message(content = 'guess the image axes for each image in the list', data = message_input, role = 'User')
+    responses = await axis_guesser.handle(m)
+    guessed_axes = [''.join(x.axes.labels) for x in responses[0].data.labeled_images]
+    return(guessed_axes)
+
 
 def create_svg_table_unknown(input_images, shapes, guessed_axes):
     ET.register_namespace("", "http://www.w3.org/2000/svg")
@@ -435,12 +452,17 @@ def get_torch_db(db_path: str, processor: ImageProcessor, force_build: bool = Fa
     cellpose_input_images = [os.path.join(cellpose_dir, x) for x in os.listdir(cellpose_dir) if x.endswith('.png')]
     for input_image_path in cellpose_input_images:
         rn = randomname.get_name(noun=("cats", "dogs", "birds", "fish"))
-        nickname = f"cellpose_{rn}"
+        cp_id = os.path.splitext(os.path.basename(input_image_path))[0]
+        # nickname = f"cellpose_{rn}_{cp_id}"
+        nickname = f"cellpose_{cp_id}"
         rdf_dict = {"config" : {'bioimageio' : {'nickname' : nickname}},
                     'test_inputs' : os.path.abspath(input_image_path),
                     "inputs" : [{'axes' : 'yxc'}]}
+        with open(os.path.join(db_path, 'rdf_sources', f"{nickname}.yaml"), 'w') as f:
+            yaml.dump(rdf_dict, f, default_flow_style=False)
         torch_image = processor.get_torch_image
         input_image = processor.read_image(input_image_path)
+        np.save(os.path.join(db_path, "input_images", f"{nickname}.npy"), input_image)
         resized_image = processor.resize_image(input_image, 'yxc', grayscale=grayscale, output_format = "bcyx")
         resized_image = resized_image.astype(np.float32)
         torch_image = torch.from_numpy(resized_image).to(torch.float32)
@@ -574,51 +596,43 @@ def transform_input(image: np.ndarray, image_axes: str, output_axes: str):
     """
     return map_axes(image, image_axes, output_axes)
 
-def guess_image_axes_deterministic(shape : tuple[int]):
-    axes = []
-    common_channel_sizes = [1, 3, 4, 5]  # Common channel sizes are 1 (grayscale), 3 (RGB), and 4 (RGBA)
-    shapes_left = sorted([[x, i_x] for i_x, x in enumerate(shape)], key = lambda tup : tup[0], reverse = True, )
-    dimensions_left = 'yxcbz'
-    def enter(c, axes, shapes_left, dimensions_left):
-        axes = [x for x in axes]
-        axes.append([c] + shapes_left[0])
-        shapes_left = [x for i_x, x in enumerate(shapes_left) if i_x > 0]
-        dimensions_left = ''.join([x for x in dimensions_left if x != c])
-        return(axes, shapes_left, dimensions_left)
-    for c in ['y', 'x']:
-        if c in dimensions_left:
-            axes, shapes_left, dimensions_left = enter(c, axes, shapes_left, dimensions_left)
-    safety_counter = 0
-    while len(shapes_left) > 0:
-        if shapes_left[0][0] in common_channel_sizes and 'c' in dimensions_left:
-            axes, shapes_left, dimensions_left = enter('c', axes, shapes_left, dimensions_left)
-        elif 'z' in dimensions_left and len(shapes_left) > 1 and max([x[1] for i_x, x in enumerate(shapes_left) if i_x > 0]) == 1:
-            axes, shapes_left, dimensions_left = enter('z', axes, shapes_left, dimensions_left)
-        elif 'b' in dimensions_left:
-            axes, shapes_left, dimensions_left = enter('b', axes, shapes_left, dimensions_left)
-        else:
-            axes, shapes_left, dimensions_left = enter('z', axes, shapes_left, dimensions_left)
-        if len(dimensions_left) == 0:
-            break
-        safety_counter += 1
-        if safety_counter > 10:
-            break
-    out_axes = ""
-    axes = sorted(axes, key = lambda tup : tup[-1])
-    out_axes = ''.join([x[0] for x in axes])
-    return(out_axes)
-# test_shapes = [
-#     (256, 256),
-#     (1, 256, 256),
-#     (1, 3, 256, 256),
-#     (1, 1, 30, 225, 225),
-#     (1, 256, 256, 4),
-#     (3,255,255),
-#     (255,255,3),
-#     (225, 3, 260)
-# ]
-# for shape in test_shapes:
-#     print(f"Shape: {shape} -> Axes: {guess_image_axes(shape)}")
+def guess_image_axes_deterministic(input_image_files : list[str]):
+    guessed_axes = []
+    image_processor = ImageProcessor()
+    for shape in [image_processor.read_image(fname).shape for fname in input_image_files]:
+        axes = []
+        common_channel_sizes = [1, 3, 4, 5]  # Common channel sizes are 1 (grayscale), 3 (RGB), and 4 (RGBA)
+        shapes_left = sorted([[x, i_x] for i_x, x in enumerate(shape)], key = lambda tup : tup[0], reverse = True, )
+        dimensions_left = 'yxcbz'
+        def enter(c, axes, shapes_left, dimensions_left):
+            axes = [x for x in axes]
+            axes.append([c] + shapes_left[0])
+            shapes_left = [x for i_x, x in enumerate(shapes_left) if i_x > 0]
+            dimensions_left = ''.join([x for x in dimensions_left if x != c])
+            return(axes, shapes_left, dimensions_left)
+        for c in ['y', 'x']:
+            if c in dimensions_left:
+                axes, shapes_left, dimensions_left = enter(c, axes, shapes_left, dimensions_left)
+        safety_counter = 0
+        while len(shapes_left) > 0:
+            if shapes_left[0][0] in common_channel_sizes and 'c' in dimensions_left:
+                axes, shapes_left, dimensions_left = enter('c', axes, shapes_left, dimensions_left)
+            elif 'z' in dimensions_left and len(shapes_left) > 1 and max([x[1] for i_x, x in enumerate(shapes_left) if i_x > 0]) == 1:
+                axes, shapes_left, dimensions_left = enter('z', axes, shapes_left, dimensions_left)
+            elif 'b' in dimensions_left:
+                axes, shapes_left, dimensions_left = enter('b', axes, shapes_left, dimensions_left)
+            else:
+                axes, shapes_left, dimensions_left = enter('z', axes, shapes_left, dimensions_left)
+            if len(dimensions_left) == 0:
+                break
+            safety_counter += 1
+            if safety_counter > 10:
+                break
+        out_axes = ""
+        axes = sorted(axes, key = lambda tup : tup[-1])
+        out_axes = ''.join([x[0] for x in axes])
+        guessed_axes.append(out_axes)
+    return(guessed_axes)
 
 def get_db_inputs(db_path, model_name):
     image_dir = os.path.join(db_path, 'input_images')
@@ -630,11 +644,11 @@ def get_db_inputs(db_path, model_name):
     input_image_name = os.path.join(image_dir, f"{model_name}.npy")
     return(input_image_name, input_axes)
 
-def test_images(input_files : list, out_dir : str, out_suffix : str, db_path: str, 
+async def test_images(input_files : list, out_dir : str, out_suffix : str, db_path: str, 
                 mislabeled_axes : dict = {'impartial-shark' : 'yx'}, 
                 known_axes : bool = False,
                 single_output_file : bool = False,
-                num_output_cols : int = 3):
+                num_output_cols : int = 3, llm_axis_guessing = True):
     os.makedirs(out_dir, exist_ok=True)
     mpl.rcParams['axes.titlesize'] = 10
     mpl.rcParams['xtick.labelsize'] = 5
@@ -643,8 +657,15 @@ def test_images(input_files : list, out_dir : str, out_suffix : str, db_path: st
     if single_output_file:
         fig, axes = plt.subplots(len(input_files), 4 + num_output_cols, figsize=(15, 3.2 * len(input_files)))
         out_fig_fname = os.path.join(out_dir, f"{out_suffix}.svg")
+    if known_axes:
+        all_input_axes = [get_axes(db_path, os.path.basename(fname_abs).replace('.npy', '')) for fname_abs in input_files]
+    elif not llm_axis_guessing:
+        all_input_axes = guess_image_axes_deterministic(input_files)
+    else:
+        all_input_axes = await guess_image_axes(input_files)
     for i_fname, fname_abs in enumerate(tqdm(input_files)):
         fname = os.path.basename(fname_abs)
+        input_axes = all_input_axes[i_fname]
         if not single_output_file:
             fig, axes = plt.subplots(1, 4 + num_output_cols, figsize = (15, 3.2))
             out_fig_fname = os.path.join(out_dir, f"{out_suffix}_{os.path.splitext(fname)[0]}.svg")
@@ -653,10 +674,6 @@ def test_images(input_files : list, out_dir : str, out_suffix : str, db_path: st
         else:
             current_row = axes[i_fname]
         input_image = image_processor.read_image(fname_abs)
-        if known_axes:
-            input_axes = get_axes(db_path, fname.replace('.npy', '')) # gkreder
-        else:
-            input_axes = guess_image_axes(input_image.shape)
         input_image_standardized = image_processor.standardize_image(input_image, input_axes, standard_format='yxc')
         torch_image_grayscale = image_processor.get_torch_image(fname_abs, input_axes, grayscale=True)
         torch_image_color = image_processor.get_torch_image(fname_abs, input_axes, grayscale=False)
@@ -717,14 +734,6 @@ async def get_representative_images(input_files : list, verbose : bool = False,
                               grayscale : bool = True, random_seed : int = 2010,
                               threshold_distance : float = 0.25, safety_iter : int = 100,
                               llm_axis_guessing = True):
-    axis_guesser = Role(name = "AxisGuesser",
-                profile = "Axis Guesser",
-                goal="Your goal as AxisGuesser is read the shapes of input images and guess their axis labels using common sense.",
-            constraints=None,
-            actions=[guess_image_axes, guess_all_axes])
-    event_bus = axis_guesser.get_event_bus()
-    event_bus.register_default_events()
-    guessed_axes = []
     shapes = []
     image_processor = ImageProcessor()
     embedded_db = []
@@ -736,13 +745,11 @@ async def get_representative_images(input_files : list, verbose : bool = False,
         input_image = image_processor.read_image(input_image_path)
         shapes.append(input_image.shape)
     if llm_axis_guessing:
-        message_input = UnlabeledImages(unlabeled_images = [UnlabeledImage(shape = s) for s in shapes])
-        m = Message(content = 'guess the image axes for each image in the list', data = message_input, role = 'User')
-        responses = await axis_guesser.handle(m)
-        guessed_axes = [''.join(x.axes.labels) for x in responses[0].data.labeled_images]
+        guessed_axes = guess_image_axes(input_files)        
     else:
-        guessed_axes = [guess_image_axes_deterministic(s) for s in shapes]
+        guessed_axes = guess_image_axes_deterministic(input_files)
     for i_img, input_image_path in enumerate(input_files_interable):
+        input_image = image_processor.read_image(input_image_path)
         input_axes = guessed_axes[i_img]
         embedded_image = image_processor.embed_image(input_image, input_axes, grayscale = grayscale)
         embedded_db.append((fname, input_image_path, embedded_image))
@@ -774,6 +781,9 @@ async def get_representative_images(input_files : list, verbose : bool = False,
                 safety_progress.close()
             sys.exit('Error - sampling loop iterations exceeded past safety number')
     return([v[1] for v in representative_db])
+
+
+
 
 
 
