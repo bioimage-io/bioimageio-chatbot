@@ -90,14 +90,16 @@ async def agent_guess_all_axes(unlabeled_images : UnlabeledImages, role : Role =
 def resize_image(input_image : np.ndarray, input_format : str, output_format : str, output_dims_xy = tuple[int,int], grayscale : bool = False, output_type = np.float32):
     current_format = input_format.lower()
     output_format = output_format.lower()
+    inter_format = "yxc"
     rearranged = input_image.copy()
     assert sorted(current_format) == sorted(output_format) == ['c', 'x', 'y']
-    transposed = np.transpose(rearranged, [current_format.index(c) for c in output_format])
+    transposed = np.transpose(rearranged, [current_format.index(c) for c in inter_format])
     resized = cv2.resize(transposed, output_dims_xy, interpolation = cv2.INTER_AREA)
     if grayscale:
-        resized = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
-        resized = cv2.cvtColor(resized, cv2.COLOR_GRAY2BGR)
+        resized = cv2.cvtColor(resized, cv2.COLOR_RGB2GRAY)
+        resized = cv2.cvtColor(resized, cv2.COLOR_GRAY2RGB)
     resized = resized.astype(output_type)
+    resized = np.transpose(resized, [inter_format.index(c) for c in output_format])
     return(resized)
 
 async def run_cellpose(img, server_url : str = "https://ai.imjoy.io", diameter = 30, model_type = 'cyto', method_timeout = 30, server = None): # model_type = 'cyto' or 'nuclei')
