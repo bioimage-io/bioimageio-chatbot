@@ -5,6 +5,8 @@ import datetime
 import secrets
 import aiofiles
 from imjoy_rpc.hypha import login, connect_to_server
+from PIL import Image
+import io
 
 from pydantic import BaseModel, Field
 from schema_agents.role import Role
@@ -17,10 +19,20 @@ from bioimageio_chatbot.knowledge_base import load_knowledge_base
 from bioimageio_chatbot.utils import get_manifest
 import pkg_resources
 import base64
+from bioimageio_chatbot.image_processor import *
 
 def decode_base64(encoded_data):
-    decoded_data = base64.b64decode(encoded_data.split(',')[1])
-    return decoded_data
+    header, encoded_content = encoded_data.split(',')
+    decoded_data = base64.b64decode(encoded_content)
+    file_extension = header.split(';')[0].split('/')[1]
+    return decoded_data, file_extension
+
+def encode_base64(image_path):
+    with open(image_path, "rb") as image_file:
+        encoded_string = base64.b64encode(image_file.read())
+    # format it for the html img tag
+    encoded_string = f"data:image/png;base64,{encoded_string.decode('utf-8')}"
+    return encoded_string
     
 def load_model_info():
     response = requests.get("https://bioimage-io.github.io/collection-bioimage-io/collection.json")
@@ -123,6 +135,7 @@ class QuestionWithHistory(BaseModel):
     chat_history: Optional[List[Dict[str, str]]] = Field(None, description="The chat history.")
     user_profile: Optional[UserProfile] = Field(None, description="The user's profile. You should use this to personalize the response based on the user's background and occupation.")
     channel_info: Optional[ChannelInfo] = Field(None, description="The selected channel of the user's question. If provided, rely only on the selected channel when answering the user's question.")
+    image_data: Optional[str] = Field(None, description = "The uploaded image data")
 
 def create_customer_service(db_path):
     debug = os.environ.get("BIOIMAGEIO_DEBUG") == "true"
@@ -171,10 +184,10 @@ def create_customer_service(db_path):
             
         if not question_with_history.channel_info or question_with_history.channel_info.id == "bioimage.io":
             try:
-                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, ModelZooInfoScript, LearnResponse])
+                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, ModelZooInfoScript, LearnResponse, CellposeTask])
             except Exception as e:
                 # try again
-                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, ModelZooInfoScript, LearnResponse])
+                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, ModelZooInfoScript, LearnResponse, CellposeTask])
         else:
             try:
                 req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput])
@@ -185,6 +198,38 @@ def create_customer_service(db_path):
             return req.response
         elif isinstance(req, LearnResponse):
             return req.response
+        elif isinstance(req, CellposeTask):
+            try:
+                decoded_image_data, image_ext = decode_base64(question_with_history.image_data)
+            except Exception as e:
+                return f"Failed to decode the image, error: {e}"
+            image_path = f'tmp-user-image.{image_ext}'
+            print(req)
+            with open(image_path, 'wb') as f:
+                f.write(decoded_image_data)
+            arr = read_image(image_path)
+            axes = await guess_image_axes(image_path)
+            cp_info_str = "Would you like me to segment this? Currently I can run image segmentation using pretrained cellpose models for either cytoplasm (`cyto`) or nuclei (`nuclei`). I can accept .png, .jpeg, .tiff, or .npy images."
+            if req.task == "unknown":
+                out_string = f"Here's the image you've uploaded. It has shape {arr.shape} which I believe corresponds to axes {tuple([c for c in axes])}\n\n![input_image]({question_with_history.image_data})\n\n{cp_info_str}\nIf you would like to segment this image, please try uploading it again and specify which model you'd prefer!"
+                return out_string
+            arr_resized = resize_image(arr, axes, 'cyx', grayscale = False, output_dims_xy=(512,512), output_type = np.float32)
+            print("Running cellpose...")
+            results = await run_cellpose(arr_resized)
+            # results = await run_cellpose(arr_resized, server_url = "https://hypha.bioimage.io")
+            mask = results['mask'] # default output shape of 1,512,512
+            info = results['info'] # metadata about the model
+            mask_shape = results['__info__']['outputs'][0]['shape'] # shape of the mask
+            fig, axes = plt.subplots(ncols=2)
+            axes[0].imshow(arr_resized.transpose(1,2,0))
+            axes[0].set_title('Input image')
+            axes[1].imshow(mask[0,:,:])
+            axes[1].set_title('Output image')
+            fig.savefig('tmp-output.png')
+            base64_output = encode_base64('tmp-output.png')
+            out_string = f"I've run cellpose your uploaded image. I can currently run either cytoplasm or nucleus segmentation based on pretrained cellpose models. My best guess for what you wanted to do on this image was `{req.task}`. If this seems off, please try again specificying either `cyto` or `nucleus` as your desired task"
+            return f"Cellpose segmentation results\n![result_image]({base64_output})"
+
         elif isinstance(req, DocumentRetrievalInput):
             if req.channel_id == "all":
                 docs_with_score = []
@@ -351,12 +396,12 @@ async def register_chat_service(server):
         event_bus.on("stream", stream_callback)
 
 
-        if image_data:
-            await status_callback({"type": "text", "content": f"\n![Uploaded Image]({image_data})\n"})
-            try:
-                decoded_image_data = decode_base64(image_data)
-            except Exception as e:
-                return f"Failed to decode the image, error: {e}"
+        # if image_data:
+        #     await status_callback({"type": "text", "content": f"\n![Uploaded Image]({image_data})\n"})
+        #     try:
+        #         decoded_image_data = decode_base64(image_data)
+        #     except Exception as e:
+        #         return f"Failed to decode the image, error: {e}"
 
         # Get the channel id by its name
         if channel == 'learn':
@@ -377,6 +422,10 @@ async def register_chat_service(server):
             channel_info = ChannelInfo.parse_obj(channel_info)
         # user_profile = {"name": "lulu", "occupation": "data scientist", "background": "machine learning and AI"}
         m = QuestionWithHistory(question=text, chat_history=chat_history, user_profile=UserProfile.parse_obj(user_profile),channel_info=channel_info)
+        if image_data:
+            m.image_data = image_data
+            if text == "":
+                m.question = "Please analyze this image"
         try:
             response = await customer_service.handle(Message(content=m.json(), data=m , role="User", session_id=session_id))
             # get the content of the last response
@@ -448,8 +497,11 @@ async def register_chat_service(server):
     })
     server_url = server.config['public_base_url']
 
-    print(f"The BioImage.IO Chatbot is available at: {server_url}/{server.config['workspace']}/apps/bioimageio-chatbot-client/index")
-
+    user_url = f"{server_url}/{server.config['workspace']}/apps/bioimageio-chatbot-client/index"
+    print(f"The BioImage.IO Chatbot is available at: {user_url}")
+    import webbrowser
+    webbrowser.open(user_url)
+    
 if __name__ == "__main__":
     # asyncio.run(main())
     server_url = "https://ai.imjoy.io"
