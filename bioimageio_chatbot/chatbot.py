@@ -209,19 +209,22 @@ def create_customer_service(db_path):
             except Exception as e:
                 return f"Failed to decode the image, error: {e}"
             image_path = f'tmp-user-image.{image_ext}'
-            print(req)
             with open(image_path, 'wb') as f:
                 f.write(decoded_image_data)
             arr = read_image(image_path)
             axes = await guess_image_axes(image_path)
+            arr_resized = resize_image(arr, axes, 'cyx', grayscale = False, output_dims_xy=(512,512), output_type = np.uint8)
+            fig, ax = plt.subplots()
+            ax.imshow(arr_resized.transpose(1,2,0))
+            fig.savefig(f"tmp-user-resized.png")
+            image_data_base64 = encode_base64("tmp-user-resized.png")
             cp_info_str = "Would you like me to segment this? Currently I can run image segmentation using pretrained cellpose models for either cytoplasm (`cyto`) or nuclei (`nuclei`). This is an experimental feature, so for now I can accept .png or .jpeg images."
             if req.task == "unknown":
-                out_string = f"Here's the image you've uploaded. It has shape {arr.shape} which I believe corresponds to axes {tuple([c for c in axes])}\n\n![input_image]({question_with_history.image_data})\n\n{cp_info_str}\nIf you would like to segment this image, please try uploading it again and specify which model you'd prefer!"
+                out_string = f"Here's the image you've uploaded (colors may be shuffled). It has shape {arr.shape} which I believe corresponds to axes {tuple([c for c in axes])}\n\n![input_image]({image_data_base64})\n\n{cp_info_str}\nIf you would like to segment this image, please try uploading it again and specify which model you'd prefer!"
                 return out_string
-            arr_resized = resize_image(arr, axes, 'cyx', grayscale = False, output_dims_xy=(512,512), output_type = np.float32)
             print("Running cellpose...")
-            results = await run_cellpose(arr_resized)
-            # results = await run_cellpose(arr_resized, server_url = "https://hypha.bioimage.io")
+            # results = await run_cellpose(arr_resized)
+            results = await run_cellpose(arr_resized, server_url = "https://hypha.bioimage.io")
             mask = results['mask'] # default output shape of 1,512,512
             info = results['info'] # metadata about the model
             mask_shape = results['__info__']['outputs'][0]['shape'] # shape of the mask
@@ -322,6 +325,8 @@ async def connect_server(server_url):
         token = await login({"server_url": server_url})
     else:
         token = None
+    print('here')
+    print(server_url)
     server = await connect_to_server({"server_url": server_url, "token": token, "method_timeout": 100})
     await register_chat_service(server)
     
@@ -334,7 +339,6 @@ async def register_chat_service(server):
     if not os.path.exists(knowledge_base_path):
         print(f"The knowledge base is not found at {knowledge_base_path}, will download it automatically.")
         os.makedirs(knowledge_base_path, exist_ok=True)
-
     chat_logs_path = os.environ.get("BIOIMAGEIO_CHAT_LOGS_PATH", "./chat_logs")
     assert chat_logs_path is not None, "Please set the BIOIMAGEIO_CHAT_LOGS_PATH environment variable to the path of the chat logs folder."
     if not os.path.exists(chat_logs_path):
@@ -438,7 +442,9 @@ async def register_chat_service(server):
         if session_id:
             chat_history.append({ 'role': 'user', 'content': text })
             # chat_history.append({ 'role': 'assistant', 'content': response })
-            chat_history.append({ 'role': 'assistant', 'content': re.sub(r"\n\n\!\[input_image\]\(data.*\n\n", "", response)})
+            response_no_images = re.sub(r"\n\!\[input_image\]\(data.*\n\n", "", response)
+            response_no_images = re.sub(r"\n\!\[result_image\]\(data*\)", "", response_no_images)
+            chat_history.append({ 'role': 'assistant', 'content': response_no_images})
             version = pkg_resources.get_distribution('bioimageio-chatbot').version
             chat_his_dict = {'conversations':chat_history, 
                      'timestamp': str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), 
@@ -503,7 +509,8 @@ async def register_chat_service(server):
     
 if __name__ == "__main__":
     # asyncio.run(main())
-    server_url = "https://ai.imjoy.io"
+    # server_url = "https://ai.imjoy.io"
+    server_url = "https://hypha.bioimage.io/"
     loop = asyncio.get_event_loop()
     loop.create_task(connect_server(server_url))
     loop.run_forever()
