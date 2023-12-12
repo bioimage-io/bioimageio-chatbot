@@ -207,20 +207,24 @@ def create_customer_service(db_path):
             try:
                 decoded_image_data, image_ext = decode_base64(question_with_history.image_data)
             except Exception as e:
-                return f"Failed to decode the image, error: {e}"
+                return f"I failed to decode the uploaded image, error: {e}"
+            if image_ext not in ['png', 'jpeg', 'jpg', 'tiff']:
+                return f"I'm sorry, though I can run image segmentation, for now I can only process .png, .jpeg, and .tiff images. Please try again with a different image."
             image_path = f'tmp-user-image.{image_ext}'
             with open(image_path, 'wb') as f:
                 f.write(decoded_image_data)
             arr = read_image(image_path)
             axes = await guess_image_axes(image_path)
+            if sorted(axes) != ['c', 'x', 'y']:
+                return f"I'm sorry, though I can run image segmentation, for now I can only process images containing only dimensions for channel (c), x, and y. My best guess for your image's axes is '{axes}'. Please try again with a different image."
             arr_resized = resize_image(arr, axes, 'cyx', grayscale = False, output_dims_xy=(512,512), output_type = np.uint8)
             fig, ax = plt.subplots()
             ax.imshow(arr_resized.transpose(1,2,0))
-            fig.savefig(f"tmp-user-resized.png")
+            fig.savefig("tmp-user-resized.png")
             image_data_base64 = encode_base64("tmp-user-resized.png")
-            cp_info_str = "Would you like me to segment this? Currently I can run image segmentation using pretrained cellpose models for either cytoplasm (`cyto`) or nuclei (`nuclei`). This is an experimental feature, so for now I can accept .png or .jpeg images."
+            cp_info_str = "Would you like me to segment this? Currently I can run image segmentation using pretrained cellpose models for either cytoplasm (`cyto`) or nuclei (`nuclei`). This is an experimental feature, so for now I can accept .png, .jpeg, and .tiff images."
             if req.task == "unknown":
-                out_string = f"Here's the image you've uploaded (colors may be shuffled). It has shape {arr.shape} which I believe corresponds to axes {tuple([c for c in axes])}\n\n![input_image]({image_data_base64})\n\n{cp_info_str}\nIf you would like to segment this image, please try uploading it again and specify which model you'd prefer!"
+                out_string = f"Here's the image (resized) you've uploaded. Colors may be shuffled. The original image shape is {arr.shape} which I believe corresponds to axes {tuple([c for c in axes])}\n\n![input_image]({image_data_base64})\n\n{cp_info_str}\nIf you would like to segment this image, please try uploading it again and specify which model you'd prefer!"
                 return out_string
             print("Running cellpose...")
             # results = await run_cellpose(arr_resized)
@@ -325,8 +329,6 @@ async def connect_server(server_url):
         token = await login({"server_url": server_url})
     else:
         token = None
-    print('here')
-    print(server_url)
     server = await connect_to_server({"server_url": server_url, "token": token, "method_timeout": 100})
     await register_chat_service(server)
     
