@@ -206,6 +206,11 @@ def create_customer_service(db_path):
         elif isinstance(req, CellposeTask):
             try:
                 decoded_image_data, image_ext = decode_base64(question_with_history.image_data)
+                print('Size of data: ')
+                print(len(decoded_image_data))
+                mb_size_max = 2.0
+                if len(decoded_image_data) / 1e6 > mb_size_max:
+                    return f"I see you've uploaded an image! But I'm sorry to say it's too large. For now, I can only handle .png, .jpeg, and .tiff images up to about 2MB"
             except Exception as e:
                 return f"I failed to decode the uploaded image, error: {e}"
             if image_ext not in ['png', 'jpeg', 'jpg', 'tiff']:
@@ -221,26 +226,31 @@ def create_customer_service(db_path):
             fig, ax = plt.subplots()
             ax.imshow(arr_resized.transpose(1,2,0))
             fig.savefig("tmp-user-resized.png")
+            plt.close()
             image_data_base64 = encode_base64("tmp-user-resized.png")
             cp_info_str = "Would you like me to segment this? Currently I can run image segmentation using pretrained cellpose models for either cytoplasm (`cyto`) or nuclei (`nuclei`). This is an experimental feature, so for now I can accept .png, .jpeg, and .tiff images."
             if req.task == "unknown":
-                out_string = f"Here's the image (resized) you've uploaded. Colors may be shuffled. The original image shape is {arr.shape} which I believe corresponds to axes {tuple([c for c in axes])}\n\n![input_image]({image_data_base64})\n\n{cp_info_str}\nIf you would like to segment this image, please try uploading it again and specify which model you'd prefer!"
+                out_string = f"Here's the image (resized) you've uploaded. Colors may be shuffled. The original image shape is {arr.shape} which I believe corresponds to axes {tuple([c for c in axes])}\n\n![input_image]({image_data_base64})\n\n{cp_info_str}\n\nIf you would like to segment this image, please try uploading it again and specify which model you'd prefer!"
                 return out_string
+            arr_resized = resize_image(arr_resized, 'cyx', 'cyx', grayscale = False, output_dims_xy=(512,512), output_type = np.float32)
             print("Running cellpose...")
             # results = await run_cellpose(arr_resized)
-            results = await run_cellpose(arr_resized, server_url = "https://hypha.bioimage.io")
+            print(arr_resized.shape)
+            results = await run_cellpose(arr_resized, server_url = "https://hypha.bioimage.io", model_type = req.task, diameter = None)
+            print(arr_resized.shape)
             mask = results['mask'] # default output shape of 1,512,512
             info = results['info'] # metadata about the model
             mask_shape = results['__info__']['outputs'][0]['shape'] # shape of the mask
             fig, axes = plt.subplots(ncols=2)
-            axes[0].imshow(arr_resized.transpose(1,2,0))
-            axes[0].set_title('Input image')
+            axes[0].imshow(arr_resized.transpose(1,2,0) / 255.0)
+            axes[0].set_title('Input image (resized)')
             axes[1].imshow(mask[0,:,:])
             axes[1].set_title('Output image')
             fig.savefig('tmp-output.png')
+            plt.close()
             base64_output = encode_base64('tmp-output.png')
             out_string = f"I've run cellpose your uploaded image. I can currently run either cytoplasm or nucleus segmentation based on pretrained cellpose models. My best guess for what you wanted to do on this image was `{req.task}`. If this seems off, please try again specificying either `cyto` or `nucleus` as your desired task"
-            return f"Cellpose segmentation results\n![result_image]({base64_output})"
+            return f"Cellpose segmentation results from {req.task} task\n![result_image]({base64_output})"
 
         elif isinstance(req, DocumentRetrievalInput):
             if req.channel_id == "all":
@@ -446,7 +456,7 @@ async def register_chat_service(server):
             # chat_history.append({ 'role': 'assistant', 'content': response })
             response_no_images = re.sub(r"\n\!\[input_image\]\(data.*\n\n", "", response)
             response_no_images = re.sub(r"\n\!\[result_image\]\(data*\)", "", response_no_images)
-            chat_history.append({ 'role': 'assistant', 'content': response_no_images})
+            chat_history.append({ 'role': 'assistant', 'content': response_no_images}) # gkreder
             version = pkg_resources.get_distribution('bioimageio-chatbot').version
             chat_his_dict = {'conversations':chat_history, 
                      'timestamp': str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), 
