@@ -18,7 +18,7 @@ from bioimageio_chatbot.utils import get_manifest
 import pkg_resources
 import base64
 from bioimageio_chatbot.image_processor import *
-from matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
 def decode_base64(encoded_data):
     header, encoded_content = encoded_data.split(',')
@@ -235,7 +235,7 @@ def create_customer_service(db_path):
             print("Running cellpose...")
             # results = await run_cellpose(arr_resized)
             print(arr_resized.shape)
-            results = await run_cellpose(arr_resized, server_url = "https://hypha.bioimage.io", model_type = req.task, diameter = None)
+            results = await run_cellpose(arr_resized, server_url="https://ai.imjoy.io", model_type = req.task, diameter = None)
             print(arr_resized.shape)
             mask = results['mask'] # default output shape of 1,512,512
             info = results['info'] # metadata about the model
@@ -517,8 +517,8 @@ async def register_chat_service(server):
     
 if __name__ == "__main__":
     # asyncio.run(main())
-    # server_url = "https://ai.imjoy.io"
-    server_url = "https://hypha.bioimage.io/"
+    server_url = "https://ai.imjoy.io"
+    # server_url = "https://hypha.bioimage.io/"
     loop = asyncio.get_event_loop()
     loop.create_task(connect_server(server_url))
     loop.run_forever()
