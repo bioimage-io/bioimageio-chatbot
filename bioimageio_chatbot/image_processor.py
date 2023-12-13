@@ -94,22 +94,25 @@ def resize_image(input_image : np.ndarray, input_format : str, output_format : s
     rearranged = input_image.copy()
     assert sorted(current_format) == sorted(output_format) == ['c', 'x', 'y']
     transposed = np.transpose(rearranged, [current_format.index(c) for c in inter_format])
+    current_format = inter_format
     resized = cv2.resize(transposed, output_dims_xy, interpolation = cv2.INTER_AREA)
     if grayscale:
         resized = cv2.cvtColor(resized, cv2.COLOR_RGB2GRAY)
         resized = cv2.cvtColor(resized, cv2.COLOR_GRAY2RGB)
+        current_format = "yxc"
     resized = resized.astype(output_type)
-    resized = np.transpose(resized, [inter_format.index(c) for c in output_format])
+    resized = np.transpose(resized, [current_format.index(c) for c in output_format])
     return(resized)
 
-async def run_cellpose(img, server_url : str = "https://ai.imjoy.io", diameter = 30, model_type = 'cyto', method_timeout = 30, server = None): # model_type = 'cyto' or 'nuclei')
+async def run_cellpose(img, server_url : str = "https://ai.imjoy.io", diameter = None, model_type = 'cyto', method_timeout = 30, server = None): # model_type = 'cyto' or 'nuclei')
     params = {'diameter' : diameter, 'model_type' : model_type}
+    img_input =img.copy()
     if server is None:
         cellpose_server = await connect_to_server({"name": "client", "server_url": server_url, "method_timeout": method_timeout})
     else:
         cellpose_server = server
     triton = await cellpose_server.get_service("triton-client")
-    results = await triton.execute(inputs=[img,params], model_name = "cellpose-python", decode_bytes=True)
+    results = await triton.execute(inputs=[img_input,params], model_name = "cellpose-python", decode_bytes=True)
     return results
 
 async def guess_image_axes(input_files : list | str):
