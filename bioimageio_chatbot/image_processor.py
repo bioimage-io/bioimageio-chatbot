@@ -8,10 +8,7 @@ import cv2
 from schema_agents.role import Role
 from schema_agents.schema import Message
 from schema_agents.provider.openai_api import retry
-
-
 import matplotlib.pyplot as plt
-
 from imjoy_rpc.hypha import connect_to_server
 
 class TaskChoice(str, Enum):
