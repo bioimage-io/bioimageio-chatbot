@@ -214,7 +214,7 @@ def create_customer_service(db_path):
             except Exception as e:
                 return f"I failed to decode the uploaded image, error: {e}"
             if image_ext not in ['png', 'jpeg', 'jpg', 'tiff']:
-                return f"I'm sorry, though I can run image segmentation, for now I can only process .png, .jpeg, and .tiff images. Please try again with a different image."
+                return f"I can see you've uploaded a file! I can run image segmentation (nucleus or cytoplasm), but for now I can only process 2D .png, .jpeg, and .tiff images in grayscale or RGB. Please try again with a different file and specify which segmentation task you'd like me to perform!"
             image_path = f'tmp-user-image.{image_ext}'
             with open(image_path, 'wb') as f:
                 f.write(decoded_image_data)
