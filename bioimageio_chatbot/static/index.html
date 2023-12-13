@@ -650,9 +650,12 @@
         try {
           // Call the chat function with text and image data
           response = await svc.chat(textMessage, chat_history, user_profile, selectedChannel, statusCallback, sessionId, imageData);
+          const regex = /!\[.*?\]\(data:.+?\)/g;
+          const replacementText = '`image placeholder`';
+          responseWithoutImage = response.replace(regex, replacementText);
           console.log(response)
           chat_history.push({ role: 'user', content: textMessage });
-          chat_history.push({ role: 'assistant', content: response });
+          chat_history.push({ role: 'assistant', content: responseWithoutImage });
           showReadyStatus();
 
         }

@@ -5,9 +5,7 @@ import datetime
 import secrets
 import aiofiles
 from imjoy_rpc.hypha import login, connect_to_server
-from PIL import Image
 import io
-import re
 
 from pydantic import BaseModel, Field
 from schema_agents.role import Role
@@ -20,6 +18,7 @@ from bioimageio_chatbot.utils import get_manifest
 import pkg_resources
 import base64
 from bioimageio_chatbot.image_processor import *
+from matplotlib.pyplot as plt
 
 def decode_base64(encoded_data):
     header, encoded_content = encoded_data.split(',')
@@ -453,10 +452,7 @@ async def register_chat_service(server):
 
         if session_id:
             chat_history.append({ 'role': 'user', 'content': text })
-            # chat_history.append({ 'role': 'assistant', 'content': response })
-            response_no_images = re.sub(r"\n\!\[input_image\]\(data.*\n\n", "", response)
-            response_no_images = re.sub(r"\n\!\[result_image\]\(data*\)", "", response_no_images)
-            chat_history.append({ 'role': 'assistant', 'content': response_no_images}) # gkreder
+            chat_history.append({ 'role': 'assistant', 'content': response })
             version = pkg_resources.get_distribution('bioimageio-chatbot').version
             chat_his_dict = {'conversations':chat_history, 
                      'timestamp': str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), 
