@@ -198,9 +198,9 @@ class ImageProcessor():
     def resize_image(self, input_image : np.ndarray, input_format : str, output_format : str, output_dims_xy = tuple[int,int], grayscale : bool = False, output_type = np.float32):
         current_format = input_format.lower()
         output_format = output_format.lower()
+        assert sorted(current_format) == ['c', 'x', 'y']
         inter_format = "yxc"
         rearranged = input_image.copy()
-        assert sorted(current_format) == sorted(output_format) == ['c', 'x', 'y']
         transposed = np.transpose(rearranged, [current_format.index(c) for c in inter_format])
         current_format = inter_format
         resized = cv2.resize(transposed, output_dims_xy, interpolation = cv2.INTER_AREA)
@@ -208,6 +208,10 @@ class ImageProcessor():
             resized = cv2.cvtColor(resized, cv2.COLOR_RGB2GRAY)
             resized = cv2.cvtColor(resized, cv2.COLOR_GRAY2RGB)
             current_format = "yxc"
+        for c in output_format:
+            if c not in current_format:
+                resized = np.expand_dims(resized, axis = 0)
+                current_format = c + current_format
         resized = resized.astype(output_type)
         resized = np.transpose(resized, [current_format.index(c) for c in output_format])
         return(resized)
@@ -215,10 +219,10 @@ class ImageProcessor():
     def embed_image(self, input_image, current_format: str, grayscale : bool = True):
         resized_image = self.resize_image(
             input_image,
-            current_format,
+            input_format=current_format,
             grayscale = grayscale,
+            output_dims_xy=(224, 224),
             output_format=self.embedder.input_format)
-        
         vector_embedding = self.embedder.embed_image(resized_image)
         self.vector_embedding = vector_embedding
         return vector_embedding
@@ -238,11 +242,96 @@ class ImageProcessor():
 
     def get_torch_image(self, input_image_path, input_axes, grayscale : bool = True):
         input_image = self.read_image(input_image_path)
-        resized_image = self.resize_image(input_image, input_axes, grayscale=grayscale, output_format = "bcyx")
-        resized_image = resized_image.astype(np.float32)
+        resized_image = self.resize_image(input_image, input_axes, output_format = "bcyx", output_dims_xy = (224,224) , grayscale=grayscale, output_type=np.float32)    
         torch_image = torch.from_numpy(resized_image).to(torch.float32)
         return torch_image
+    
+    async def test_images(self, input_files : list, out_dir : str, out_suffix : str, db_path: str, 
+                mislabeled_axes : dict = {'impartial-shark' : 'yx'}, 
+                known_axes : list | None = None,
+                single_output_file : bool = False,
+                num_output_cols : int = 3, llm_axis_guessing = True,
+                grayscale : bool = True):
+        os.makedirs(out_dir, exist_ok=True)
+        mpl.rcParams['axes.titlesize'] = 10
+        mpl.rcParams['xtick.labelsize'] = 5
+        mpl.rcParams['ytick.labelsize'] = 5
+        if single_output_file:
+            fig, axes = plt.subplots(len(input_files), 4 + num_output_cols, figsize=(15, 3.2 * len(input_files)))
+            out_fig_fname = os.path.join(out_dir, f"{out_suffix}.svg")
+        if known_axes:
+            all_input_axes = known_axes
+        elif not llm_axis_guessing:
+            all_input_axes = guess_image_axes_deterministic(input_files)
+        else:
+            all_input_axes = await guess_image_axes(input_files)
+        for i_fname, fname_abs in enumerate(tqdm(input_files)):
+            fname = os.path.basename(fname_abs)
+            input_axes = all_input_axes[i_fname]
+            if not single_output_file:
+                fig, axes = plt.subplots(1, 4 + num_output_cols, figsize = (15, 3.2))
+                out_fig_fname = os.path.join(out_dir, f"{out_suffix}_{os.path.splitext(fname)[0]}.svg")
+            if len(input_files) == 1 or not single_output_file:
+                current_row = axes
+            else:
+                current_row = axes[i_fname]
+            input_image = self.read_image(fname_abs)
+            input_image_standardized = self.resize_image(input_image, input_axes, output_format='yxc', output_dims_xy=(224,224), grayscale = False, output_type=np.uint8)
+            output_image_grayscale = self.resize_image(input_image, input_axes, output_format='yxc', output_dims_xy=(224,224), grayscale = True, output_type=np.uint8)
+            output_image_color = self.resize_image(input_image, input_axes, output_format='yxc', output_dims_xy=(224,224), grayscale = False, output_type=np.uint8)
 
+            # torch_image_grayscale = self.get_torch_image(fname_abs, input_axes, grayscale=True)
+            # torch_image_color = self.get_torch_image(fname_abs, input_axes, grayscale=False)
+            # output_image_grayscale = self.standardize_image(torch_image_grayscale.numpy(), input_format = "bcyx", standard_format="yxc")
+            # output_image_color = self.standardize_image(torch_image_color.numpy(), input_format = "bcyx", standard_format="yxc")
+            res = search_torch_db(self, fname_abs, input_axes, db_path, verbose = False, grayscale = grayscale)
+            best_hit = res[0][-2]['config']['bioimageio']['nickname']
+            best_score = res[0][-1]
+
+            show_images = [(input_image_standardized, f"{fname}"),
+                        (output_image_grayscale, "Input (Grayscale)"),
+                        (output_image_color, "Input (RGB)")]
+            for i_ax in range(3):
+                current_row[i_ax].imshow(show_images[i_ax][0])
+                current_row[i_ax].set_title(show_images[i_ax][1])
+            current_row[3].barh([len(res) - i for i in range(len(res))], [x[-1] for x in res])
+            for i, hit in enumerate(res):
+                value = hit[-1]
+                hit_name = hit[-2]['config']['bioimageio']['nickname']
+                current_row[3].set_title(f"Best sim: {best_score:.3f}")
+                current_row[3].text(value / 2, len(res) - i, hit_name, ha='center', va='center', rotation='horizontal', color = 'white', size = 6)
+            current_row[3].set_yticks([i+1 for i in range(len(res))])
+            current_row[3].set_yticklabels([str(len(res) - i) for i in range(len(res))])
+            pos_axes2 = current_row[2].get_position()
+            pos_axes3 = current_row[3].get_position()
+            new_width = pos_axes2.x1 - pos_axes2.x0
+            new_height = pos_axes2.y1 - pos_axes2.y0
+            height_diff = (pos_axes3.y1 - pos_axes3.y0) - new_height
+            new_y0 = pos_axes3.y0 + ( height_diff / 2)
+            current_row[3].set_position([pos_axes3.x0, new_y0, new_width, new_height])
+
+            for i, hit in enumerate(res[0 : num_output_cols]):
+                rdf_dict = hit[-2]
+                hit_name = rdf_dict['config']['bioimageio']['nickname']
+                # hit_image_path, hit_axes = get_db_inputs(db_path, hit_name)
+                hit_image_path = rdf_dict['image_path']
+                hit_axes = rdf_dict['inputs'][0]['axes']
+                if hit_name in mislabeled_axes:
+                    hit_axes = mislabeled_axes[hit_name]
+                hit_image = self.read_image(hit_image_path)
+                hit_image_standardized = self.resize_image(hit_image, hit_axes, output_format='yxc', output_dims_xy=(224,224), grayscale = False, output_type=np.uint8)
+                # hit_image_standardized = self.standardize_image(np.load(hit_image_path), input_format = hit_axes, standard_format = "yxc")
+                current_row[4 + i].imshow(hit_image_standardized)
+                current_row[4 + i].set_title(f"{hit_name}\n({hit[-1]:.3f})")
+            
+            if not single_output_file:
+                plt.savefig(out_fig_fname, bbox_inches = 'tight')
+                plt.close()
+        if single_output_file:
+            plt.savefig(out_fig_fname, bbox_inches = "tight")
+            plt.close()
+        return (fig, axes) 
+    
 
 def get_model_rdf(m: dict, db_path: str) -> T.Optional[dict]:
     """Gets the model rdf_source yaml (and writes to db_path). 
@@ -290,77 +379,114 @@ def get_model_torch_images(rdf_dict: dict, db_path : str, grayscale : bool = Tru
         model_metadata.append(rdf_dict)
     return torch_images, model_metadata
 
-
-def get_torch_db(db_path: str, processor: ImageProcessor, force_build: bool = False,
+def get_torch_db(db_path : str, processor: ImageProcessor, force_build: bool = False,
                  grayscale : bool = True) -> list[(torch.Tensor, dict)]:
-    from bioimageio_chatbot.chatbot import load_model_info
     out_db_path = os.path.join(db_path, 'db.pkl')
     if (not force_build) and os.path.exists(out_db_path):
         db = pkl.load(open(out_db_path, 'rb'))
         return db
-    models = load_model_info()
-    all_metadata = []
+    input_images = [os.path.join(db_path, x) for x in os.listdir(db_path) if x.endswith('.png')]
+    rdf_dir = os.path.join(db_path, 'rdf_sources')
+    os.makedirs(rdf_dir, exist_ok=True) 
     all_torch_images = []
+    all_metadata = []
     all_embeddings = []
-    print('Creating PyTorch image database from model zoo...')
-    for _, m in enumerate(tqdm(models)):
-        if 'nickname' not in m:
-            continue
-        rdf_dict = get_model_rdf(m, db_path)
-        if not rdf_dict:
-            continue
-        model_torch_images, model_metadata = get_model_torch_images(
-            rdf_dict, db_path, grayscale=grayscale)
-        all_torch_images.extend(model_torch_images)
-        all_metadata.extend(model_metadata)
-        for img in model_torch_images:
-            vec = processor.embed_image(img.numpy(), "bcyx")
-            all_embeddings.append(vec)
-    # db_old = pkl.load(open(out_db_path, 'rb'))
-    # all_torch_images, all_embeddings, all_metadata = zip(*db_old)
-    # all_torch_images = list(all_torch_images)
-    # all_embeddings = list(all_embeddings)
-    # all_metadata = list(all_metadata)
-
-    cellpose_dir = os.path.join(db_path, 'cellpose_train-set_representatives')
-    cellpose_temp_dir = os.path.join(db_path, "cellpose_tmp")
-    if not os.path.exists(cellpose_dir):
-        os.makedirs(cellpose_temp_dir, exist_ok=True)
-        cellpose_drive_id = "1kEy9DHxkGeQHQDQco8CyaL1KEEPS6NYY"
-        cellpose_zip_file = os.path.join(db_path, "cellpose_train_reps.zip")
-        wget_cmd = f"wget --no-check-certificate 'https://docs.google.com/uc?export=download&id={cellpose_drive_id}' -O {cellpose_zip_file}"
-        os.system(wget_cmd)
-        unzip_cmd = f"unzip {cellpose_zip_file} -d {cellpose_temp_dir}"
-        os.system(unzip_cmd)
-        shutil.move(os.path.join(cellpose_temp_dir, "cellpose_train-set_representatives"), db_path)
-        shutil.rmtree(cellpose_temp_dir, ignore_errors=True)
-
-    cellpose_input_images = [os.path.join(cellpose_dir, x) for x in os.listdir(cellpose_dir) if x.endswith('.png')]
-    for input_image_path in cellpose_input_images:
-        rn = randomname.get_name(noun=("cats", "dogs", "birds", "fish"))
-        cp_id = os.path.splitext(os.path.basename(input_image_path))[0]
-        # nickname = f"cellpose_{rn}_{cp_id}"
-        nickname = f"cellpose_{cp_id}"
-        rdf_dict = {"config" : {'bioimageio' : {'nickname' : nickname}},
-                    'test_inputs' : os.path.abspath(input_image_path),
+    for input_image_path in tqdm(input_images):
+        # rn = randomname.get_name(noun=("cats", "dogs", "birds", "fish"))
+        # cp_id = os.path.splitext(os.path.basename(input_image_path))[0]
+        # # nickname = f"cellpose_{rn}_{cp_id}"
+        # nickname = f"cellpose_{cp_id}"
+        nickname = os.path.splitext(os.path.basename(input_image_path))[0]
+        rdf_dict = {'config' : {'bioimageio' : {'nickname': nickname}},
+                    'image_path' : input_image_path,
                     "inputs" : [{'axes' : 'yxc'}]}
-        with open(os.path.join(db_path, 'rdf_sources', f"{nickname}.yaml"), 'w') as f:
+        with open(os.path.join(rdf_dir, f"{nickname}.yaml"), 'w') as f:
             yaml.dump(rdf_dict, f, default_flow_style=False)
-        torch_image = processor.get_torch_image
+        axes = 'yxc'
         input_image = processor.read_image(input_image_path)
-        np.save(os.path.join(db_path, "input_images", f"{nickname}.npy"), input_image)
-        resized_image = processor.resize_image(input_image, 'yxc', grayscale=grayscale, output_format = "bcyx")
-        resized_image = resized_image.astype(np.float32)
-        torch_image = torch.from_numpy(resized_image).to(torch.float32)
+        torch_image = processor.get_torch_image(input_image_path, axes, grayscale=grayscale)
         all_torch_images.extend([torch_image])
         all_metadata.extend([rdf_dict])
-        vec = processor.embed_image(torch_image.numpy(), "bcyx")
+        # vec = processor.embed_image(torch_image.numpy(), "bcyx")
+        vec = processor.embed_image(input_image, axes, grayscale = grayscale)
         all_embeddings.append(vec)
-
     db = list(zip(all_torch_images, all_embeddings, all_metadata))
     with open(out_db_path, 'wb') as f:
         pkl.dump(db, f)
     return db
+
+
+
+# def get_torch_db(db_path: str, processor: ImageProcessor, force_build: bool = False,
+#                  grayscale : bool = True) -> list[(torch.Tensor, dict)]:
+#     from bioimageio_chatbot.chatbot import load_model_info
+#     out_db_path = os.path.join(db_path, 'db.pkl')
+#     if (not force_build) and os.path.exists(out_db_path):
+#         db = pkl.load(open(out_db_path, 'rb'))
+#         return db
+#     models = load_model_info()
+#     all_metadata = []
+#     all_torch_images = []
+#     all_embeddings = []
+#     print('Creating PyTorch image database from model zoo...')
+#     for _, m in enumerate(tqdm(models)):
+#         if 'nickname' not in m:
+#             continue
+#         rdf_dict = get_model_rdf(m, db_path)
+#         if not rdf_dict:
+#             continue
+#         model_torch_images, model_metadata = get_model_torch_images(
+#             rdf_dict, db_path, grayscale=grayscale)
+#         all_torch_images.extend(model_torch_images)
+#         all_metadata.extend(model_metadata)
+#         for img in model_torch_images:
+#             vec = processor.embed_image(img.numpy(), "bcyx")
+#             all_embeddings.append(vec)
+#     # db_old = pkl.load(open(out_db_path, 'rb'))
+#     # all_torch_images, all_embeddings, all_metadata = zip(*db_old)
+#     # all_torch_images = list(all_torch_images)
+#     # all_embeddings = list(all_embeddings)
+#     # all_metadata = list(all_metadata)
+
+#     cellpose_dir = os.path.join(db_path, 'cellpose_train-set_representatives')
+#     cellpose_temp_dir = os.path.join(db_path, "cellpose_tmp")
+#     if not os.path.exists(cellpose_dir):
+#         os.makedirs(cellpose_temp_dir, exist_ok=True)
+#         cellpose_drive_id = "1kEy9DHxkGeQHQDQco8CyaL1KEEPS6NYY"
+#         cellpose_zip_file = os.path.join(db_path, "cellpose_train_reps.zip")
+#         wget_cmd = f"wget --no-check-certificate 'https://docs.google.com/uc?export=download&id={cellpose_drive_id}' -O {cellpose_zip_file}"
+#         os.system(wget_cmd)
+#         unzip_cmd = f"unzip {cellpose_zip_file} -d {cellpose_temp_dir}"
+#         os.system(unzip_cmd)
+#         shutil.move(os.path.join(cellpose_temp_dir, "cellpose_train-set_representatives"), db_path)
+#         shutil.rmtree(cellpose_temp_dir, ignore_errors=True)
+
+#     cellpose_input_images = [os.path.join(cellpose_dir, x) for x in os.listdir(cellpose_dir) if x.endswith('.png')]
+#     for input_image_path in cellpose_input_images:
+#         rn = randomname.get_name(noun=("cats", "dogs", "birds", "fish"))
+#         cp_id = os.path.splitext(os.path.basename(input_image_path))[0]
+#         # nickname = f"cellpose_{rn}_{cp_id}"
+#         nickname = f"cellpose_{cp_id}"
+#         rdf_dict = {"config" : {'bioimageio' : {'nickname' : nickname}},
+#                     'test_inputs' : os.path.abspath(input_image_path),
+#                     "inputs" : [{'axes' : 'yxc'}]}
+#         with open(os.path.join(db_path, 'rdf_sources', f"{nickname}.yaml"), 'w') as f:
+#             yaml.dump(rdf_dict, f, default_flow_style=False)
+#         torch_image = processor.get_torch_image
+#         input_image = processor.read_image(input_image_path)
+#         np.save(os.path.join(db_path, "input_images", f"{nickname}.npy"), input_image)
+#         resized_image = processor.resize_image(input_image, 'yxc', grayscale=grayscale, output_format = "bcyx")
+#         resized_image = resized_image.astype(np.float32)
+#         torch_image = torch.from_numpy(resized_image).to(torch.float32)
+#         all_torch_images.extend([torch_image])
+#         all_metadata.extend([rdf_dict])
+#         vec = processor.embed_image(torch_image.numpy(), "bcyx")
+#         all_embeddings.append(vec)
+
+#     db = list(zip(all_torch_images, all_embeddings, all_metadata))
+#     with open(out_db_path, 'wb') as f:
+#         pkl.dump(db, f)
+#     return db
 
 
 def get_similarity_vec(vec1: np.ndarray, vec2: np.ndarray) -> float:
@@ -376,10 +502,12 @@ def search_torch_db(
         db_path: str, top_n: int = 5, verbose : bool = False, 
         force_build : bool = False, grayscale : bool = True) -> str:
     db = get_torch_db(db_path, image_processor, force_build = force_build, grayscale=grayscale)
-    user_torch_image = image_processor.get_torch_image(
-        input_image_path, input_image_axes, grayscale=grayscale)
-    user_embedding = image_processor.embed_image(
-        user_torch_image.numpy(), "bcyx")
+    # user_torch_image = image_processor.get_torch_image(
+    #     input_image_path, input_image_axes, grayscale=grayscale)
+    # user_embedding = image_processor.embed_image(
+    #     user_torch_image.numpy(), "bcyx")
+    img = image_processor.read_image(input_image_path)
+    user_embedding = image_processor.embed_image(img, input_image_axes, grayscale=grayscale)
     if verbose:
         print('Searching DB...')
     db_iterable = tqdm(db) if verbose else db
@@ -451,84 +579,6 @@ def get_db_inputs(db_path, model_name):
     input_axes = get_axes(db_path, model_name)
     input_image_name = os.path.join(image_dir, f"{model_name}.npy")
     return (input_image_name, input_axes)
-
-async def test_images(input_files : list, out_dir : str, out_suffix : str, db_path: str, 
-                mislabeled_axes : dict = {'impartial-shark' : 'yx'}, 
-                known_axes : bool = False,
-                single_output_file : bool = False,
-                num_output_cols : int = 3, llm_axis_guessing = True):
-    os.makedirs(out_dir, exist_ok=True)
-    mpl.rcParams['axes.titlesize'] = 10
-    mpl.rcParams['xtick.labelsize'] = 5
-    mpl.rcParams['ytick.labelsize'] = 5
-    image_processor = ImageProcessor()
-    if single_output_file:
-        fig, axes = plt.subplots(len(input_files), 4 + num_output_cols, figsize=(15, 3.2 * len(input_files)))
-        out_fig_fname = os.path.join(out_dir, f"{out_suffix}.svg")
-    if known_axes:
-        all_input_axes = [get_axes(db_path, os.path.basename(fname_abs).replace('.npy', '')) for fname_abs in input_files]
-    elif not llm_axis_guessing:
-        all_input_axes = guess_image_axes_deterministic(input_files)
-    else:
-        all_input_axes = await guess_image_axes(input_files)
-    for i_fname, fname_abs in enumerate(tqdm(input_files)):
-        fname = os.path.basename(fname_abs)
-        input_axes = all_input_axes[i_fname]
-        if not single_output_file:
-            fig, axes = plt.subplots(1, 4 + num_output_cols, figsize = (15, 3.2))
-            out_fig_fname = os.path.join(out_dir, f"{out_suffix}_{os.path.splitext(fname)[0]}.svg")
-        if len(input_files) == 1 or not single_output_file:
-            current_row = axes
-        else:
-            current_row = axes[i_fname]
-        input_image = image_processor.read_image(fname_abs)
-        input_image_standardized = image_processor.standardize_image(input_image, input_axes, standard_format='yxc')
-        torch_image_grayscale = image_processor.get_torch_image(fname_abs, input_axes, grayscale=True)
-        torch_image_color = image_processor.get_torch_image(fname_abs, input_axes, grayscale=False)
-        output_image_grayscale = image_processor.standardize_image(torch_image_grayscale.numpy(), input_format = "bcyx", standard_format="yxc")
-        output_image_color = image_processor.standardize_image(torch_image_color.numpy(), input_format = "bcyx", standard_format="yxc")
-        res = search_torch_db(image_processor, fname_abs, input_axes, db_path, verbose = False, grayscale = True)
-        best_hit = res[0][-2]['config']['bioimageio']['nickname']
-        best_score = res[0][-1]
-
-        show_images = [(input_image_standardized, f"{fname}"),
-                       (output_image_grayscale, "Input (Grayscale)"),
-                       (output_image_color, "Input (RGB)")]
-        for i_ax in range(3):
-            current_row[i_ax].imshow(show_images[i_ax][0])
-            current_row[i_ax].set_title(show_images[i_ax][1])
-        current_row[3].barh([len(res) - i for i in range(len(res))], [x[-1] for x in res])
-        for i, hit in enumerate(res):
-            value = hit[-1]
-            hit_name = hit[-2]['config']['bioimageio']['nickname']
-            current_row[3].set_title(f"Best sim: {best_score:.3f}")
-            current_row[3].text(value / 2, len(res) - i, hit_name, ha='center', va='center', rotation='horizontal', color = 'white', size = 6)
-        current_row[3].set_yticks([i+1 for i in range(len(res))])
-        current_row[3].set_yticklabels([str(len(res) - i) for i in range(len(res))])
-        pos_axes2 = current_row[2].get_position()
-        pos_axes3 = current_row[3].get_position()
-        new_width = pos_axes2.x1 - pos_axes2.x0
-        new_height = pos_axes2.y1 - pos_axes2.y0
-        height_diff = (pos_axes3.y1 - pos_axes3.y0) - new_height
-        new_y0 = pos_axes3.y0 + ( height_diff / 2)
-        current_row[3].set_position([pos_axes3.x0, new_y0, new_width, new_height])
-
-        for i, hit in enumerate(res[0 : num_output_cols]):
-            hit_name = hit[-2]['config']['bioimageio']['nickname']
-            hit_image_path, hit_axes = get_db_inputs(db_path, hit_name)
-            if hit_name in mislabeled_axes:
-                hit_axes = mislabeled_axes[hit_name]
-            hit_image_standardized = image_processor.standardize_image(np.load(hit_image_path), input_format = hit_axes, standard_format = "yxc")
-            current_row[4 + i].imshow(hit_image_standardized)
-            current_row[4 + i].set_title(f"{hit_name}\n({hit[-1]:.3f})")
-        
-        if not single_output_file:
-            plt.savefig(out_fig_fname, bbox_inches = 'tight')
-            plt.close()
-    if single_output_file:
-        plt.savefig(out_fig_fname, bbox_inches = "tight")
-        plt.close()
-    return (fig, axes)
 
 def min_distance_to_representative(vector : list, representative_db : list):
     min_distance = np.inf
