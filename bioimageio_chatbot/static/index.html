@@ -139,6 +139,15 @@
       /* Remove margin for the last button */
     }
 
+    .step {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 10px; /* Round corners */
+      background-color: #007bff; /* Example background color */
+      color: white;
+      font-size: 0.8em;
+    }
+
     .announcement-banner {
       background-color: #fff;
       color: #000;
@@ -652,13 +661,13 @@
           response = await svc.chat(textMessage, chat_history, user_profile, selectedChannel, statusCallback, sessionId, imageData);
           console.log(response)
           chat_history.push({ role: 'user', content: textMessage });
-          chat_history.push({ role: 'assistant', content: response });
+          chat_history.push({ role: 'assistant', content: response.text });
           showReadyStatus();
 
         }
         catch (e) {
           // generate an error message to simulate how Melman from Madagascar would respond to an error
-          response = "Oh no! I'm sorry, I don't know how to answer that. Please try again.";
+          response = {text: "Oh no! I'm sorry, I don't know how to answer that. Please try again."};
           showErrorStatus(`The server failed to respond, please try again. ${e}`);
           console.error(e);
         }
@@ -667,7 +676,7 @@
           $('.spinner').remove();
           $('#progress-message-container').remove();
 
-          appendRobotMessage(response, "message-" + chat_history.length); // Append robot message to the message container
+          appendRobotMessage(response.text, "message-" + chat_history.length, response.steps); // Append robot message to the message container
         }
       }
 
@@ -681,10 +690,17 @@
         $('.message-holder').append(messageContainer);
       }
 
-      function appendRobotMessage(message, messageId) {
+      function appendRobotMessage(message, messageId, steps) {
         // Convert the message to HTML using the marked library
+        if(steps && steps.length > 0){
+          message = message + "\n<details> <summary>🔍More Details</summary>\n\n"
+          for(let step of steps){
+            message = message + `<div class="step">${step.name}</div>\n\n\`\`\`\n\n${JSON.stringify(step.details, null, 2)}\n\n\`\`\`\n\n`
+          }
+          message = message + "\n\n</details>"
+        }
         const htmlMessage = marked(message, { renderer: renderer });
-
+        
         let messageContainer = `<div class="message-container robot-message">
           <div class="rounded-icon-container">
             <img style="width: 20px;" src="https://bioimage.io/static/img/bioimage-io-icon.svg" alt="Melman the Giraffe" width="30" height="30">
