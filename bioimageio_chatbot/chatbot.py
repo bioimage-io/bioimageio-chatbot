@@ -480,7 +480,7 @@ async def register_chat_service(server):
     
 if __name__ == "__main__":
     # asyncio.run(main())
-    server_url = "https://ai.imjoy.io"
+    server_url = """https://ai.imjoy.io"""
     # server_url = "https://hypha.bioimage.io/"
     loop = asyncio.get_event_loop()
     loop.create_task(connect_server(server_url))
