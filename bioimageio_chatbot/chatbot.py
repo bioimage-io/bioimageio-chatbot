@@ -6,8 +6,6 @@ import secrets
 import aiofiles
 from imjoy_rpc.hypha import login, connect_to_server
 import io
-import numpy as np
-
 from pydantic import BaseModel, Field
 from schema_agents.role import Role
 from schema_agents.schema import Message
@@ -17,22 +15,8 @@ import sys
 from bioimageio_chatbot.knowledge_base import load_knowledge_base
 from bioimageio_chatbot.utils import get_manifest
 import pkg_resources
-import base64
-from bioimageio_chatbot.image_processor import ImageProcessor, guess_image_axes, run_cellpose, CellposeTask
+import bioimageio_chatbot.user_APIs.interface as user_apis
 import matplotlib.pyplot as plt
-
-def decode_base64(encoded_data):
-    header, encoded_content = encoded_data.split(',')
-    decoded_data = base64.b64decode(encoded_content)
-    file_extension = header.split(';')[0].split('/')[1]
-    return decoded_data, file_extension
-
-def encode_base64(image_path):
-    with open(image_path, "rb") as image_file:
-        encoded_string = base64.b64encode(image_file.read())
-    # format it for the html img tag
-    encoded_string = f"data:image/png;base64,{encoded_string.decode('utf-8')}"
-    return encoded_string
     
 def load_model_info():
     response = requests.get("https://bioimage-io.github.io/collection-bioimage-io/collection.json")
@@ -170,29 +154,41 @@ def create_customer_service(db_path):
     async def respond_to_user(question_with_history: QuestionWithHistory = None, role: Role = None) -> str:
         """Answer the user's question directly or retrieve relevant documents from the documentation, or create a Python Script to get information about details of models."""
         inputs = [question_with_history.user_profile] + list(question_with_history.chat_history) + [question_with_history.question]
+
+        mode_types = [DirectResponse, DocumentRetrievalInput, ModelZooInfoScript, LearnResponse]
+        user_modes = user_apis.get_modes()
+        user_modes = user_modes if len(user_modes) > 0 else None
+        for mode_name, mode_d in user_modes.items():
+            mode_types.append(mode_d['mode'])
+        mode_types = tuple(mode_types)
+
         # The channel info will be inserted at the beginning of the inputs
         if question_with_history.channel_info:
             inputs.insert(0, question_with_history.channel_info)
-        if question_with_history.channel_info is not None and question_with_history.channel_info.id == "learn":
-            
+        if question_with_history.channel_info is not None:
+            if question_with_history.channel_info.id == "learn":
+                try:
+                    req = await role.aask(inputs, LearnResponse)
+                except Exception as e:
+                    # try again
+                    req = await role.aask(inputs, LearnResponse)
+                return req.response
+            elif user_modes is not None:
+                for mode_name, mode_d in user_modes.items():
+                    if mode_name == question_with_history.channel_info.id:
+                        try: 
+                            req = await role.aask(inputs, mode_d['mode'])
+                        except Exception as e:
+                            req = await role.aask(inputs, mode_d['mode'])
+                        response_function = mode_d['response_function']
+                        response = await response_function(question_with_history, req)
+                        return response
+        if not question_with_history.channel_info or question_with_history.channel_info.id == "bioimage.io":
             try:
-                req = await role.aask(inputs, LearnResponse)
+                req = await role.aask(inputs, Union[mode_types])
             except Exception as e:
                 # try again
-                req = await role.aask(inputs, LearnResponse)
-            return req.response
-
-        if question_with_history.image_data:
-            try:
-                req = await role.aask(inputs, CellposeTask) 
-            except Exception as e:
-                req = await role.aask(inputs, CellposeTask)        
-        elif not question_with_history.channel_info or question_with_history.channel_info.id == "bioimage.io":
-            try:
-                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, ModelZooInfoScript, LearnResponse])
-            except Exception as e:
-                # try again
-                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, ModelZooInfoScript, LearnResponse])
+                req = await role.aask(inputs, Union[mode_types])
         else:
             try:
                 req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput])
@@ -203,56 +199,6 @@ def create_customer_service(db_path):
             return req.response
         elif isinstance(req, LearnResponse):
             return req.response
-        elif isinstance(req, CellposeTask):
-            try:
-                decoded_image_data, image_ext = decode_base64(question_with_history.image_data)
-                print('Size of data: ')
-                print(len(decoded_image_data))
-                mb_size_max = 2.0
-                if len(decoded_image_data) / 1e6 > mb_size_max:
-                    return f"I see you've uploaded an image! But I'm sorry to say it's too large. For now, I can only handle .png, .jpeg, and .tiff images up to about 2MB"
-            except Exception as e:
-                return f"I failed to decode the uploaded image, error: {e}"
-            if image_ext not in ['png', 'jpeg', 'jpg', 'tiff']:
-                return f"I can see you've uploaded a file! I can run image segmentation (nucleus or cytoplasm), but for now I can only process 2D .png, .jpeg, and .tiff images in grayscale or RGB. Please try again with a different file and specify which segmentation task you'd like me to perform!"
-            image_path = f'tmp-user-image.{image_ext}'
-            with open(image_path, 'wb') as f:
-                f.write(decoded_image_data)
-            image_processor = ImageProcessor()
-            arr = image_processor.read_image(image_path)
-            axes = await guess_image_axes(image_path)
-            if sorted(axes) != ['c', 'x', 'y']:
-                return f"I'm sorry, though I can run image segmentation, for now I can only process images containing only dimensions for channel (c), x, and y. My best guess for your image's axes is '{axes}'. Please try again with a different image."
-            arr_resized = image_processor.resize_image(arr, axes, 'cyx', grayscale = False, output_dims_xy=(512,512), output_type = np.uint8)
-            fig, ax = plt.subplots()
-            ax.imshow(arr_resized.transpose(1,2,0))
-            fig.savefig("tmp-user-resized.png")
-            plt.close()
-            image_data_base64 = encode_base64("tmp-user-resized.png")
-            cp_info_str = "Would you like me to segment this? Currently I can run image segmentation using pretrained cellpose models for either cytoplasm (`cyto`) or nuclei (`nuclei`). This is an experimental feature, so for now I can accept .png, .jpeg, and .tiff images."
-            if req.task == "unknown":
-                out_string = f"Here's the image (resized) you've uploaded. Colors may be shuffled. The original image shape is {arr.shape} which I believe corresponds to axes {tuple([c for c in axes])}\n\n![input_image]({image_data_base64})\n\n{cp_info_str}\n\nIf you would like to segment this image, please try uploading it again and specify which model you'd prefer!"
-                return out_string
-            arr_resized = image_processor.resize_image(arr_resized, 'cyx', 'cyx', grayscale = False, output_dims_xy=(512,512), output_type = np.float32)
-            print("Running cellpose...")
-            # results = await run_cellpose(arr_resized)
-            print(arr_resized.shape)
-            results = await run_cellpose(arr_resized, server_url="https://ai.imjoy.io", model_type = req.task, diameter = None)
-            print(arr_resized.shape)
-            mask = results['mask'] # default output shape of 1,512,512
-            info = results['info'] # metadata about the model
-            mask_shape = results['__info__']['outputs'][0]['shape'] # shape of the mask
-            fig, axes = plt.subplots(ncols=2)
-            axes[0].imshow(arr_resized.transpose(1,2,0) / 255.0)
-            axes[0].set_title('Input image (resized)')
-            axes[1].imshow(mask[0,:,:])
-            axes[1].set_title('Output image')
-            fig.savefig('tmp-output.png')
-            plt.close()
-            base64_output = encode_base64('tmp-output.png')
-            out_string = f"I've run cellpose your uploaded image. I can currently run either cytoplasm or nucleus segmentation based on pretrained cellpose models. My best guess for what you wanted to do on this image was `{req.task}`. If this seems off, please try again specificying either `cyto` or `nucleus` as your desired task"
-            return f"Cellpose segmentation results from {req.task} task\n![result_image]({base64_output})"
-
         elif isinstance(req, DocumentRetrievalInput):
             if req.channel_id == "all":
                 docs_with_score = []
@@ -314,6 +260,13 @@ def create_customer_service(db_path):
             references = f"""<details><summary>Source Code</summary>\n\n<code>\nScript: \n{req.script}\n\nResults: \n{result["stdout"]}\nError: {result["stderr"]}\n</code>\n\n</details>"""
             response = response.response + "\n\n" + references
             return response
+        elif user_modes is not None:
+            for mode_name, mode_d in user_modes.items():
+                mode = mode_d['mode']
+                response_function = mode_d['response_function']
+                if isinstance(req, mode):
+                    response = await response_function(question_with_history, req)
+                    return response
         
     customer_service = Role(
         name="Melman",
@@ -417,9 +370,12 @@ async def register_chat_service(server):
 
         event_bus.on("stream", stream_callback)
 
+        user_modes = user_apis.get_modes()
         # Get the channel id by its name
         if channel == 'learn':
             channel_id = 'learn'
+        elif user_modes is not None and channel in user_modes.keys():
+            channel_id = channel
         else:
             if channel == 'auto':
                 channel = None
@@ -430,6 +386,9 @@ async def register_chat_service(server):
                 channel_id = None
         if channel == 'learn':
             channel_info = {"id": channel_id, "name": channel, "description": "Learning assistant"}
+        elif user_modes is not None:
+            for mode_name, mode_d in user_modes.items():
+                channel_info = {"id" : mode_name, "name" : mode_name, "description" : mode_d['description']}
         else:
             channel_info = channel_id and {"id": channel_id, "name": channel, "description": description_by_id[channel_id]}
         if channel_info:
@@ -473,6 +432,8 @@ async def register_chat_service(server):
 
     channels = [collection['name'] for collection in collections]
     channels.append("learn")
+    for mode_name in user_apis.get_modes().keys():
+        channels.append(mode_name)
     hypha_service_info = await server.register_service({
         "name": "BioImage.IO Chatbot",
         "id": "bioimageio-chatbot",
