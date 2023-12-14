@@ -189,7 +189,6 @@ async def cellpose_get_response(question_with_history, req : CellposeTask):
     if not question_with_history.image_data:
         situation = "User did not upload an image. User's question was: " + question_with_history.question
         return await create_cellpose_help(situation)
-        return f"It seems you may be interested in running Cellpose image segmentation. But I can't see an image in your message. Did you upload one?"
     try:
         decoded_image_data, image_ext = decode_base64(question_with_history.image_data)
         print('Size of data: ')
@@ -198,19 +197,14 @@ async def cellpose_get_response(question_with_history, req : CellposeTask):
         if len(decoded_image_data) / 1e6 > mb_size_max:
             situation = "User uploaded an image that is too large (greater than 2MB). User's question was: " + question_with_history.question
             return await create_cellpose_help(situation)
-            return f"I see you've uploaded an image! But I'm sorry to say it's too large. For now, I can only handle .png, .jpeg, and .tiff images up to about 2MB"
     except Exception as e:
         return f"I failed to decode the uploaded image, error: {e}"
     if image_ext not in ['png', 'jpeg', 'jpg', 'tiff']:
         situation = "User uploaded a file that is not a .png, .jpeg, or .tiff image. User's question was: " + question_with_history.question
         return await create_cellpose_help(situation)
-        return f"I can see you've uploaded a file! I can run image segmentation (nucleus or cytoplasm), but for now I can only process 2D .png, .jpeg, and .tiff images in grayscale or RGB. Please try again with a different file and specify which segmentation task you'd like me to perform!"
     if req.task == "unknown":
         situation = "User uploaded an image but did not specify a task. Clarify that right now you can run Cellpose segmentation on either cytoplasm (`cyto`) or nuclei (`nuclei`). User's question was: " + question_with_history.question
         return await create_cellpose_help(situation)
-        # cp_info_str = "Would you like me to segment this? I can run Cellpose image segmentation using pretrained models for either cytoplasm (`cyto`) or nuclei (`nuclei`). This is an experimental feature, so for now I can accept .png, .jpeg, and .tiff images."
-        # out_string = f"Here's the image (resized) you've uploaded. Colors may be shuffled. The original image shape is {arr.shape} which I believe corresponds to axes {tuple([c for c in axes])}\n\n![input_image]({image_data_base64})\n\n{cp_info_str}\n\nIf you would like to segment this image, please try uploading it again and specify which model you'd prefer!"
-        # return out_string
     tmp_dir = "tmp"
     os.makedirs(tmp_dir, exist_ok=True)
     image_path = os.path.join(tmp_dir, f'tmp-user-image.{image_ext}')
@@ -222,7 +216,6 @@ async def cellpose_get_response(question_with_history, req : CellposeTask):
     if sorted(axes) != ['c', 'x', 'y']:
         situation = "User uploaded an image with an unexpected number of axes. Currently, only images with 3 axes (channel, x, and y) are supported"
         return await create_cellpose_help(situation)
-        return f"I'm sorry, though I can run image segmentation, for now I can only process images containing only dimensions for channel (c), x, and y. My best guess for your image's axes is '{axes}'. Please try again with a different image."
     arr_resized = image_processor.resize_image(arr, axes, 'cyx', grayscale = False, output_dims_xy=(512,512), output_type = np.uint8)
     fig, ax = plt.subplots()
     ax.imshow(arr_resized.transpose(1,2,0))
@@ -232,7 +225,6 @@ async def cellpose_get_response(question_with_history, req : CellposeTask):
     image_data_base64 = encode_base64(resized_fname)
     arr_resized = image_processor.resize_image(arr_resized, 'cyx', 'cyx', grayscale = False, output_dims_xy=(512,512), output_type = np.float32)
     print("Running cellpose...")
-    # results = await run_cellpose(arr_resized)
     print(arr_resized.shape)
     results = await run_cellpose(arr_resized, server_url="https://ai.imjoy.io", model_type = req.task, diameter = None)
     print(arr_resized.shape)
