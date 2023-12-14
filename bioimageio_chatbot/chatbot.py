@@ -75,7 +75,7 @@ class ModelZooInfoScriptResults(BaseModel):
     user_info: Optional[str] = Field("", description="The user's info for personalizing response.")
 
 class DirectResponse(BaseModel):
-    """Direct response to a user's question."""
+    """Direct response to a user's question if you are confident about the answer."""
     response: str = Field(description="The response to the user's question answering what that asked for.")
 
 class LearnResponse(BaseModel):
