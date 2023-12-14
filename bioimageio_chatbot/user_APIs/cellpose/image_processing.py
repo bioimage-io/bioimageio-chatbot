@@ -11,6 +11,8 @@ from pydantic import BaseModel, Field, validator
 from schema_agents.role import Role
 from schema_agents.schema import Message
 import matplotlib.pyplot as plt
+# from .results_display import create_results_page
+from bioimageio_chatbot.user_APIs.cellpose.results_display import create_results_page
 
 class TaskChoice(str, Enum):
     """The best guess for the image segmentation task. Either 'cyto' or 'nuclei'"""
@@ -171,7 +173,7 @@ async def print_cellpose_help(situation : str, role : Role = None) -> CellposeHe
     response = await role.aask(situation, CellposeHelp)
     return response
 
-async def create_cellpose_help(situation : str):
+async def create_cellpose_help(situation : str) -> str:
     cellpose_helper = Role(name = "CellposeHelper",
                            profile = "Cellpose Helper",
                            goal = "Your goal is write helpful messages to the user telling them about how they can use this Cellpose service",
@@ -184,6 +186,34 @@ async def create_cellpose_help(situation : str):
     responses = await cellpose_helper.handle(m)
     print(responses)
     return responses[0].data.message
+
+class CellposeResults(BaseModel):
+    """The results of running Cellpose segmentation on an image"""
+    mask_shape : list[int] = Field(description = "The shape of the output mask")
+    info : list = Field(description = "The output info dictionary")
+    number_segmented_regions : int = Field(description = "The number of segmented regions in the output mask")
+
+class ResultsSummary(BaseModel):
+    """The results summary message to print to the user"""
+    message : str = Field(description = "The results summary message to print to the user from the run.")
+
+async def print_results_summary(cellpose_results : CellposeResults, role : Role = None) -> ResultsSummary:
+    """Takes the Cellpose results and creates a results summary message to print to the user"""
+    response = await role.aask(cellpose_results, ResultsSummary)
+    return response
+
+async def create_results_summary(cellpose_results : CellposeResults) -> str:
+    results_summarizer = Role(name = "ResultsSummarizer",
+                              profile = "Results Summarizer",
+                              goal = "Your goal is write helpful messages to the user summarizing the results of their image analysis",
+                              actions = [print_results_summary])
+    event_bus = results_summarizer.get_event_bus()
+    event_bus.register_default_events()
+    m = Message(content = cellpose_results.json(), data = cellpose_results, role = 'User')
+    responses = await results_summarizer.handle(m)
+    print(responses)
+    return responses[0].data.message
+    
 
 async def cellpose_get_response(question_with_history, req : CellposeTask):
     if not question_with_history.image_data:
@@ -219,26 +249,35 @@ async def cellpose_get_response(question_with_history, req : CellposeTask):
     arr_resized = image_processor.resize_image(arr, axes, 'cyx', grayscale = False, output_dims_xy=(512,512), output_type = np.uint8)
     fig, ax = plt.subplots()
     ax.imshow(arr_resized.transpose(1,2,0))
-    resized_fname = os.path.join(tmp_dir, 'tmp-user-resized.png')
+    resized_fname = os.path.join(tmp_dir, 'user-image-resized.png')
     fig.savefig(resized_fname)
     plt.close() 
-    image_data_base64 = encode_base64(resized_fname)
     arr_resized = image_processor.resize_image(arr_resized, 'cyx', 'cyx', grayscale = False, output_dims_xy=(512,512), output_type = np.float32)
     print("Running cellpose...")
     print(arr_resized.shape)
     results = await run_cellpose(arr_resized, server_url="https://ai.imjoy.io", model_type = req.task, diameter = None)
-    print(arr_resized.shape)
     mask = results['mask'] 
+    seg_areas = len(np.unique(mask[mask != 0]))
     info = results['info'] 
     mask_shape = results['__info__']['outputs'][0]['shape']
-    fig, axes = plt.subplots(ncols=2)
-    axes[0].imshow(arr_resized.transpose(1,2,0) / 255.0)
-    axes[0].set_title('Input image (resized)')
-    axes[1].imshow(mask[0,:,:])
-    axes[1].set_title('Output image')
-    output_fname = os.path.join(tmp_dir, 'tmp-output.png')
+    print(seg_areas)
+    print(info)
+    print(mask_shape)
+    fig, axes = plt.subplots()
+    axes.imshow(mask[0,:,:])
+    output_fname = os.path.join(tmp_dir, 'output-image.png')
     fig.savefig(output_fname)
     plt.close()
-    base64_output = encode_base64(output_fname)
-    out_string = f"I've run cellpose your uploaded image. I can currently run either cytoplasm or nucleus segmentation based on pretrained cellpose models. My best guess for what you wanted to do on this image was `{req.task}`. If this seems off, please try again specificying either `cyto` or `nucleus` as your desired task"
-    return f"Cellpose segmentation results from Cellpose task `{req.task}`\n![result_image]({base64_output})"
+    result_images = [resized_fname, output_fname]
+    result_headers = ["User image (resized)", "Cellpose segmentation results"]
+    results_link = await create_results_page("https://ai.imjoy.io", result_images, result_headers)
+    cellpose_results = CellposeResults(mask_shape = mask_shape, info = info, number_segmented_regions = seg_areas)
+    out_string = await create_results_summary(cellpose_results)
+    out_string += f"\n\n[Results Page]({results_link})"
+    return out_string
+
+if __name__ == "__main__":
+    cellpose_results = CellposeResults(mask_shape = [3,512,512], info = {'a':1}, number_segmented_regions = 2)
+    loop = asyncio.get_event_loop()
+    loop.create_task(create_results_summary(cellpose_results))
+    loop.run_forever()
