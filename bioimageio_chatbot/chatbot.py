@@ -6,6 +6,7 @@ import secrets
 import aiofiles
 from imjoy_rpc.hypha import login, connect_to_server
 import io
+import numpy as np
 
 from pydantic import BaseModel, Field
 from schema_agents.role import Role
@@ -17,7 +18,7 @@ from bioimageio_chatbot.knowledge_base import load_knowledge_base
 from bioimageio_chatbot.utils import get_manifest
 import pkg_resources
 import base64
-from bioimageio_chatbot.image_processor import *
+from bioimageio_chatbot.image_processor import ImageProcessor, guess_image_axes, run_cellpose, CellposeTask
 import matplotlib.pyplot as plt
 
 def decode_base64(encoded_data):
@@ -217,11 +218,12 @@ def create_customer_service(db_path):
             image_path = f'tmp-user-image.{image_ext}'
             with open(image_path, 'wb') as f:
                 f.write(decoded_image_data)
-            arr = read_image(image_path)
+            image_processor = ImageProcessor()
+            arr = image_processor.read_image(image_path)
             axes = await guess_image_axes(image_path)
             if sorted(axes) != ['c', 'x', 'y']:
                 return f"I'm sorry, though I can run image segmentation, for now I can only process images containing only dimensions for channel (c), x, and y. My best guess for your image's axes is '{axes}'. Please try again with a different image."
-            arr_resized = resize_image(arr, axes, 'cyx', grayscale = False, output_dims_xy=(512,512), output_type = np.uint8)
+            arr_resized = image_processor.resize_image(arr, axes, 'cyx', grayscale = False, output_dims_xy=(512,512), output_type = np.uint8)
             fig, ax = plt.subplots()
             ax.imshow(arr_resized.transpose(1,2,0))
             fig.savefig("tmp-user-resized.png")
@@ -231,7 +233,7 @@ def create_customer_service(db_path):
             if req.task == "unknown":
                 out_string = f"Here's the image (resized) you've uploaded. Colors may be shuffled. The original image shape is {arr.shape} which I believe corresponds to axes {tuple([c for c in axes])}\n\n![input_image]({image_data_base64})\n\n{cp_info_str}\n\nIf you would like to segment this image, please try uploading it again and specify which model you'd prefer!"
                 return out_string
-            arr_resized = resize_image(arr_resized, 'cyx', 'cyx', grayscale = False, output_dims_xy=(512,512), output_type = np.float32)
+            arr_resized = image_processor.resize_image(arr_resized, 'cyx', 'cyx', grayscale = False, output_dims_xy=(512,512), output_type = np.float32)
             print("Running cellpose...")
             # results = await run_cellpose(arr_resized)
             print(arr_resized.shape)
