@@ -250,15 +250,15 @@ async def cellpose_get_response(question_with_history, req : CellposeTask):
     if sorted(axes) != ['c', 'x', 'y']:
         situation = "User uploaded an image with an unexpected number of axes. Currently, only images with 3 axes (channel, x, and y) are supported"
         return await create_cellpose_help(situation)
-    # arr_resized = image_processor.resize_image(arr, axes, 'cyx', grayscale = False, output_dims_xy=(512,512), output_type = np.uint8)
     arr_resized = arr.astype(np.float32)
+    resized_fname_npy = os.path.join(tmp_dir, 'user-image.npy')
+    np.save(resized_fname_npy, arr_resized)
     fig, ax = plt.subplots()
-    # ax.imshow(arr_resized.transpose(1,2,0))
     ax.imshow(arr_resized / 255.0)
+    ax.axis('off')
     resized_fname = os.path.join(tmp_dir, 'user-image.png')
-    fig.savefig(resized_fname)
+    fig.savefig(resized_fname, bbox_inches='tight')
     plt.close() 
-    # arr_resized = image_processor.resize_image(arr_resized, 'cyx', 'cyx', grayscale = False, output_dims_xy=(512,512), output_type = np.float32)
     print("Running cellpose...")
     print(arr_resized.shape)
     diameter = req.diameter if "diameter" in req.dict().keys() else None
@@ -270,14 +270,18 @@ async def cellpose_get_response(question_with_history, req : CellposeTask):
     print(seg_areas)
     print(info)
     print(mask_shape)
-    fig, axes = plt.subplots()
-    axes.imshow(mask[0,:,:])
+    fig, ax = plt.subplots()
+    ax.imshow(mask[0,:,:])
+    ax.axis('off')
     output_fname = os.path.join(tmp_dir, 'output-image.png')
-    fig.savefig(output_fname)
+    fig.savefig(output_fname, bbox_inches='tight')
     plt.close()
+    output_fname_npy = os.path.join(tmp_dir, 'output-image.npy')
+    np.save(output_fname_npy, mask)
     result_images = [resized_fname, output_fname]
+    npy_paths = [resized_fname_npy, output_fname_npy]
     result_headers = ["User image", "Cellpose segmentation results"]
-    results_link = await create_results_page("https://ai.imjoy.io", result_images, result_headers)
+    results_link = await create_results_page("https://ai.imjoy.io", result_images, result_headers, npy_paths)
     cellpose_results = CellposeResults(mask_shape = mask_shape, info = info, number_segmented_regions = seg_areas, user_diameter = diameter is not None, input_diameter = diameter)
     out_string = await create_results_summary(cellpose_results)
     out_string += f"\n\n[View results]({results_link})"
