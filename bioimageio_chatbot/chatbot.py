@@ -124,6 +124,16 @@ class QuestionWithHistory(BaseModel):
     user_profile: Optional[UserProfile] = Field(None, description="The user's profile. You should use this to personalize the response based on the user's background and occupation.")
     channel_info: Optional[ChannelInfo] = Field(None, description="The selected channel of the user's question. If provided, rely only on the selected channel when answering the user's question.")
 
+class ResponseStep(BaseModel):
+    """Response step"""
+    name: str = Field(description="Step name")
+    details: Optional[dict] = Field(None, description="Step details")
+
+class RichResponse(BaseModel):
+    """Rich response with text and intermediate steps"""
+    text: str = Field(description="Response text")
+    steps: List[ResponseStep] = Field(description="Intermediate steps")
+
 def create_customer_service(db_path):
     debug = os.environ.get("BIOIMAGEIO_DEBUG") == "true"
     collections = get_manifest()['collections']
@@ -156,18 +166,20 @@ def create_customer_service(db_path):
 
     async def respond_to_user(question_with_history: QuestionWithHistory = None, role: Role = None) -> str:
         """Answer the user's question directly or retrieve relevant documents from the documentation, or create a Python Script to get information about details of models."""
+        steps = []
         inputs = [question_with_history.user_profile] + list(question_with_history.chat_history) + [question_with_history.question]
         # The channel info will be inserted at the beginning of the inputs
         if question_with_history.channel_info:
             inputs.insert(0, question_with_history.channel_info)
         if question_with_history.channel_info is not None and question_with_history.channel_info.id == "learn":
-            
             try:
                 req = await role.aask(inputs, LearnResponse)
+                steps.append(ResponseStep(name="Learn", details=req.dict()))
             except Exception as e:
                 # try again
                 req = await role.aask(inputs, LearnResponse)
-            return req.response
+                steps.append(ResponseStep(name="Learn"))
+            return RichResponse(text=req.response, steps=steps)
             
         if not question_with_history.channel_info or question_with_history.channel_info.id == "bioimage.io":
             try:
@@ -182,10 +194,13 @@ def create_customer_service(db_path):
                 # try again
                 req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput])
         if isinstance(req, DirectResponse):
-            return req.response
+            steps.append(ResponseStep(name="Direct"))
+            return RichResponse(text=req.response, steps=steps)
         elif isinstance(req, LearnResponse):
-            return req.response
+            steps.append(ResponseStep(name="Learn"))
+            return RichResponse(text=req.response, steps=steps)
         elif isinstance(req, DocumentRetrievalInput):
+            steps.append(ResponseStep(name="Document Retrieval", details= req.dict()))
             if req.channel_id == "all":
                 docs_with_score = []
                 # loop through all the channels
@@ -203,7 +218,9 @@ def create_customer_service(db_path):
                 # only keep the top 3 documents
                 docs_with_score = docs_with_score[:3]
                 search_input = DocumentSearchInput(user_question=req.request, relevant_context=docs_with_score, user_info=req.user_info, format=None, preliminary_response=req.preliminary_response)
+                steps.append(ResponseStep(name="Document Search", details=search_input.dict()))
                 response = await role.aask(search_input, FinalResponse)
+                steps.append(ResponseStep(name="Final Response", details=response.dict()))
             else:
                 docs_store = docs_store_dict[req.channel_id]
                 collection_info = collection_info_dict[req.channel_id]
@@ -213,39 +230,26 @@ def create_customer_service(db_path):
                 docs_with_score = [DocWithScore(doc=doc.page_content, score=score, metadata=doc.metadata, base_url=base_url) for doc, score in results_with_scores]
                 print(f"Retrieved documents:\n{docs_with_score[0].doc[:20] + '...'} (score: {docs_with_score[0].score})\n{docs_with_score[1].doc[:20] + '...'} (score: {docs_with_score[1].score})\n{docs_with_score[2].doc[:20] + '...'} (score: {docs_with_score[2].score})")
                 search_input = DocumentSearchInput(user_question=req.request, relevant_context=docs_with_score, user_info=req.user_info, format=collection_info.get('format'), preliminary_response=req.preliminary_response)
+                steps.append(ResponseStep(name="Document Search", details=search_input.dict()))
                 response = await role.aask(search_input, FinalResponse)
-            if debug:
-                source_func = lambda doc: f"\nSource: {doc.metadata.get('source', 'N/A')}"  # Use get() to provide a default value if 'source' is not present
-            else:
-                source_func = lambda doc:""
-            # Create an HTML table for references
-            table_rows = []
-            for i, doc in enumerate(docs_with_score):
-                # if 'source' in doc.metadata:
-                table_rows.append(f"<tr><td>{i + 1}</td><td>{doc.doc}{source_func(doc)}</td></tr>")
-            table_content = "\n".join(table_rows)
-            references_table = f"""<details><summary>References</summary>
-                                <table border="1">
-                                    <tr><th>#</th><th>Content</th></tr>
-                                    {table_content}
-                                </table>
-                            </details>"""
-            response = response.response + "\n\n" + references_table
-            return response
+                steps.append(ResponseStep(name="Final Response", details=response.dict()))
+            # source: doc.metadata.get('source', 'N/A')
+            return RichResponse(text=response.response, steps=steps)
         elif isinstance(req, ModelZooInfoScript):
+            steps.append(ResponseStep(name="Model Zoo Info Script", details=req.dict()))
             loop = asyncio.get_running_loop()
             print(f"Executing the script:\n{req.script}")
             result = await loop.run_in_executor(None, execute_code, req.script, {"resources": resource_items})
             print(f"Script execution result:\n{result}")
+            steps.append(ResponseStep(name="Script Execution", details=result))
             response = await role.aask(ModelZooInfoScriptResults(
                 stdout=result["stdout"],
                 stderr=result["stderr"],
                 request=req.request,
                 user_info=req.user_info
             ), FinalResponse)
-            references = f"""<details><summary>Source Code</summary>\n\n<code>\nScript: \n{req.script}\n\nResults: \n{result["stdout"]}\nError: {result["stderr"]}\n</code>\n\n</details>"""
-            response = response.response + "\n\n" + references
-            return response
+            steps.append(ResponseStep(name="Final Response", details=response.dict()))
+            return RichResponse(text=response.response, steps=steps)
         
     customer_service = Role(
         name="Melman",
@@ -380,8 +384,8 @@ async def register_chat_service(server):
         try:
             response = await customer_service.handle(Message(content=m.json(), data=m , role="User", session_id=session_id))
             # get the content of the last response
-            response = response[-1].content
-            print(f"\nUser: {text}\nChatbot: {response}")
+            response = response[-1].data # type: RichResponse
+            print(f"\nUser: {text}\nChatbot: {response.text}")
         except Exception as e:
             event_bus.off("stream", stream_callback)
             raise e
@@ -390,7 +394,7 @@ async def register_chat_service(server):
 
         if session_id:
             chat_history.append({ 'role': 'user', 'content': text })
-            chat_history.append({ 'role': 'assistant', 'content': response })
+            chat_history.append({ 'role': 'assistant', 'content': response.text })
             version = pkg_resources.get_distribution('bioimageio-chatbot').version
             chat_his_dict = {'conversations':chat_history, 
                      'timestamp': str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), 
@@ -400,7 +404,7 @@ async def register_chat_service(server):
             chat_log_full_path = os.path.join(chat_logs_path, filename)
             await save_chat_history(chat_log_full_path, chat_his_dict)
             print(f"Chat history saved to {filename}")
-        return response
+        return response.dict()
 
     async def ping(context=None):
         if login_required and context and context.get("user"):
