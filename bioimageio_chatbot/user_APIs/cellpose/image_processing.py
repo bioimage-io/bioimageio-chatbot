@@ -284,7 +284,7 @@ async def cellpose_get_response(question_with_history, req : CellposeTask):
     results_link = await create_results_page("https://ai.imjoy.io", result_images, result_headers, npy_paths)
     cellpose_results = CellposeResults(mask_shape = mask_shape, info = info, number_segmented_regions = seg_areas, user_diameter = diameter is not None, input_diameter = diameter)
     out_string = await create_results_summary(cellpose_results)
-    out_string += f"\n\n[View results]({results_link})"
+    out_string += f"\n\n[View and download results]({results_link})"
     return out_string
 
 if __name__ == "__main__":
