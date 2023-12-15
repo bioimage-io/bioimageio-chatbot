@@ -17,6 +17,7 @@ from bioimageio_chatbot.knowledge_base import load_knowledge_base
 from bioimageio_chatbot.utils import get_manifest
 import pkg_resources
 import base64
+from bioimageio_chatbot.jsonschema_pydantic import jsonschema_to_pydantic, JsonSchemaObject
 
 def decode_base64(encoded_data):
     decoded_data = base64.b64decode(encoded_data.split(',')[1])
@@ -123,7 +124,7 @@ class QuestionWithHistory(BaseModel):
     chat_history: Optional[List[Dict[str, str]]] = Field(None, description="The chat history.")
     user_profile: Optional[UserProfile] = Field(None, description="The user's profile. You should use this to personalize the response based on the user's background and occupation.")
     channel_info: Optional[ChannelInfo] = Field(None, description="The selected channel of the user's question. If provided, rely only on the selected channel when answering the user's question.")
-
+    custom_functions: Optional[Dict[str, Any]] = Field(None, description="Custom functions provided from the client.")
 class ResponseStep(BaseModel):
     """Response step"""
     name: str = Field(description="Step name")
@@ -171,6 +172,19 @@ def create_customer_service(db_path):
         # The channel info will be inserted at the beginning of the inputs
         if question_with_history.channel_info:
             inputs.insert(0, question_with_history.channel_info)
+
+        if question_with_history.custom_functions and question_with_history.channel_info is not None and question_with_history.channel_info.id == "function-call":
+            try:
+                func = question_with_history.custom_functions[0]
+                req = await role.aask(inputs,func['input_type'])
+                steps.append(ResponseStep(name="Function Call", details=req.dict()))
+                await func['execute'](**req.dict())
+            except Exception as e:
+                # try again
+                req = await role.aask(inputs, LearnResponse)
+                steps.append(ResponseStep(name="Learn"))
+            return RichResponse(text=req.response, steps=steps)
+
         if question_with_history.channel_info is not None and question_with_history.channel_info.id == "learn":
             try:
                 req = await role.aask(inputs, LearnResponse)
@@ -342,7 +356,7 @@ async def register_chat_service(server):
         await save_chat_history(chat_log_full_path, chat_his_dict)
         print(f"User report saved to {filename}")
         
-    async def chat(text, chat_history, user_profile=None, channel=None, status_callback=None, session_id=None, image_data=None, context=None):
+    async def chat(text, chat_history, user_profile=None, channel=None, status_callback=None, session_id=None, image_data=None, custom_functions=None, context=None):
         if login_required and context and context.get("user"):
             assert check_permission(context.get("user")), "You don't have permission to use the chatbot, please sign up and wait for approval"
         session_id = session_id or secrets.token_hex(8)
@@ -365,6 +379,8 @@ async def register_chat_service(server):
         # Get the channel id by its name
         if channel == 'learn':
             channel_id = 'learn'
+        elif channel == 'function-call':
+            channel_id = 'function-call'
         else:
             if channel == 'auto':
                 channel = None
@@ -375,12 +391,19 @@ async def register_chat_service(server):
                 channel_id = None
         if channel == 'learn':
             channel_info = {"id": channel_id, "name": channel, "description": "Learning assistant"}
+        elif channel == 'function-call':
+            channel_info = {"id": channel_id, "name": channel, "description": "Function call assistant"}
         else:
             channel_info = channel_id and {"id": channel_id, "name": channel, "description": description_by_id[channel_id]}
         if channel_info:
             channel_info = ChannelInfo.parse_obj(channel_info)
+
+        for custom_function in custom_functions:
+            input_type = jsonschema_to_pydantic(JsonSchemaObject.parse_obj(custom_function['schema']))
+            custom_function['input_type'] = input_type
+
         # user_profile = {"name": "lulu", "occupation": "data scientist", "background": "machine learning and AI"}
-        m = QuestionWithHistory(question=text, chat_history=chat_history, user_profile=UserProfile.parse_obj(user_profile),channel_info=channel_info)
+        m = QuestionWithHistory(question=text, chat_history=chat_history, user_profile=UserProfile.parse_obj(user_profile),channel_info=channel_info, custom_functions=custom_functions)
         try:
             response = await customer_service.handle(Message(content=m.json(), data=m , role="User", session_id=session_id))
             # get the content of the last response
@@ -413,6 +436,7 @@ async def register_chat_service(server):
 
     channels = [collection['name'] for collection in collections]
     channels.append("learn")
+    channels.append("function-call")
     hypha_service_info = await server.register_service({
         "name": "BioImage.IO Chatbot",
         "id": "bioimageio-chatbot",
