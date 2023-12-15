@@ -1,3 +1,4 @@
+import os
 from imjoy_rpc.hypha import login, connect_to_server
 import asyncio
 from imjoy_rpc.hypha import connect_to_server
@@ -35,6 +36,21 @@ results_css = """body {
     background-color: #45a049;
 }"""
 
+def npy_route_factory(npy_file_path):
+    async def npy_route(event, context=None):
+        with open(npy_file_path, "rb") as npy_file:
+            npy_content = npy_file.read()
+        return {
+            "status": 200,
+            "headers": {
+                "Content-Type": "application/octet-stream",
+                "Content-Disposition": f"attachment; filename={os.path.basename(npy_file_path)}"
+            },
+            "body": npy_content
+        }
+    return npy_route
+
+
 def image_route_factory(image_file_path):
     async def image_route(event, context=None):
         with open(image_file_path, "rb") as img_file:
@@ -46,10 +62,11 @@ def image_route_factory(image_file_path):
         }
     return image_route
 
-def make_index_html(image_functions):
+def make_index_html(image_functions, npy_functions):
     index_html = f"""
         <!DOCTYPE html>
         <html>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
         <head>
             <title>Cellpose Segmentation Results</title>
             <style>
@@ -57,12 +74,15 @@ def make_index_html(image_functions):
             </style>
         </head>
         <body>"""
-    for img_nickname, _, desc in image_functions:
+    for i, (img_nickname, _, desc) in enumerate(image_functions):
+        npy_nickname, _, _ = npy_functions[i]
         index_html += f"""<div class="image-container">\n"""
-        index_html += f"""<h1>{desc}</h1>\n"""
+        index_html += f"""<h2>{desc}</h2>\n"""
         index_html += f"""<img src="{img_nickname}" alt="Image">\n"""
-        index_html += f"""<a href="{img_nickname}" download="{img_nickname}">\n"""
+        index_html += f"""<a href="{img_nickname}" download="{img_nickname}.png">\n"""
         index_html += f"""<button class="download-button">Download Image</button></a>\n"""
+        index_html += f"""<a href="{npy_nickname}" download="{npy_nickname}.npy">\n"""
+        index_html += f"""<button class="download-button">Download .npy</button></a>\n"""
         index_html += f"""</div>\n"""
     index_html += "</body></html>"
     async def index(event, context=None):
@@ -73,12 +93,14 @@ def make_index_html(image_functions):
         }
     return index
 
-async def create_results_page(server_url, image_paths, image_headers):
+async def create_results_page(server_url, image_paths, image_headers, npy_paths):
     server = await connect_to_server({"server_url": server_url, "token": None, "method_timeout": 100})
     assert len(image_paths) == len(image_headers)
     image_functions = [(f"image_{i}", image_route_factory(image_path), desc) for i, (image_path, desc) in enumerate(zip(image_paths, image_headers))]
-    index_page = make_index_html(image_functions)
+    npy_functions = [(f"npy_{i}", npy_route_factory(npy_path), desc) for i, (npy_path, desc) in enumerate(zip(npy_paths, image_headers))]
+    index_page = make_index_html(image_functions, npy_functions)
     service_id = "chatbot-image-analysis"
+    print(npy_functions)
     await server.register_service({
         "id": service_id,
         "type": "functions",
@@ -88,6 +110,7 @@ async def create_results_page(server_url, image_paths, image_headers):
         },
         "index": index_page,
         **{nickname: route for nickname, route, _ in image_functions},
+        **{nickname: route for nickname, route, _ in npy_functions},
     })
     server_url = server.config['public_base_url']
     user_url = f"{server_url}/{server.config['workspace']}/apps/{service_id}/index"
