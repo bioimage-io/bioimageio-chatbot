@@ -198,7 +198,7 @@ class CellposeResults(BaseModel):
     input_diameter : Optional[float] = Field(description = "The user-specified input diameter if the user specified one, None otherwise")
 
 class ResultsSummary(BaseModel):
-    """The results summary message to print to the user"""
+    """The results summary message to print to the user. Speak directly to the user"""
     message : str = Field(description = "The results summary message to print to the user from the run.")
 
 async def print_results_summary(cellpose_results : CellposeResults, role : Role = None) -> ResultsSummary:
