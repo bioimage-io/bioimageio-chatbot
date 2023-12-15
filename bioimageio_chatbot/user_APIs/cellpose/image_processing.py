@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field, validator
 from schema_agents.role import Role
 from schema_agents.schema import Message
 import matplotlib.pyplot as plt
-# from .results_display import create_results_page
+from typing import Optional
 from bioimageio_chatbot.user_APIs.cellpose.results_display import create_results_page
 
 class TaskChoice(str, Enum):
@@ -24,6 +24,7 @@ class CellposeTask(BaseModel):
     """Take the user's uploaded image and run it through Cellpose segmentation making sure that the user has both uploaded an image and has specified a task (either cytoplasm or nuclei segmentation)"""
     request: str = Field(description="The user's request")
     task: TaskChoice = Field(description="The best guess for the image analysis task. Either 'cyto' (cytoplasm segmentation) or 'nuclei' (nuclei segmentation). If not known, set to `unknown`")
+    diameter: Optional[float] = Field(description="The diameter of the cells in pixels if specified by the user.")
 
 class AxisGuess(BaseModel):
     """The best guess for what each axis in the image corresponds to. The largest dimensions will be 'x' and 'y'. The 'c' dimension will not be larger than 5. The numbers of dimensions in the shape tuple MUST match the number of axis labels"""
@@ -121,7 +122,7 @@ def encode_base64(image_path):
 
 class ImageProcessor():
         
-    def resize_image(self, input_image : np.ndarray, input_format : str, output_format : str, output_dims_xy = tuple[int,int], grayscale : bool = False, output_type = np.float32):
+    def resize_image(self, input_image : np.ndarray, input_format : str, output_format : str, output_dims_xy = tuple[int,int] | None, grayscale : bool = False, output_type = np.float32):
         current_format = input_format.lower()
         output_format = output_format.lower()
         inter_format = "yxc"
@@ -129,7 +130,8 @@ class ImageProcessor():
         assert sorted(current_format) == sorted(output_format) == ['c', 'x', 'y']
         transposed = np.transpose(rearranged, [current_format.index(c) for c in inter_format])
         current_format = inter_format
-        resized = cv2.resize(transposed, output_dims_xy, interpolation = cv2.INTER_AREA)
+        if output_dims_xy is not None:
+            resized = cv2.resize(transposed, output_dims_xy, interpolation = cv2.INTER_AREA)
         if grayscale:
             resized = cv2.cvtColor(resized, cv2.COLOR_RGB2GRAY)
             resized = cv2.cvtColor(resized, cv2.COLOR_GRAY2RGB)
@@ -152,7 +154,7 @@ class ImageProcessor():
         torch_image = torch.from_numpy(resized_image).to(torch.float32)
         return torch_image
 
-async def run_cellpose(img, server_url : str = "https://ai.imjoy.io", diameter = None, model_type = 'cyto', method_timeout = 30, server = None):
+async def run_cellpose(img : np.ndarray, server_url : str = "https://ai.imjoy.io", diameter : float | None = None, model_type = 'cyto', method_timeout = 30, server = None):
     # model_type = 'cyto' or 'nuclei')
     params = {'diameter' : diameter, 'model_type' : model_type}
     img_input =img.copy()
@@ -190,8 +192,10 @@ async def create_cellpose_help(situation : str) -> str:
 class CellposeResults(BaseModel):
     """The results of running Cellpose segmentation on an image"""
     mask_shape : list[int] = Field(description = "The shape of the output mask")
-    info : list = Field(description = "The output info dictionary")
+    info : list = Field(description = "The output info dictionary. If the user did not specify a diameter, this was estimated by Cellpose")
     number_segmented_regions : int = Field(description = "The number of segmented regions in the output mask")
+    user_diameter : bool = Field(description = "True if the user specified an input diameter, False otherwise")
+    input_diameter : Optional[float] = Field(description = "The user-specified input diameter if the user specified one, None otherwise")
 
 class ResultsSummary(BaseModel):
     """The results summary message to print to the user"""
@@ -246,16 +250,19 @@ async def cellpose_get_response(question_with_history, req : CellposeTask):
     if sorted(axes) != ['c', 'x', 'y']:
         situation = "User uploaded an image with an unexpected number of axes. Currently, only images with 3 axes (channel, x, and y) are supported"
         return await create_cellpose_help(situation)
-    arr_resized = image_processor.resize_image(arr, axes, 'cyx', grayscale = False, output_dims_xy=(512,512), output_type = np.uint8)
+    # arr_resized = image_processor.resize_image(arr, axes, 'cyx', grayscale = False, output_dims_xy=(512,512), output_type = np.uint8)
+    arr_resized = arr.astype(np.float32)
     fig, ax = plt.subplots()
-    ax.imshow(arr_resized.transpose(1,2,0))
-    resized_fname = os.path.join(tmp_dir, 'user-image-resized.png')
+    # ax.imshow(arr_resized.transpose(1,2,0))
+    ax.imshow(arr_resized / 255.0)
+    resized_fname = os.path.join(tmp_dir, 'user-image.png')
     fig.savefig(resized_fname)
     plt.close() 
-    arr_resized = image_processor.resize_image(arr_resized, 'cyx', 'cyx', grayscale = False, output_dims_xy=(512,512), output_type = np.float32)
+    # arr_resized = image_processor.resize_image(arr_resized, 'cyx', 'cyx', grayscale = False, output_dims_xy=(512,512), output_type = np.float32)
     print("Running cellpose...")
     print(arr_resized.shape)
-    results = await run_cellpose(arr_resized, server_url="https://ai.imjoy.io", model_type = req.task, diameter = None)
+    diameter = req.diameter if "diameter" in req.dict().keys() else None
+    results = await run_cellpose(arr_resized, server_url="https://ai.imjoy.io", model_type = req.task, diameter = diameter)
     mask = results['mask'] 
     seg_areas = len(np.unique(mask[mask != 0]))
     info = results['info'] 
@@ -269,11 +276,11 @@ async def cellpose_get_response(question_with_history, req : CellposeTask):
     fig.savefig(output_fname)
     plt.close()
     result_images = [resized_fname, output_fname]
-    result_headers = ["User image (resized)", "Cellpose segmentation results"]
+    result_headers = ["User image", "Cellpose segmentation results"]
     results_link = await create_results_page("https://ai.imjoy.io", result_images, result_headers)
-    cellpose_results = CellposeResults(mask_shape = mask_shape, info = info, number_segmented_regions = seg_areas)
+    cellpose_results = CellposeResults(mask_shape = mask_shape, info = info, number_segmented_regions = seg_areas, user_diameter = diameter is not None, input_diameter = diameter)
     out_string = await create_results_summary(cellpose_results)
-    out_string += f"\n\n[Results Page]({results_link})"
+    out_string += f"\n\n[View results]({results_link})"
     return out_string
 
 if __name__ == "__main__":
