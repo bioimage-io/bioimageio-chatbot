@@ -133,6 +133,16 @@ class RichResponse(BaseModel):
     text: str = Field(description="Response text")
     steps: List[ResponseStep] = Field(description="Intermediate steps")
 
+class ResponseStep(BaseModel):
+    """Response step"""
+    name: str = Field(description="Step name")
+    details: Optional[dict] = Field(None, description="Step details")
+
+class RichResponse(BaseModel):
+    """Rich response with text and intermediate steps"""
+    text: str = Field(description="Response text")
+    steps: List[ResponseStep] = Field(description="Intermediate steps")
+
 def create_customer_service(db_path):
     debug = os.environ.get("BIOIMAGEIO_DEBUG") == "true"
     collections = get_manifest()['collections']
@@ -265,6 +275,7 @@ def create_customer_service(db_path):
                 steps.append(ResponseStep(name="Document Search", details=search_input.dict()))
                 response = await role.aask(search_input, FinalResponse)
                 steps.append(ResponseStep(name="Final Response", details=response.dict()))
+            # source: doc.metadata.get('source', 'N/A')
             return RichResponse(text=response.response, steps=steps)
         elif isinstance(req, ModelZooInfoScript):
             steps.append(ResponseStep(name="Model Zoo Info Script", details=req.dict()))
