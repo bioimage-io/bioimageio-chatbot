@@ -191,7 +191,9 @@ def jsonschema_to_pydantic(
         if attr.name not in fields_to_exclude:
             fields[attr.name] = (attr.type_hint, ... if attr.required else attr.default)
 
-    return create_model(schema.title, __config__=config, **fields)
+    model = create_model(schema.title, __config__=config, **fields)
+    model.__doc__ = schema.description
+    return model
 
 
 if __name__ == "__main__":
