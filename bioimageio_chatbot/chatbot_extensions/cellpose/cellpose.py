@@ -86,7 +86,6 @@ async def agent_guess_all_axes(unlabeled_images : UnlabeledImages, role : Role =
     return labeled_images
 
 async def guess_image_axes(input_files : list | str):
-    image_processor = ImageProcessor()
     single_input = isinstance(input_files, str)
     if single_input:
         input_files = [input_files]
@@ -97,7 +96,7 @@ async def guess_image_axes(input_files : list | str):
             actions=[agent_guess_image_axes, agent_guess_all_axes])
     event_bus = axis_guesser.get_event_bus()
     event_bus.register_default_events()
-    message_input = UnlabeledImages(unlabeled_images = [UnlabeledImage(shape = image_processor.read_image(fname).shape) for fname in input_files])
+    message_input = UnlabeledImages(unlabeled_images = [UnlabeledImage(shape = read_image(fname).shape) for fname in input_files])
     m = Message(content = 'guess the image axes for each image in the list', data = message_input, role = 'User')
     responses = await axis_guesser.handle(m)
     guessed_axes = [''.join(x.axes.labels) for x in responses[0].data.labeled_images]
@@ -119,40 +118,13 @@ def encode_base64(image_path):
     encoded_string = f"data:image/png;base64,{encoded_string.decode('utf-8')}"
     return encoded_string
 
-class ImageProcessor():
-        
-    def resize_image(self, input_image : np.ndarray, input_format : str, output_format : str, output_dims_xy = tuple[int,int] | None, grayscale : bool = False, output_type = np.float32):
-        current_format = input_format.lower()
-        output_format = output_format.lower()
-        inter_format = "yxc"
-        rearranged = input_image.copy()
-        assert sorted(current_format) == sorted(output_format) == ['c', 'x', 'y']
-        transposed = np.transpose(rearranged, [current_format.index(c) for c in inter_format])
-        current_format = inter_format
-        if output_dims_xy is not None:
-            resized = cv2.resize(transposed, output_dims_xy, interpolation = cv2.INTER_AREA)
-        if grayscale:
-            resized = cv2.cvtColor(resized, cv2.COLOR_RGB2GRAY)
-            resized = cv2.cvtColor(resized, cv2.COLOR_GRAY2RGB)
-            current_format = "yxc"
-        resized = resized.astype(output_type)
-        resized = np.transpose(resized, [current_format.index(c) for c in output_format])
-        return(resized)
+def read_image(input_image_path) -> np.ndarray:
+    if input_image_path.endswith('.npy'):
+        input_image = np.load(input_image_path)
+    else:
+        input_image = cv2.imread(input_image_path)
+    return input_image
 
-    def read_image(self, input_image_path) -> np.ndarray:
-        if input_image_path.endswith('.npy'):
-            input_image = np.load(input_image_path)
-        else:
-            input_image = cv2.imread(input_image_path)
-        return input_image
-
-    def get_torch_image(self, input_image_path, input_axes, grayscale : bool = True):
-        import torch
-        input_image = self.read_image(input_image_path)
-        resized_image = self.resize_image(input_image, input_axes, grayscale=grayscale, output_format = "bcyx")
-        resized_image = resized_image.astype(np.float32)
-        torch_image = torch.from_numpy(resized_image).to(torch.float32)
-        return torch_image
 
 async def run_cellpose(img : np.ndarray, server_url : str = "https://ai.imjoy.io", diameter : float | None = None, model_type = 'cyto', method_timeout = 30, server = None):
     # model_type = 'cyto' or 'nuclei')
@@ -217,7 +189,7 @@ async def create_results_summary(cellpose_results : CellposeResults) -> str:
     responses = await results_summarizer.handle(m)
     print(responses)
     return responses[0].data.message
-    
+
 
 async def cellpose_get_response(question_with_history, req : CellposeTask):
     if not question_with_history.image_data:
@@ -244,8 +216,8 @@ async def cellpose_get_response(question_with_history, req : CellposeTask):
     image_path = os.path.join(tmp_dir, f'tmp-user-image.{image_ext}')
     with open(image_path, 'wb') as f:
         f.write(decoded_image_data)
-    image_processor = ImageProcessor()
-    arr = image_processor.read_image(image_path)
+
+    arr = read_image(image_path)
     axes = await guess_image_axes(image_path)
     if sorted(axes) != ['c', 'x', 'y']:
         situation = "User uploaded an image with an unexpected number of axes. Currently, only images with 3 axes (channel, x, and y) are supported"
