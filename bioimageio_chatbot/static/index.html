@@ -480,9 +480,9 @@
                   }
                 }
               },
-              async execute(macro, args){
+              async execute(config){
                 try{
-                  const result = await ij.runMacro(macro, args)
+                  const result = await ij.runMacro(config['macro'], config['args'])
                   return result
                 }
                 catch(e){
