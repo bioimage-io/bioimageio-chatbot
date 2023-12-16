@@ -704,8 +704,7 @@
           // responseWithoutImage = response.replace(regex, replacementText);
           console.log(response)
           chat_history.push({ role: 'user', content: textMessage });
-          // chat_history.push({ role: 'assistant', content: responseWithoutImage });
-          chat_history.push({ role: 'assistant', content: response });
+          chat_history.push({ role: 'assistant', content: response.text });
           showReadyStatus();
 
         }
