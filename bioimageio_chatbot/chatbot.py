@@ -171,6 +171,19 @@ def create_customer_service(db_path):
 
     async def respond_to_user(question_with_history: QuestionWithHistory = None, role: Role = None) -> str:
         """Answer the user's question directly or retrieve relevant documents from the documentation, or create a Python Script to get information about details of models."""
+        if question_with_history.channel_info:
+            channel_prompt = f"The channel_id of the knowledge base to search. It MUST be set to {question_with_history.channel_info.id} (selected by the user)."
+        else:
+            channel_prompt = f"The channel_id of the knowledge base to search. It MUST be the same as the user provided channel_id. If not specified, either select 'all' to search through all the available knowledge base channels or select one from the available channels which are:\n{channels_info}. If you are not sure which channel to select, select 'all'."
+
+        class DocumentRetrievalInput(BaseModel):
+            """Input for searching knowledge bases and finding documents relevant to the user's request."""
+            request: str = Field(description="The user's detailed request")
+            preliminary_response: str = Field(description="The preliminary response to the user's question. This will be combined with the retrieved documents to produce the final response.")
+            query: str = Field(description="The query used to retrieve documents related to the user's request. Take preliminary_response as reference to generate query if needed.")
+            user_info: Optional[str] = Field("", description="Brief user info summary including name, background, etc., for personalizing responses to the user.")
+            channel_id: str = Field(description=channel_prompt)
+
         steps = []
         inputs = [question_with_history.user_profile] + list(question_with_history.chat_history) + [question_with_history.question]
 
@@ -227,19 +240,6 @@ def create_customer_service(db_path):
                         response = await response_function(question_with_history, req)
                         steps.append(ResponseStep(name=mode_name, details=req.dict()))
                         return RichResponse(text=response, steps=steps)
-
-        if question_with_history.channel_info:
-            channel_prompt = f"The channel_id of the knowledge base to search. It MUST be set to {question_with_history.channel_info.id} (selected by the user)."
-        else:
-            channel_prompt = f"The channel_id of the knowledge base to search. It MUST be the same as the user provided channel_id. If not specified, either select 'all' to search through all the available knowledge base channels or select one from the available channels which are:\n{channels_info}. If you are not sure which channel to select, select 'all'."
-        
-        class DocumentRetrievalInput(BaseModel):
-            """Input for searching knowledge bases and finding documents relevant to the user's request."""
-            request: str = Field(description="The user's detailed request")
-            preliminary_response: str = Field(description="The preliminary response to the user's question. This will be combined with the retrieved documents to produce the final response.")
-            query: str = Field(description="The query used to retrieve documents related to the user's request. Take preliminary_response as reference to generate query if needed.")
-            user_info: Optional[str] = Field("", description="Brief user info summary including name, background, etc., for personalizing responses to the user.")
-            channel_id: str = Field(description=channel_prompt)
 
         if not question_with_history.channel_info or question_with_history.channel_info.id == "bioimage.io":
             try:
@@ -430,8 +430,6 @@ async def register_chat_service(server):
                     "execute": x['execute']
                     } for x in custom_functions]
 
-        # Wei - The `custom_modes` is the dictionary I was using before for dynamic function calling
-        # this might be awkward syntax, for now was just trying to get it to work
         custom_modes = {x['name'] : x for x in custom_functions} if custom_functions is not None else None
         local_modes = {x.name : {'description' : x.description} for x in load_extensions_from_json(Path(__file__).parent / "chatbot_extensions" / "extensions.json")}
         if custom_modes is not None:
@@ -439,8 +437,6 @@ async def register_chat_service(server):
                 local_modes[k] = v
         if channel == 'learn':
             channel_id = 'learn'
-        elif channel == 'function-call':
-            channel_id = 'function-call'
         elif local_modes is not None and channel in local_modes.keys(): # Wei
             channel_id = channel
         elif channel == 'coding':
@@ -455,8 +451,6 @@ async def register_chat_service(server):
                 channel_id = None
         if channel == 'learn':
             channel_info = {"id": channel_id, "name": channel, "description": "Learning assistant"}
-        elif channel == 'function-call':
-            channel_info = {"id": channel_id, "name": channel, "description": "Function call assistant"}
         elif channel in local_modes.keys(): # Wei
             mode_name = channel
             channel_info = {"id" : mode_name, "name" : mode_name, "description" : local_modes[channel]['description']}
@@ -513,7 +507,6 @@ async def register_chat_service(server):
     local_modes = load_extensions_from_json(Path(__file__).parent / "chatbot_extensions" / "extensions.json")
     for mode_d in local_modes: # Wei 
         channels.append(mode_d.name)
-    channels.append("function-call")
     channels.append("coding")
     hypha_service_info = await server.register_service({
         "name": "BioImage.IO Chatbot",
