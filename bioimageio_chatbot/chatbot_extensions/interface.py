@@ -3,8 +3,6 @@ from typing import Callable, Type
 import json
 from pathlib import Path
 import importlib
-# from .cellpose.image_processing import CellposeTask, cellpose_get_response
-
 
 class ChatbotExtension(BaseModel):
     """A class that defines the interface for a user extension"""

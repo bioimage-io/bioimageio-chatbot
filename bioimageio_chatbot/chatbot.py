@@ -405,7 +405,6 @@ async def register_chat_service(server):
                     await status_callback(message.dict())
 
         event_bus.on("stream", stream_callback)
-        # Wei - First I load the local extensions from json, then I add the custom functions passed through from chat interface
         if custom_functions is not None: 
             custom_functions = [
                 {   
