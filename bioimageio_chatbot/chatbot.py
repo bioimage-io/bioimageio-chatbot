@@ -78,11 +78,14 @@ class DirectResponse(BaseModel):
     """Direct response to a user's question if you are confident about the answer."""
     response: str = Field(description="The response to the user's question answering what that asked for.")
 
-class LearnResponse(BaseModel):
+class LearningResponse(BaseModel):
     """Pedagogical response to user's question if the user's question is related to learning, the response should include such as key terms and important concepts about the topic."""
     response: str = Field(description="The response to user's question, make sure the response is pedagogical and educational.")
-    user_info: Optional[str] = Field("", description="The user's info for personalizing response.")
-    
+
+class CodingResponse(BaseModel):
+    """If user's question is related to scripting or coding in bioimage analysis, generate code to help user to create valid scripts or understand code. Note: Don't be confused with the ModelZooInfoScript, which is used to get information about details of models, applications, datasets, etc. in the model zoo."""
+    response: str = Field(description="The response to user's question, make sure the response contains valid code, with concise explaination.")
+
 class DocWithScore(BaseModel):
     """A document with an associated relevance score."""
     doc: str = Field(description="The document retrieved.")
@@ -99,7 +102,7 @@ class DocumentSearchInput(BaseModel):
     preliminary_response: Optional[str] = Field(None, description="The preliminary response to the user's question. This will be combined with the retrieved documents to produce the final response.")
     
 class FinalResponse(BaseModel):
-    """The final response to the user's question based on the preliminary response and the documentation search results. 
+    """The final response to the user's question based on the preliminary response and the documentation search results. The response should be tailored to uer's info if provided. 
     If the documentation search results are relevant to the user's question, provide a text response to the question based on the search results.
     If the documentation search results contains only low relevance scores or if the question isn't relevant to the search results, return the preliminary response.
     Importantly, if you can't confidently provide a relevant response to the user's question, return 'Sorry I didn't find relevant information in model zoo, please try again.'."""
@@ -150,14 +153,6 @@ def create_customer_service(db_path):
     
     channels_info = "\n".join(f"""- `{collection['id']}`: {collection['description']}""" for collection in collections)
     resource_item_stats = f"""Each item contains the following fields: {list(resource_items[0].keys())}\nThe available resource types are: {types}\nSome example tags: {tags}\nHere is an example: {resource_items[0]}"""
-    class DocumentRetrievalInput(BaseModel):
-        """Input for searching knowledge bases and finding documents relevant to the user's request."""
-        request: str = Field(description="The user's detailed request")
-        preliminary_response: str = Field(description="The preliminary response to the user's question. This will be combined with the retrieved documents to produce the final response.")
-        query: str = Field(description="The query used to retrieve documents related to the user's request. Take preliminary_response as reference to generate query if needed.")
-        user_info: Optional[str] = Field("", description="Brief user info summary including name, background, etc., for personalizing responses to the user.")
-        channel_id: str = Field(description=f"The channel_id of the knowledge base to search. It MUST be the same as the user provided channel_id. If not specified, either select 'all' to search through all the available knowledge base channels or select one from the available channels which are:\n{channels_info}. If you are not sure which channel to select, select 'all'.")
-        
     class ModelZooInfoScript(BaseModel):
         """Create a Python Script to get information about details of models, applications, datasets, etc. in the model zoo. Remember some items in the model zoo may not have all the fields, so you need to handle the missing fields."""
         script: str = Field(description="The script to be executed which uses a predefined local variable `resources` containing a list of dictionaries with all the resources in the model zoo (including models, applications, datasets etc.). The response to the query should be printed to stdout. Details about the local variable `resources`:\n" + resource_item_stats)
@@ -173,34 +168,52 @@ def create_customer_service(db_path):
             inputs.insert(0, question_with_history.channel_info)
         if question_with_history.channel_info is not None and question_with_history.channel_info.id == "learn":
             try:
-                req = await role.aask(inputs, LearnResponse)
-                steps.append(ResponseStep(name="Learn", details=req.dict()))
+                req = await role.aask(inputs, LearningResponse)
             except Exception as e:
                 # try again
-                req = await role.aask(inputs, LearnResponse)
-                steps.append(ResponseStep(name="Learn"))
+                req = await role.aask(inputs, LearningResponse)
             return RichResponse(text=req.response, steps=steps)
-            
+    
+        if question_with_history.channel_info is not None and question_with_history.channel_info.id == "coding":
+            try:
+                req = await role.aask(inputs, CodingResponse)
+            except Exception as e:
+                # try again
+                req = await role.aask(inputs, CodingResponse)
+            return RichResponse(text=req.response, steps=steps)
+
+        if question_with_history.channel_info:
+            channel_prompt = f"The channel_id of the knowledge base to search. It MUST be set to {question_with_history.channel_info.id} (selected by the user)."
+        else:
+            channel_prompt = f"The channel_id of the knowledge base to search. It MUST be the same as the user provided channel_id. If not specified, either select 'all' to search through all the available knowledge base channels or select one from the available channels which are:\n{channels_info}. If you are not sure which channel to select, select 'all'."
+        
+        class DocumentRetrievalInput(BaseModel):
+            """Input for searching knowledge bases and finding documents relevant to the user's request."""
+            request: str = Field(description="The user's detailed request")
+            preliminary_response: str = Field(description="The preliminary response to the user's question. This will be combined with the retrieved documents to produce the final response.")
+            query: str = Field(description="The query used to retrieve documents related to the user's request. Take preliminary_response as reference to generate query if needed.")
+            user_info: Optional[str] = Field("", description="Brief user info summary including name, background, etc., for personalizing responses to the user.")
+            channel_id: str = Field(description=channel_prompt)
+
         if not question_with_history.channel_info or question_with_history.channel_info.id == "bioimage.io":
             try:
-                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, ModelZooInfoScript, LearnResponse])
+                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, ModelZooInfoScript, LearningResponse, CodingResponse])
             except Exception as e:
                 # try again
-                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, ModelZooInfoScript, LearnResponse])
+                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, ModelZooInfoScript, LearningResponse, CodingResponse])
         else:
             try:
                 req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput])
             except Exception as e:
                 # try again
                 req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput])
-        if isinstance(req, DirectResponse):
-            steps.append(ResponseStep(name="Direct"))
-            return RichResponse(text=req.response, steps=steps)
-        elif isinstance(req, LearnResponse):
-            steps.append(ResponseStep(name="Learn"))
+        if isinstance(req, (DirectResponse, LearningResponse, CodingResponse)):
             return RichResponse(text=req.response, steps=steps)
         elif isinstance(req, DocumentRetrievalInput):
-            steps.append(ResponseStep(name="Document Retrieval", details= req.dict()))
+            if question_with_history.channel_info:
+                req.channel_id = question_with_history.channel_info.id
+
+            steps.append(ResponseStep(name="Document Retrieval", details=req.dict()))
             if req.channel_id == "all":
                 docs_with_score = []
                 # loop through all the channels
@@ -365,6 +378,8 @@ async def register_chat_service(server):
         # Get the channel id by its name
         if channel == 'learn':
             channel_id = 'learn'
+        elif channel == 'coding':
+            channel_id = 'coding'
         else:
             if channel == 'auto':
                 channel = None
@@ -375,6 +390,8 @@ async def register_chat_service(server):
                 channel_id = None
         if channel == 'learn':
             channel_info = {"id": channel_id, "name": channel, "description": "Learning assistant"}
+        elif channel == 'coding':
+            channel_info = {"id": channel_id, "name": channel, "description": "Coding assistant"}
         else:
             channel_info = channel_id and {"id": channel_id, "name": channel, "description": description_by_id[channel_id]}
         if channel_info:
@@ -413,6 +430,7 @@ async def register_chat_service(server):
 
     channels = [collection['name'] for collection in collections]
     channels.append("learn")
+    channels.append("coding")
     hypha_service_info = await server.register_service({
         "name": "BioImage.IO Chatbot",
         "id": "bioimageio-chatbot",
