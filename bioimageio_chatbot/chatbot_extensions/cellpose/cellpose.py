@@ -4,7 +4,6 @@ import base64
 from enum import Enum
 from imjoy_rpc.hypha import connect_to_server
 import cv2
-import torch
 import numpy as np
 from schema_agents.provider.openai_api import retry
 from pydantic import BaseModel, Field, validator
@@ -13,7 +12,6 @@ from schema_agents.schema import Message
 import matplotlib.pyplot as plt
 from typing import Optional
 from bioimageio_chatbot.chatbot_extensions.cellpose.results_display import create_results_page
-from bioimageio_chatbot.jsonschema_pydantic import jsonschema_to_pydantic, JsonSchemaObject
 
 class TaskChoice(str, Enum):
     """The best guess for the image segmentation task. Either 'cyto' or 'nuclei'"""
@@ -149,6 +147,7 @@ class ImageProcessor():
         return input_image
 
     def get_torch_image(self, input_image_path, input_axes, grayscale : bool = True):
+        import torch
         input_image = self.read_image(input_image_path)
         resized_image = self.resize_image(input_image, input_axes, grayscale=grayscale, output_format = "bcyx")
         resized_image = resized_image.astype(np.float32)
