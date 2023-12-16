@@ -139,6 +139,15 @@
       /* Remove margin for the last button */
     }
 
+    .step {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 10px; /* Round corners */
+      background-color: #007bff; /* Example background color */
+      color: white;
+      font-size: 0.8em;
+    }
+
     .announcement-banner {
       background-color: #fff;
       color: #000;
@@ -352,12 +361,13 @@
     </div>
   </div>
 
-
+  <script src="https://cdn.jsdelivr.net/npm/imjoy-rpc@latest/dist/imjoy-rpc.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/imjoy-rpc@0.5.46/dist/hypha-rpc-websocket.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/2.1.3/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
   <script>
+    let customFunctions;
     function fileSelected() {
       var input = document.getElementById('fileUpload');
       var label = document.getElementById('paperclipIcon');
@@ -445,8 +455,47 @@
       });
 
       async function initializeService() {
+        customFunctions = [];
         $('.message-holder').append(spinner);
         showConnectingStatus();
+
+        if(window.self !== window.top){
+          const api = await imjoyRPC.setupRPC({name: 'BioImage.IO Chatbot'});
+          async function setup(){
+            const ij = await api.getWindow("ImageJ.JS")
+            customFunctions.push({
+              name: "runMacro",
+              schema: {
+                "type": "object",
+                "title": "RunMacro",
+                "description": "Run a macro",
+                "properties": {
+                  "macro": {
+                    "type": "string",
+                    "description": "The macro to run"
+                  },
+                  "args": {
+                    "type": "object",
+                    "description": "Arguments for the macro"
+                  }
+                }
+              },
+              async execute(macro, args){
+                try{
+                  const result = await ij.runMacro(macro, args)
+                  return result
+                }
+                catch(e){
+                  console.error(e)
+                  return e.toString()
+                }
+              }
+            })
+          }
+          // Importantly, you need to call `api.export(...)` in order to expose the api for your web application
+          api.export({'setup': setup});
+        }
+
         try {
           // get service_id from query string
           const urlParams = new URLSearchParams(window.location.search);
@@ -649,19 +698,20 @@
 
         try {
           // Call the chat function with text and image data
-          response = await svc.chat(textMessage, chat_history, user_profile, selectedChannel, statusCallback, sessionId, imageData);
-          const regex = /!\[.*?\]\(data:.+?\)/g;
-          const replacementText = '`image placeholder`';
-          responseWithoutImage = response.replace(regex, replacementText);
+          response = await svc.chat(textMessage, chat_history, user_profile, selectedChannel, statusCallback, sessionId, imageData, customFunctions);
+          // const regex = /!\[.*?\]\(data:.+?\)/g;
+          // const replacementText = '`image placeholder`';
+          // responseWithoutImage = response.replace(regex, replacementText);
           console.log(response)
           chat_history.push({ role: 'user', content: textMessage });
-          chat_history.push({ role: 'assistant', content: responseWithoutImage });
+          // chat_history.push({ role: 'assistant', content: responseWithoutImage });
+          chat_history.push({ role: 'assistant', content: response });
           showReadyStatus();
 
         }
         catch (e) {
           // generate an error message to simulate how Melman from Madagascar would respond to an error
-          response = "Oh no! I'm sorry, I don't know how to answer that. Please try again.";
+          response = {text: "Oh no! I'm sorry, I don't know how to answer that. Please try again."};
           showErrorStatus(`The server failed to respond, please try again. ${e}`);
           console.error(e);
         }
@@ -670,7 +720,7 @@
           $('.spinner').remove();
           $('#progress-message-container').remove();
 
-          appendRobotMessage(response, "message-" + chat_history.length); // Append robot message to the message container
+          appendRobotMessage(response.text, "message-" + chat_history.length, response.steps); // Append robot message to the message container
         }
       }
 
@@ -684,10 +734,17 @@
         $('.message-holder').append(messageContainer);
       }
 
-      function appendRobotMessage(message, messageId) {
+      function appendRobotMessage(message, messageId, steps) {
         // Convert the message to HTML using the marked library
+        if(steps && steps.length > 0){
+          message = message + "\n<details> <summary>🔍More Details</summary>\n\n"
+          for(let step of steps){
+            message = message + `<div class="step">${step.name}</div>\n\n\`\`\`\n\n${JSON.stringify(step.details, null, 2)}\n\n\`\`\`\n\n`
+          }
+          message = message + "\n\n</details>"
+        }
         const htmlMessage = marked(message, { renderer: renderer });
-
+        
         let messageContainer = `<div class="message-container robot-message">
           <div class="rounded-icon-container">
             <img style="width: 20px;" src="https://bioimage.io/static/img/bioimage-io-icon.svg" alt="Melman the Giraffe" width="30" height="30">
