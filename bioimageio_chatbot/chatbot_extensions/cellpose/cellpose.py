@@ -12,7 +12,8 @@ from schema_agents.role import Role
 from schema_agents.schema import Message
 import matplotlib.pyplot as plt
 from typing import Optional
-from bioimageio_chatbot.user_APIs.cellpose.results_display import create_results_page
+from bioimageio_chatbot.chatbot_extensions.cellpose.results_display import create_results_page
+from bioimageio_chatbot.jsonschema_pydantic import jsonschema_to_pydantic, JsonSchemaObject
 
 class TaskChoice(str, Enum):
     """The best guess for the image segmentation task. Either 'cyto' or 'nuclei'"""

@@ -5,18 +5,20 @@ import datetime
 import secrets
 import aiofiles
 from imjoy_rpc.hypha import login, connect_to_server
-import io
+from pathlib import Path
+
 from pydantic import BaseModel, Field
 from schema_agents.role import Role
 from schema_agents.schema import Message
 from typing import Any, Dict, List, Optional, Union
 import requests
 import sys
+import io
 from bioimageio_chatbot.knowledge_base import load_knowledge_base
 from bioimageio_chatbot.utils import get_manifest
 import pkg_resources
-import bioimageio_chatbot.user_APIs.interface as user_apis
-import matplotlib.pyplot as plt
+from bioimageio_chatbot.chatbot_extensions.interface import load_extensions_from_json, ChatbotExtension
+from bioimageio_chatbot.jsonschema_pydantic import jsonschema_to_pydantic, JsonSchemaObject
     
 def load_model_info():
     response = requests.get("https://bioimage-io.github.io/collection-bioimage-io/collection.json")
@@ -71,7 +73,7 @@ class ModelZooInfoScriptResults(BaseModel):
     user_info: Optional[str] = Field("", description="The user's info for personalizing response.")
 
 class DirectResponse(BaseModel):
-    """Direct response to a user's question."""
+    """Direct response to a user's question if you are confident about the answer."""
     response: str = Field(description="The response to the user's question answering what that asked for.")
 
 class LearnResponse(BaseModel):
@@ -120,6 +122,16 @@ class QuestionWithHistory(BaseModel):
     user_profile: Optional[UserProfile] = Field(None, description="The user's profile. You should use this to personalize the response based on the user's background and occupation.")
     channel_info: Optional[ChannelInfo] = Field(None, description="The selected channel of the user's question. If provided, rely only on the selected channel when answering the user's question.")
     image_data: Optional[str] = Field(None, description = "The uploaded image data if the user has uploaded an image. If provided, run a cellpose task")
+    custom_functions: Optional[Dict[str, Any]] = Field(None, description="Custom functions provided from the client.")
+class ResponseStep(BaseModel):
+    """Response step"""
+    name: str = Field(description="Step name")
+    details: Optional[dict] = Field(None, description="Step details")
+
+class RichResponse(BaseModel):
+    """Rich response with text and intermediate steps"""
+    text: str = Field(description="Response text")
+    steps: List[ResponseStep] = Field(description="Intermediate steps")
 
 def create_customer_service(db_path):
     debug = os.environ.get("BIOIMAGEIO_DEBUG") == "true"
@@ -153,14 +165,28 @@ def create_customer_service(db_path):
 
     async def respond_to_user(question_with_history: QuestionWithHistory = None, role: Role = None) -> str:
         """Answer the user's question directly or retrieve relevant documents from the documentation, or create a Python Script to get information about details of models."""
+        steps = []
         inputs = [question_with_history.user_profile] + list(question_with_history.chat_history) + [question_with_history.question]
 
         mode_types = [DirectResponse, DocumentRetrievalInput, ModelZooInfoScript, LearnResponse]
-        user_modes = user_apis.get_modes()
-        user_modes = user_modes if len(user_modes) > 0 else None
-        for mode_name, mode_d in user_modes.items():
-            mode_types.append(mode_d['mode'])
+        if question_with_history.custom_functions is not None: # Wei
+            for mode_d in question_with_history.custom_functions:
+                mode_types.append(jsonschema_to_pydantic(mode_d['schema_class']))
+        local_extensions = load_extensions_from_json(Path(__file__).parent / "chatbot_extensions" / "extensions.json")
+        if question_with_history.custom_functions == {}: # I think there's some weird casting going on with the pydantic validation
+            question_with_history.custom_functions = None
+        if question_with_history.custom_functions is None and len(local_extensions) > 0:
+            question_with_history.custom_functions = []
+        for x in local_extensions:
+            question_with_history.custom_functions.append(
+                {'name' : x.name,
+                 'description' : x.description,
+                 'schema_class' : x.schema_class,
+                 'execute' : x.execute}
+            )
+            mode_types.append(x.schema_class)
         mode_types = tuple(mode_types)
+
 
         # The channel info will be inserted at the beginning of the inputs
         if question_with_history.channel_info:
@@ -169,26 +195,30 @@ def create_customer_service(db_path):
             if question_with_history.channel_info.id == "learn":
                 try:
                     req = await role.aask(inputs, LearnResponse)
+                    steps.append(ResponseStep(name="Learn", details=req.dict()))
                 except Exception as e:
                     # try again
                     req = await role.aask(inputs, LearnResponse)
-                return req.response
-            elif user_modes is not None:
-                for mode_name, mode_d in user_modes.items():
+                    steps.append(ResponseStep(name="Learn"))
+                return RichResponse(text=req.response, steps=steps)
+            elif question_with_history.custom_functions is not None: # Wei
+                for mode_d in question_with_history.custom_functions:
+                    mode_name = mode_d['name']
                     if mode_name == question_with_history.channel_info.id:
                         try: 
-                            req = await role.aask(inputs, mode_d['mode'])
+                            req = await role.aask(inputs, mode_d['schema_class'])
                         except Exception as e:
-                            req = await role.aask(inputs, mode_d['mode'])
-                        response_function = mode_d['response_function']
+                            req = await role.aask(inputs, mode_d['schema_class'])
+                        response_function = mode_d['execute']
                         response = await response_function(question_with_history, req)
-                        return response
+                        steps.append(ResponseStep(name=mode_name, details=req.dict()))
+                        return RichResponse(text=response, steps=steps)
         if not question_with_history.channel_info or question_with_history.channel_info.id == "bioimage.io":
             try:
-                req = await role.aask(inputs, Union[mode_types])
+                req = await role.aask(inputs, Union[mode_types]) # Wei
             except Exception as e:
                 # try again
-                req = await role.aask(inputs, Union[mode_types])
+                req = await role.aask(inputs, Union[mode_types]) # Wei
         else:
             try:
                 req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput])
@@ -196,10 +226,13 @@ def create_customer_service(db_path):
                 # try again
                 req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput])
         if isinstance(req, DirectResponse):
-            return req.response
+            steps.append(ResponseStep(name="Direct"))
+            return RichResponse(text=req.response, steps=steps)
         elif isinstance(req, LearnResponse):
-            return req.response
+            steps.append(ResponseStep(name="Learn"))
+            return RichResponse(text=req.response, steps=steps)
         elif isinstance(req, DocumentRetrievalInput):
+            steps.append(ResponseStep(name="Document Retrieval", details= req.dict()))
             if req.channel_id == "all":
                 docs_with_score = []
                 # loop through all the channels
@@ -217,7 +250,9 @@ def create_customer_service(db_path):
                 # only keep the top 3 documents
                 docs_with_score = docs_with_score[:3]
                 search_input = DocumentSearchInput(user_question=req.request, relevant_context=docs_with_score, user_info=req.user_info, format=None, preliminary_response=req.preliminary_response)
+                steps.append(ResponseStep(name="Document Search", details=search_input.dict()))
                 response = await role.aask(search_input, FinalResponse)
+                steps.append(ResponseStep(name="Final Response", details=response.dict()))
             else:
                 docs_store = docs_store_dict[req.channel_id]
                 collection_info = collection_info_dict[req.channel_id]
@@ -227,46 +262,34 @@ def create_customer_service(db_path):
                 docs_with_score = [DocWithScore(doc=doc.page_content, score=score, metadata=doc.metadata, base_url=base_url) for doc, score in results_with_scores]
                 print(f"Retrieved documents:\n{docs_with_score[0].doc[:20] + '...'} (score: {docs_with_score[0].score})\n{docs_with_score[1].doc[:20] + '...'} (score: {docs_with_score[1].score})\n{docs_with_score[2].doc[:20] + '...'} (score: {docs_with_score[2].score})")
                 search_input = DocumentSearchInput(user_question=req.request, relevant_context=docs_with_score, user_info=req.user_info, format=collection_info.get('format'), preliminary_response=req.preliminary_response)
+                steps.append(ResponseStep(name="Document Search", details=search_input.dict()))
                 response = await role.aask(search_input, FinalResponse)
-            if debug:
-                source_func = lambda doc: f"\nSource: {doc.metadata.get('source', 'N/A')}"  # Use get() to provide a default value if 'source' is not present
-            else:
-                source_func = lambda doc:""
-            # Create an HTML table for references
-            table_rows = []
-            for i, doc in enumerate(docs_with_score):
-                # if 'source' in doc.metadata:
-                table_rows.append(f"<tr><td>{i + 1}</td><td>{doc.doc}{source_func(doc)}</td></tr>")
-            table_content = "\n".join(table_rows)
-            references_table = f"""<details><summary>References</summary>
-                                <table border="1">
-                                    <tr><th>#</th><th>Content</th></tr>
-                                    {table_content}
-                                </table>
-                            </details>"""
-            response = response.response + "\n\n" + references_table
-            return response
+                steps.append(ResponseStep(name="Final Response", details=response.dict()))
+            return RichResponse(text=response.response, steps=steps)
         elif isinstance(req, ModelZooInfoScript):
+            steps.append(ResponseStep(name="Model Zoo Info Script", details=req.dict()))
             loop = asyncio.get_running_loop()
             print(f"Executing the script:\n{req.script}")
             result = await loop.run_in_executor(None, execute_code, req.script, {"resources": resource_items})
             print(f"Script execution result:\n{result}")
+            steps.append(ResponseStep(name="Script Execution", details=result))
             response = await role.aask(ModelZooInfoScriptResults(
                 stdout=result["stdout"],
                 stderr=result["stderr"],
                 request=req.request,
                 user_info=req.user_info
             ), FinalResponse)
-            references = f"""<details><summary>Source Code</summary>\n\n<code>\nScript: \n{req.script}\n\nResults: \n{result["stdout"]}\nError: {result["stderr"]}\n</code>\n\n</details>"""
-            response = response.response + "\n\n" + references
-            return response
-        elif user_modes is not None:
-            for mode_name, mode_d in user_modes.items():
-                mode = mode_d['mode']
-                response_function = mode_d['response_function']
-                if isinstance(req, mode):
+            steps.append(ResponseStep(name="Final Response", details=response.dict()))
+            return RichResponse(text=response.response, steps=steps)
+        elif question_with_history.custom_functions is not None: # Wei
+            for mode_d in question_with_history.custom_functions:
+                mode_name = mode_d['name']
+                mode_type = mode_d['schema_class']
+                response_function = mode_d['execute']
+                if isinstance(req, mode_type): # Wei - here req matches one of the custom function input types
                     response = await response_function(question_with_history, req)
-                    return response
+                    steps.append(ResponseStep(name=mode_name, details=req.dict()))
+                    return RichResponse(text=response, steps=steps)
         
     customer_service = Role(
         name="Melman",
@@ -305,6 +328,7 @@ async def register_chat_service(server):
     if not os.path.exists(knowledge_base_path):
         print(f"The knowledge base is not found at {knowledge_base_path}, will download it automatically.")
         os.makedirs(knowledge_base_path, exist_ok=True)
+
     chat_logs_path = os.environ.get("BIOIMAGEIO_CHAT_LOGS_PATH", "./chat_logs")
     assert chat_logs_path is not None, "Please set the BIOIMAGEIO_CHAT_LOGS_PATH environment variable to the path of the chat logs folder."
     if not os.path.exists(chat_logs_path):
@@ -358,7 +382,8 @@ async def register_chat_service(server):
         await save_chat_history(chat_log_full_path, chat_his_dict)
         print(f"User report saved to {filename}")
         
-    async def chat(text, chat_history, user_profile=None, channel=None, status_callback=None, session_id=None, image_data=None, context=None):
+    # async def chat(text, chat_history, user_profile=None, channel=None, status_callback=None, session_id=None, image_data=None, context=None):
+    async def chat(text, chat_history, user_profile=None, channel=None, status_callback=None, session_id=None, image_data=None, custom_functions=None, context=None):
         if login_required and context and context.get("user"):
             assert check_permission(context.get("user")), "You don't have permission to use the chatbot, please sign up and wait for approval"
         session_id = session_id or secrets.token_hex(8)
@@ -369,12 +394,28 @@ async def register_chat_service(server):
                     await status_callback(message.dict())
 
         event_bus.on("stream", stream_callback)
+        # Wei - First I load the local extensions from json, then I add the custom functions passed through from chat interface
+        if custom_functions is not None: 
+            custom_functions = [
+                {   
+                    "name": x['name'],
+                    'description': "A custom function passed through from the chat interface",
+                    "schema_class": jsonschema_to_pydantic(JsonSchemaObject.parse_obj(x['schema'])),
+                    "execute": x['execute']
+                    } for x in custom_functions]
 
-        user_modes = user_apis.get_modes()
-        # Get the channel id by its name
+        # Wei - The `custom_modes` is the dictionary I was using before for dynamic function calling
+        # this might be awkward syntax, for now was just trying to get it to work
+        custom_modes = {x['name'] : x for x in custom_functions} if custom_functions is not None else None
+        local_modes = {x.name : {'description' : x.description} for x in load_extensions_from_json(Path(__file__).parent / "chatbot_extensions" / "extensions.json")}
+        if custom_modes is not None:
+            for k,v in custom_modes.items():
+                local_modes[k] = v
         if channel == 'learn':
             channel_id = 'learn'
-        elif user_modes is not None and channel in user_modes.keys():
+        elif channel == 'function-call':
+            channel_id = 'function-call'
+        elif local_modes is not None and channel in local_modes.keys(): # Wei
             channel_id = channel
         else:
             if channel == 'auto':
@@ -386,25 +427,32 @@ async def register_chat_service(server):
                 channel_id = None
         if channel == 'learn':
             channel_info = {"id": channel_id, "name": channel, "description": "Learning assistant"}
-        elif user_modes is not None:
-            for mode_name, mode_d in user_modes.items():
-                channel_info = {"id" : mode_name, "name" : mode_name, "description" : mode_d['description']}
+        elif channel == 'function-call':
+            channel_info = {"id": channel_id, "name": channel, "description": "Function call assistant"}
+        elif channel in local_modes.keys(): # Wei
+            mode_name = channel
+            channel_info = {"id" : mode_name, "name" : mode_name, "description" : local_modes[channel]['description']}
         else:
             channel_info = channel_id and {"id": channel_id, "name": channel, "description": description_by_id[channel_id]}
         if channel_info:
             channel_info = ChannelInfo.parse_obj(channel_info)
+        # for custom_function in custom_functions: # Wei
+        #     input_type = jsonschema_to_pydantic(JsonSchemaObject.parse_obj(custom_function['schema']))
+        #     custom_function['input_type'] = input_type
+
         # user_profile = {"name": "lulu", "occupation": "data scientist", "background": "machine learning and AI"}
-        m = QuestionWithHistory(question=text, chat_history=chat_history, user_profile=UserProfile.parse_obj(user_profile),channel_info=channel_info)
-        if image_data:
+        # m = QuestionWithHistory(question=text, chat_history=chat_history, user_profile=UserProfile.parse_obj(user_profile),channel_info=channel_info)
+        m = QuestionWithHistory(question=text, chat_history=chat_history, user_profile=UserProfile.parse_obj(user_profile),channel_info=channel_info, custom_functions=custom_functions)
+        if image_data: # Checks if user uploaded an image, if so wait for it to upload
             await status_callback({"type": "text", "content": "Uploading image..."})
             m.image_data = image_data
             if text == "":
-                m.question = "Please analyze this image"
+                m.question = "Please analyze this image" # In case user uploaded image with no text message
         try:
             response = await customer_service.handle(Message(content=m.json(), data=m , role="User", session_id=session_id))
             # get the content of the last response
-            response = response[-1].content
-            print(f"\nUser: {text}\nChatbot: {response}")
+            response = response[-1].data # type: RichResponse
+            print(f"\nUser: {text}\nChatbot: {response.text}")
         except Exception as e:
             event_bus.off("stream", stream_callback)
             raise e
@@ -413,7 +461,7 @@ async def register_chat_service(server):
 
         if session_id:
             chat_history.append({ 'role': 'user', 'content': text })
-            chat_history.append({ 'role': 'assistant', 'content': response })
+            chat_history.append({ 'role': 'assistant', 'content': response.text })
             version = pkg_resources.get_distribution('bioimageio-chatbot').version
             chat_his_dict = {'conversations':chat_history, 
                      'timestamp': str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), 
@@ -423,7 +471,7 @@ async def register_chat_service(server):
             chat_log_full_path = os.path.join(chat_logs_path, filename)
             await save_chat_history(chat_log_full_path, chat_his_dict)
             print(f"Chat history saved to {filename}")
-        return response
+        return response.dict()
 
     async def ping(context=None):
         if login_required and context and context.get("user"):
@@ -432,8 +480,10 @@ async def register_chat_service(server):
 
     channels = [collection['name'] for collection in collections]
     channels.append("learn")
-    for mode_name in user_apis.get_modes().keys():
-        channels.append(mode_name)
+    local_modes = load_extensions_from_json(Path(__file__).parent / "chatbot_extensions" / "extensions.json")
+    for mode_d in local_modes: # Wei 
+        channels.append(mode_d.name)
+    channels.append("function-call")
     hypha_service_info = await server.register_service({
         "name": "BioImage.IO Chatbot",
         "id": "bioimageio-chatbot",
