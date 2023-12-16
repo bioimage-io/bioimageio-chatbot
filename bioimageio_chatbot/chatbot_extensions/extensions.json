@@ -1,0 +1,8 @@
+[
+    {
+        "name": "cellpose",
+        "description" : "Runs Cellpose image segmentation (either cytoplasm or nuclei) on user images using pretrained models",
+        "schema" : "CellposeTask",
+        "execute" : "cellpose_get_response"
+    }
+]
