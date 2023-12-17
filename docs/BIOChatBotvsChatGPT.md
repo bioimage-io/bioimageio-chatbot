@@ -41,7 +41,7 @@ Here is an example of the same query asked to the BioImage.IO Chatbot and ChatGP
 ![ChatGPT vs. BioImage.IO Chatbot](./screenshots/chatgpt-vs-bioimageiochatbot.png)
 
 ### API Calls
-The BioImage.IO Chatbot also has API calling functionality allowing it to utilize external codebases, analysis pipelines, and plugins. Cellpose image segmentation has been implemented and can be used as a template for additional Chatbot API extensions. Users may use Cellpose API function calling by uploading a file and requesting the Chatbot to segment it either from the auto or cellpose channels.
+The BioImage.IO Chatbot also has API calling functionality allowing it to utilize external codebases, analysis pipelines, and plugins. Cellpose image segmentation has been implemented and can be used as a template for additional Chatbot API extensions. 
 
 Chatbot API calls rely on two components (1) an API task schema exposed to the Chatbot and (2) a response function. The API task schema serves as an interface between the Chatbot agent and the desired API call task. The Chatbot agent uses the schema to decide if this particular API call task is appropriate for a given user query and if so, populates the schema's fields. The response function is then executed using the agent-inferred fields. In the Cellpose example case, the task schema is the `CellposeTask` class and the response function is `cellpose_get_response`.
 
