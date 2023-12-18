@@ -72,7 +72,8 @@ For instance, if a user inquires about the total number of models in the BioImag
 
 ![Model Queries](./screenshots/script-gen-exe-retrieval.png)
 
-
+### API Calls
+The BioImage.IO Chatbot can also execute functions in external APIs, analysis pipelines, plugins, and user code. Cellpose image segmentation has been added as a Chatbot function calling extension and can be used as a template for additional APIs. Users may currently use the Cellpose API function calling by uploading a file and requesting the Chatbot to segment it either from the `auto` or `cellpose` channels.
 
 ## Conclusion
 The BioImage.IO Chatbot is a powerful tool designed to provide you with accurate and personalized information from a wide range of databases. Whether you're a biologist or a developer, our chatbot is here to assist you. Feel free to explore its capabilities, ask questions, and customize your experience.
