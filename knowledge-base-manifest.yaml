@@ -50,3 +50,14 @@ collections:
     description: A collection of algorithms for image processing.
     base_url: https://scikit-image.org/docs/stable/
     format: pdf
+
+additional_channels:
+  - name: "Learn"
+    id: learn
+    description: "Learning assistant for bioimage analysis"
+  - name: "Coding"
+    id: coding
+    description: "Coding assistant for bioimage analysis"
+  - name: "biii.eu"
+    id: biii.eu
+    description: "The BioImage Informatics Index"
