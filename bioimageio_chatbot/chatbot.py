@@ -15,6 +15,7 @@ import sys
 import io
 from bioimageio_chatbot.knowledge_base import load_knowledge_base
 from bioimageio_chatbot.utils import get_manifest
+from bioimageio_chatbot.biii import search_biii_with_links, BiiiRow
 import pkg_resources
 import base64
 
@@ -74,6 +75,19 @@ class ModelZooInfoScriptResults(BaseModel):
     request: str = Field(description="Details concerning the user's request that triggered the model zoo query script execution")
     user_info: Optional[str] = Field("", description="The user's info for personalizing response.")
 
+class SearchOnBiii(BaseModel):
+    """Search software tools on BioImage Informatics Index (biii.eu) is a platform for sharing bioimage analysis software and tools."""
+    keywords: List[str] = Field(description="A list of search keywords, no space allowed in each keyword.")
+    request: str = Field(description="Details concerning the user's request that triggered the model zoo query script execution")
+    user_info: Optional[str] = Field("", description="The user's info for personalizing response.")
+
+class BiiiSearchResult(BaseModel):
+    """Search results from biii.eu"""
+    results: List[BiiiRow] = Field(description="Search results from biii.eu")
+    request: str = Field(description="The user's detailed request")
+    user_info: Optional[str] = Field("", description="Brief user info summary including name, background, etc., for personalizing responses to the user.")
+    base_url: str = Field(description="The based URL of the search results, e.g. ImageJ (/imagej) will become <base_url>/imagej")
+
 class DirectResponse(BaseModel):
     """Direct response to a user's question if you are confident about the answer."""
     response: str = Field(description="The response to the user's question answering what that asked for.")
@@ -100,7 +114,7 @@ class DocumentSearchInput(BaseModel):
     user_info: Optional[str] = Field("", description="The user's info for personalizing the response.")
     format: Optional[str] = Field(None, description="The format of the document.")
     preliminary_response: Optional[str] = Field(None, description="The preliminary response to the user's question. This will be combined with the retrieved documents to produce the final response.")
-    
+
 class FinalResponse(BaseModel):
     """The final response to the user's question based on the preliminary response and the documentation search results. The response should be tailored to uer's info if provided. 
     If the documentation search results are relevant to the user's question, provide a text response to the question based on the search results.
@@ -166,21 +180,7 @@ def create_customer_service(db_path):
         # The channel info will be inserted at the beginning of the inputs
         if question_with_history.channel_info:
             inputs.insert(0, question_with_history.channel_info)
-        if question_with_history.channel_info is not None and question_with_history.channel_info.id == "learn":
-            try:
-                req = await role.aask(inputs, LearningResponse)
-            except Exception as e:
-                # try again
-                req = await role.aask(inputs, LearningResponse)
-            return RichResponse(text=req.response, steps=steps)
-    
-        if question_with_history.channel_info is not None and question_with_history.channel_info.id == "coding":
-            try:
-                req = await role.aask(inputs, CodingResponse)
-            except Exception as e:
-                # try again
-                req = await role.aask(inputs, CodingResponse)
-            return RichResponse(text=req.response, steps=steps)
+        
 
         if question_with_history.channel_info:
             channel_prompt = f"The channel_id of the knowledge base to search. It MUST be set to {question_with_history.channel_info.id} (selected by the user)."
@@ -195,20 +195,37 @@ def create_customer_service(db_path):
             user_info: Optional[str] = Field("", description="Brief user info summary including name, background, etc., for personalizing responses to the user.")
             channel_id: str = Field(description=channel_prompt)
 
-        if not question_with_history.channel_info or question_with_history.channel_info.id == "bioimage.io":
-            try:
-                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, ModelZooInfoScript, LearningResponse, CodingResponse])
-            except Exception as e:
-                # try again
-                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, ModelZooInfoScript, LearningResponse, CodingResponse])
+        if question_with_history.channel_info is not None:
+            if question_with_history.channel_info.id == "learn":
+                req = await role.aask(inputs, Union[DirectResponse, LearningResponse])
+            elif question_with_history.channel_info.id == "coding":
+                req = await role.aask(inputs, Union[DirectResponse, CodingResponse])
+            elif question_with_history.channel_info.id == "biii.eu":
+                req = await role.aask(inputs, Union[DirectResponse, SearchOnBiii])
+            elif question_with_history.channel_info.id == "bioimage.io":
+                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, ModelZooInfoScript])
+            else:
+                return RichResponse(text=f"Unknown channel selected: {question_with_history.channel_info.id}")
         else:
-            try:
-                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput])
-            except Exception as e:
-                # try again
-                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput])
+            req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, ModelZooInfoScript, SearchOnBiii, LearningResponse, CodingResponse])
+
         if isinstance(req, (DirectResponse, LearningResponse, CodingResponse)):
             return RichResponse(text=req.response, steps=steps)
+        elif isinstance(req, SearchOnBiii):
+            print(f"Searching biii.eu with keywords: {req.keywords}")
+            try:
+                loop = asyncio.get_running_loop()
+                steps.append(ResponseStep(name="Search on biii.eu", details=req.dict()))
+                results = await loop.run_in_executor(None, search_biii_with_links, req.keywords, "software", "")
+                if results:
+                    results = BiiiSearchResult(results=results[:10], request=req.request, user_info=req.user_info, base_url="https://biii.eu")
+                    steps.append(ResponseStep(name="Summarize results from biii.eu", details=results.dict()))
+                    response = await role.aask(results, FinalResponse)
+                    return RichResponse(text=response.response, steps=steps)
+                else:
+                    return RichResponse(text=f"Sorry I didn't find relevant information in biii.eu about {req.keywords}", steps=steps)
+            except Exception as e:
+                return RichResponse(text=f"Failed to search biii.eu, error: {e}", steps=steps)
         elif isinstance(req, DocumentRetrievalInput):
             if question_with_history.channel_info:
                 req.channel_id = question_with_history.channel_info.id
@@ -294,7 +311,9 @@ async def connect_server(server_url):
     
 async def register_chat_service(server):
     """Hypha startup function."""
-    collections = get_manifest()['collections']
+    manifest = get_manifest()
+    collections = manifest['collections']
+    additional_channels = manifest['additional_channels']
     login_required = os.environ.get("BIOIMAGEIO_LOGIN_REQUIRED") == "true"
     knowledge_base_path = os.environ.get("BIOIMAGEIO_KNOWLEDGE_BASE_PATH", "./bioimageio-knowledge-base")
     assert knowledge_base_path is not None, "Please set the BIOIMAGEIO_KNOWLEDGE_BASE_PATH environment variable to the path of the knowledge base."
@@ -308,8 +327,8 @@ async def register_chat_service(server):
         print(f"The chat session folder is not found at {chat_logs_path}, will create one now.")
         os.makedirs(chat_logs_path, exist_ok=True)
     
-    channel_id_by_name = {collection['name']: collection['id'] for collection in collections}
-    description_by_id = {collection['id']: collection['description'] for collection in collections}
+    channel_id_by_name = {collection['name']: collection['id'] for collection in collections + additional_channels}
+    description_by_id = {collection['id']: collection['description'] for collection in collections + additional_channels}
     customer_service = create_customer_service(knowledge_base_path)
     
     event_bus = customer_service.get_event_bus()
@@ -376,24 +395,15 @@ async def register_chat_service(server):
                 return f"Failed to decode the image, error: {e}"
 
         # Get the channel id by its name
-        if channel == 'learn':
-            channel_id = 'learn'
-        elif channel == 'coding':
-            channel_id = 'coding'
+        if channel == 'auto':
+            channel = None
+        if channel:
+            assert channel in channel_id_by_name, f"Channel {channel} is not found, available channels are {list(channel_id_by_name.keys())}"
+            channel_id = channel_id_by_name[channel]
         else:
-            if channel == 'auto':
-                channel = None
-            if channel:
-                assert channel in channel_id_by_name, f"Channel {channel} is not found, available channels are {list(channel_id_by_name.keys())}"
-                channel_id = channel_id_by_name[channel]
-            else:
-                channel_id = None
-        if channel == 'learn':
-            channel_info = {"id": channel_id, "name": channel, "description": "Learning assistant"}
-        elif channel == 'coding':
-            channel_info = {"id": channel_id, "name": channel, "description": "Coding assistant"}
-        else:
-            channel_info = channel_id and {"id": channel_id, "name": channel, "description": description_by_id[channel_id]}
+            channel_id = None
+        
+        channel_info = channel_id and {"id": channel_id, "name": channel, "description": description_by_id[channel_id]}
         if channel_info:
             channel_info = ChannelInfo.parse_obj(channel_info)
         # user_profile = {"name": "lulu", "occupation": "data scientist", "background": "machine learning and AI"}
@@ -428,9 +438,7 @@ async def register_chat_service(server):
             assert check_permission(context.get("user")), "You don't have permission to use the chatbot, please sign up and wait for approval"
         return "pong"
 
-    channels = [collection['name'] for collection in collections]
-    channels.append("learn")
-    channels.append("coding")
+    channels = [collection['name'] for collection in collections + additional_channels]
     hypha_service_info = await server.register_service({
         "name": "BioImage.IO Chatbot",
         "id": "bioimageio-chatbot",
