@@ -11,7 +11,6 @@ from pydantic import BaseModel, Field
 from schema_agents.role import Role
 from schema_agents.schema import Message
 from typing import Any, Dict, List, Optional, Union
-import requests
 import sys
 import io
 from bioimageio_chatbot.knowledge_base import load_knowledge_base
@@ -19,13 +18,7 @@ from bioimageio_chatbot.utils import get_manifest
 from bioimageio_chatbot.biii import search_biii_with_links, BiiiRow
 import pkg_resources
 from bioimageio_chatbot.jsonschema_pydantic import jsonschema_to_pydantic, JsonSchemaObject
-    
-def load_model_info():
-    response = requests.get("https://bioimage-io.github.io/collection-bioimage-io/collection.json")
-    assert response.status_code == 200
-    model_info = response.json()
-    resource_items = model_info['collection']
-    return resource_items
+
 
 def execute_code(script, context=None):
     if context is None:
@@ -174,14 +167,6 @@ def create_customer_service(db_path):
     collections = get_manifest()['collections']
     docs_store_dict = load_knowledge_base(db_path)
     collection_info_dict = {collection['id']: collection for collection in collections}
-    resource_items = load_model_info()
-    types = set()
-    tags = set()
-    for resource in resource_items:
-        types.add(resource['type'])
-        tags.update(resource['tags'])
-    types = list(types)
-    tags = list(tags)[:10]
     
     channels_info = "\n".join(f"""- `{collection['id']}`: {collection['description']}""" for collection in collections)
     async def respond_to_user(question_with_history: QuestionWithHistory = None, role: Role = None) -> str:

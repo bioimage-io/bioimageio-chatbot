@@ -241,8 +241,17 @@
     </div>
   </div>
 
+  <div id="loading-container" class="container mt-5">
+    <div class="card">
+      <div class="card-header" style="text-align: center">
+        <img src="https://bioimage.io/static/img/bioimage-io-icon.svg" alt="BioImage.IO Icon"
+          style="height: 100px; margin-right: 10px">
+        <h3>Initializing BioImage.IO Chatbot...</h3>
+      </div>
+    </div>
+  </div>
 
-  <div id="login-container" class="container mt-5">
+  <div id="login-container" style="display: none;" class="container mt-5">
     <div class="card" id="login-card">
       <div class="card-header">
         <img src="https://bioimage.io/static/img/bioimage-io-icon.svg" alt="BioImage.IO Icon"
@@ -491,12 +500,14 @@
 
       // Function to show the login screen
       function showLoginScreen() {
+        $('#loading-container').hide();
         $('#login-container').show();
         $('#app-container').hide();
       }
 
       // Function to show the app interface
       function showAppInterface() {
+        $('#loading-container').hide();
         $('#login-container').hide();
         $('#app-container').show();
         $('.announcement-banner').show();
