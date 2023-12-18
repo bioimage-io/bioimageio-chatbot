@@ -143,7 +143,7 @@ class QuestionWithHistory(BaseModel):
     user_profile: Optional[UserProfile] = Field(None, description="The user's profile. You should use this to personalize the response based on the user's background and occupation.")
     channel_info: Optional[ChannelInfo] = Field(None, description="The selected channel of the user's question. If provided, rely only on the selected channel when answering the user's question.")
     image_data: Optional[str] = Field(None, description = "The uploaded image data if the user has uploaded an image. If provided, run a cellpose task")
-    custom_functions: Optional[List[Dict[str, Any]]] = Field(None, description="Custom functions provided from the client.")
+    chatbot_extensions: Optional[List[Dict[str, Any]]] = Field(None, description="Chatbot extensions.")
 
 class ResponseStep(BaseModel):
     """Response step"""
@@ -166,7 +166,6 @@ class RichResponse(BaseModel):
     steps: List[ResponseStep] = Field(description="Intermediate steps")
 
 def create_customer_service(db_path):
-    debug = os.environ.get("BIOIMAGEIO_DEBUG") == "true"
     collections = get_manifest()['collections']
     docs_store_dict = load_knowledge_base(db_path)
     collection_info_dict = {collection['id']: collection for collection in collections}
@@ -213,8 +212,8 @@ def create_customer_service(db_path):
         inputs = [question_with_history.user_profile] + list(question_with_history.chat_history) + [question_with_history.question]
 
         mode_types = [DirectResponse, DocumentRetrievalInput, ModelZooInfoScript, SearchOnBiii, LearningResponse, CodingResponse]
-        if question_with_history.custom_functions: # Wei
-            for mode_d in question_with_history.custom_functions:
+        if question_with_history.chatbot_extensions:
+            for mode_d in question_with_history.chatbot_extensions:
                 mode_types.append(mode_d['schema_class'])
         mode_types = tuple(mode_types)
 
@@ -228,8 +227,8 @@ def create_customer_service(db_path):
                 req = await role.aask(inputs, Union[DirectResponse, SearchOnBiii, LearningResponse, CodingResponse])
             elif question_with_history.channel_info.id == "bioimage.io":
                 req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, ModelZooInfoScript, LearningResponse, CodingResponse])
-            elif question_with_history.custom_functions is not None: # Wei
-                for mode_d in question_with_history.custom_functions:
+            elif question_with_history.chatbot_extensions is not None:
+                for mode_d in question_with_history.chatbot_extensions:
                     mode_name = mode_d['name']
                     if mode_name == question_with_history.channel_info.id:
                         try: 
@@ -322,8 +321,8 @@ def create_customer_service(db_path):
             ), DocumentResponse)
             steps.append(ResponseStep(name="Document Response", details=response.dict()))
             return RichResponse(text=response.response, steps=steps)
-        elif question_with_history.custom_functions is not None:
-            for mode_d in question_with_history.custom_functions:
+        elif question_with_history.chatbot_extensions is not None:
+            for mode_d in question_with_history.chatbot_extensions:
                 mode_name = mode_d['name']
                 try: 
                     req = await role.aask(inputs, mode_d['schema_class'])
@@ -386,8 +385,6 @@ async def register_chat_service(server):
     channel_id_by_name = {collection['name']: collection['id'] for collection in collections + additional_channels}
     description_by_id = {collection['id']: collection['description'] for collection in collections + additional_channels}
     customer_service = create_customer_service(knowledge_base_path)
-    # local_modes = load_extensions_from_json(Path(__file__).parent / "chatbot_extensions" / "extensions.json")
-    
     event_bus = customer_service.get_event_bus()
     event_bus.register_default_events()
         
@@ -431,7 +428,7 @@ async def register_chat_service(server):
         await save_chat_history(chat_log_full_path, chat_his_dict)
         print(f"User report saved to {filename}")
         
-    async def chat(text, chat_history, user_profile=None, channel=None, status_callback=None, session_id=None, image_data=None, custom_functions=None, context=None):
+    async def chat(text, chat_history, user_profile=None, channel=None, status_callback=None, session_id=None, image_data=None, extensions=None, context=None):
         if login_required and context and context.get("user"):
             assert check_permission(context.get("user")), "You don't have permission to use the chatbot, please sign up and wait for approval"
         session_id = session_id or secrets.token_hex(8)
@@ -443,14 +440,18 @@ async def register_chat_service(server):
 
         event_bus.on("stream", stream_callback)
         
-        if custom_functions is not None: 
-            custom_functions = [
-                {   
-                    "name": x['name'],
-                    'description': "A custom function passed through from the chat interface",
-                    "schema_class": jsonschema_to_pydantic(JsonSchemaObject.parse_obj(x['schema'])),
-                    "execute": x['execute']
-                    } for x in custom_functions]
+        if extensions is not None: 
+            chatbot_extensions = []
+            for ext in extensions:
+                schema = await ext['get_schema']()
+                chatbot_extensions.append(
+                    {
+                        "name": ext['name'],
+                        'description': ext['description'],
+                        "schema_class": jsonschema_to_pydantic(JsonSchemaObject.parse_obj(schema)),
+                        "execute": ext['execute']
+                    }
+                )
 
         if image_data:
             await status_callback({"type": "text", "content": f"\n![Uploaded Image]({image_data})\n"})
@@ -469,7 +470,7 @@ async def register_chat_service(server):
             channel_info = ChannelInfo.parse_obj(channel_info)
         
         
-        m = QuestionWithHistory(question=text, chat_history=chat_history, user_profile=UserProfile.parse_obj(user_profile),channel_info=channel_info, custom_functions=custom_functions)
+        m = QuestionWithHistory(question=text, chat_history=chat_history, user_profile=UserProfile.parse_obj(user_profile),channel_info=channel_info, chatbot_extensions=chatbot_extensions)
         if image_data: # Checks if user uploaded an image, if so wait for it to upload
             await status_callback({"type": "text", "content": "Uploading image..."})
             m.image_data = image_data
@@ -520,18 +521,22 @@ async def register_chat_service(server):
     })
     
     version = pkg_resources.get_distribution('bioimageio-chatbot').version
+    def reload_index():
+        with open(os.path.join(os.path.dirname(__file__), "static/index.html"), "r") as f:
+            index_html = f.read()
+        index_html = index_html.replace("https://ai.imjoy.io", server.config['public_base_url'] or f"http://127.0.0.1:{server.config['port']}")
+        index_html = index_html.replace('"bioimageio-chatbot"', f'"{hypha_service_info["id"]}"')
+        index_html = index_html.replace('v0.1.0', f'v{version}')
+        index_html = index_html.replace("LOGIN_REQUIRED", "true" if login_required else "false")
+        return index_html
     
-    with open(os.path.join(os.path.dirname(__file__), "static/index.html"), "r") as f:
-        index_html = f.read()
-    index_html = index_html.replace("https://ai.imjoy.io", server.config['public_base_url'] or f"http://127.0.0.1:{server.config['port']}")
-    index_html = index_html.replace('"bioimageio-chatbot"', f'"{hypha_service_info["id"]}"')
-    index_html = index_html.replace('v0.1.0', f'v{version}')
-    index_html = index_html.replace("LOGIN_REQUIRED", "true" if login_required else "false")
+    index_html = reload_index()
+    debug = os.environ.get("BIOIMAGEIO_DEBUG") == "true"
     async def index(event, context=None):
         return {
             "status": 200,
             "headers": {'Content-Type': 'text/html'},
-            "body": index_html
+            "body": reload_index() if debug else index_html,
         }
     
     await server.register_service({
