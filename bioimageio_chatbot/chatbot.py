@@ -66,6 +66,7 @@ def execute_code(script, context=None):
 
 class SearchOnBiii(BaseModel):
     """Search software tools on BioImage Informatics Index (biii.eu) is a platform for sharing bioimage analysis software and tools."""
+    preliminary_response: str = Field(description="The preliminary response to the user's question. This will be combined with the retrieved documents to produce the final response.")
     keywords: List[str] = Field(description="A list of search keywords, no space allowed in each keyword.")
     request: str = Field(description="Details concerning the user's request that triggered the search on biii.eu.")
     user_info: Optional[str] = Field("", description="The user's info for personalizing response.")
@@ -73,6 +74,7 @@ class SearchOnBiii(BaseModel):
 
 class BiiiSearchResult(BaseModel):
     """Search results from biii.eu"""
+    preliminary_response: str = Field(description="The preliminary response to the user's question. This will be combined with the retrieved documents to produce the final response.")
     results: List[BiiiRow] = Field(description="Search results from biii.eu")
     request: str = Field(description="The user's detailed request")
     user_info: Optional[str] = Field("", description="Brief user info summary including name, background, etc., for personalizing responses to the user.")
@@ -199,7 +201,7 @@ def create_customer_service(db_path):
         class DocumentRetrievalInput(BaseModel):
             """Input for searching knowledge bases and finding documents relevant to the user's request."""
             request: str = Field(description="The user's detailed request")
-            preliminary_response: str = Field(description="The preliminary response to the user's question. This will be combined with the retrieved documents to produce the Document Response.")
+            preliminary_response: str = Field(description="The preliminary response to the user's question. This will be combined with the retrieved documents to produce the final response.")
             query: str = Field(description="The query used to retrieve documents related to the user's request. Take preliminary_response as reference to generate query if needed.")
             user_info: Optional[str] = Field("", description="Brief user info summary including name, background, etc., for personalizing responses to the user.")
             channel_id: str = Field(description=channel_prompt)
@@ -226,6 +228,7 @@ def create_customer_service(db_path):
             req = await role.aask(inputs, Union[response_types])
 
         if isinstance(req, (DirectResponse, LearningResponse, CodingResponse)):
+            steps.append(ResponseStep(name=type(req).__name__, details=req.dict()))
             return RichResponse(text=req.response, steps=steps)
         elif isinstance(req, SearchOnBiii):
             print(f"Searching biii.eu with keywords: {req.keywords}, top_k: {req.top_k}")
@@ -234,7 +237,7 @@ def create_customer_service(db_path):
                 steps.append(ResponseStep(name="Search on biii.eu", details=req.dict()))
                 results = await loop.run_in_executor(None, search_biii_with_links, req.keywords, "software", "")
                 if results:
-                    results = BiiiSearchResult(results=results[:req.top_k], request=req.request, user_info=req.user_info, base_url="https://biii.eu")
+                    results = BiiiSearchResult(results=results[:req.top_k], request=req.request, user_info=req.user_info, base_url="https://biii.eu", preliminary_response=req.preliminary_response)
                     steps.append(ResponseStep(name="Summarize results from biii.eu", details=results.dict()))
                     response = await role.aask(results, BiiiResponse)
                     return RichResponse(text=response.response, steps=steps)
@@ -286,7 +289,7 @@ def create_customer_service(db_path):
             mode_d = question_with_history.chatbot_extensions[idx]
             response_function = mode_d['execute']
             mode_name = mode_d['name']
-            steps.append(ResponseStep(name="Call extension: " + mode_name, details=req.dict()))
+            steps.append(ResponseStep(name="Extension: " + mode_name, details=req.dict()))
             try:
                 result = await response_function(req.dict())
                 steps.append(ResponseStep(name="Summarize result: " + mode_name, details={"result": result}))
