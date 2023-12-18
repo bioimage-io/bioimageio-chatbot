@@ -70,6 +70,7 @@ class SearchOnBiii(BaseModel):
     request: str = Field(description="Details concerning the user's request that triggered the search on biii.eu.")
     user_info: Optional[str] = Field("", description="The user's info for personalizing response.")
     top_k: int = Field(10, description="The maximum number of search results to return. Should use a small number to avoid overwhelming the user.")
+
 class BiiiSearchResult(BaseModel):
     """Search results from biii.eu"""
     results: List[BiiiRow] = Field(description="Search results from biii.eu")
