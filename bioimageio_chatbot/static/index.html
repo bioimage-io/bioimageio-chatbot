@@ -262,7 +262,7 @@
 
 
   <div id="app-container" style="display: none;">
-
+    <div id="menu-container"></div>
     <div class="container mt-5">
       <div class="card" id="chat1">
         <div class="card-header">
@@ -324,8 +324,9 @@
               Submit Feedback
             </button>
           </div>
-
-
+          <!-- Add the "Extensions" dropdown menu -->
+          <div class="form-outline btn-info mt-3" id="extensions-container">
+          </div>
           <!-- Add the "Channels" dropdown menu -->
           <div class="form-outline btn-info mt-3">
             <label for="channelSelect">Knowledge Base Channel: </label>
@@ -333,7 +334,6 @@
               <option value="" disabled selected>Select a Channel</option>
             </select>
           </div>
-
         </div>
       </div>
       <div class="card-footer text-center">
@@ -360,13 +360,15 @@
       </div>
     </div>
   </div>
-
+  <div id="window-container" style="height:0px;"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/imjoy-rpc@0.5.46/dist/hypha-rpc-websocket.min.js"></script>
+  <script src="https://lib.imjoy.io/imjoy-loader.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/2.1.3/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
   <script>
+    let extensions = [];
     function fileSelected() {
       var input = document.getElementById('fileUpload');
       var label = document.getElementById('paperclipIcon');
@@ -385,7 +387,103 @@
       label.classList.remove('file-selected');
     }
 
+    async function _registerExtension(extension) {
+      if(!extension.name || !extension.execute || !extension.get_schema) 
+        throw new Error("Invalid extension")
+      const schema = await extension.get_schema()
+      if(!schema || !schema.title || schema.title.includes(" ") || !schema.description)
+        throw new Error("Invalid extension schema")
+
+      extensions.push(extension);
+      const container = $('#extensions-container')
+      let htmlContent = `<span>Extensions:&nbsp;</span>`
+      for(let ext of extensions){
+        htmlContent += `<div class="step" title="${ext.description}">${ext.name}</div>`
+      }
+      container.html(htmlContent);
+    }
+
+    async function setupImJoyApp(imjoy_api){
+      const app = await loadImJoyBasicApp({
+        name: 'BioImage.IO Chatbot',
+        process_url_query: true,
+        show_window_title: false,
+        show_progress_bar: true,
+        show_empty_window: true,
+        menu_style: { position: "absolute", right: 0, top: "2px" },
+        window_style: {width: '100%', height: '100%'},
+        main_container: null,
+        menu_container: "menu-container",
+        window_manager_container: "window-container",
+        expose_api: true,
+        imjoy_api: {
+          async registerExtension(plugin, config){
+            return await _registerExtension(config)
+          }
+        }
+      })
+      // if you want to let users to load new plugins, add a menu item
+      app.addMenuItem({
+          label: "➕ Load Plugin",
+          callback() {
+          const uri = prompt(
+              `Please type a ImJoy plugin URL`,
+              "https://github.com/imjoy-team/imjoy-plugins/blob/master/repository/ImageAnnotator.imjoy.html"
+          );
+          if (uri) app.loadPlugin(uri);
+          },
+      });
+
+      const api = app.imjoy.api
+      await api.registerExtension({
+        _rintf: true,
+        name: "runImageJMacro",
+        description: "Run a macro in ImageJ.JS",
+        async get_schema(){
+          return {
+            "type": "object",
+            "title": "RunImageJMacro",
+            "description": "Run a macro in ImageJ.JS",
+            "properties": {
+              "macro": {
+                "type": "string",
+                "description": "The macro to run"
+              },
+              "args": {
+                "type": "object",
+                "description": "Arguments for the macro"
+              }
+            }
+          }
+        },
+        async execute(config){
+          let ij = await api.getWindow("ImageJ.JS")
+          if(!ij){
+            ij = await api.createWindow({src: "https://ij.imjoy.io", name: "ImageJ.JS"})
+          }
+          try{
+            const result = await ij.runMacro(config['macro'], config['args'])
+            return result
+          }
+          catch(e){
+            console.error(e)
+            return e.toString()
+          }
+        }
+      })
+      return app;
+    }
+
     $(document).ready(async function () {
+      if(window.self !== window.top){
+        const imjoyRPC = await loadImJoyRPC()
+        const api = await imjoyRPC.setupRPC({name: 'BioImage.IO Chatbot'});
+        api.export({setup(){}, registerExtension: _registerExtension});
+      }
+      else{
+        await setupImJoyApp();
+      }
+
       let svc;
       let token = null;
       const spinner = `<div class="spinner"></div>`; // Spinner HTML
@@ -454,8 +552,10 @@
       });
 
       async function initializeService() {
+        
         $('.message-holder').append(spinner);
         showConnectingStatus();
+
         try {
           // get service_id from query string
           const urlParams = new URLSearchParams(window.location.search);
@@ -658,7 +758,10 @@
 
         try {
           // Call the chat function with text and image data
-          response = await svc.chat(textMessage, chat_history, user_profile, selectedChannel, statusCallback, sessionId, imageData);
+          response = await svc.chat(textMessage, chat_history, user_profile, selectedChannel, statusCallback, sessionId, imageData, extensions);
+          // const regex = /!\[.*?\]\(data:.+?\)/g;
+          // const replacementText = '`image placeholder`';
+          // responseWithoutImage = response.replace(regex, replacementText);
           console.log(response)
           chat_history.push({ role: 'user', content: textMessage });
           chat_history.push({ role: 'assistant', content: response.text });

@@ -54,19 +54,19 @@ async def evaluate_retrieval():
     #     chatgpt_answer = await chatgpt.handle(Message(content=question, role="User"))
     #     query_answer.loc[i, 'ChatGPT Direct Answer'] = chatgpt_answer[0].content
     #     chatgpt_answer_list.append(chatgpt_answer)
-    #     # BMZ chatbot
+    #     # BioImage.IO Chatbot
     #     profile = UserProfile(name="", occupation="", background="")
     #     m = QuestionWithHistory(question=question, chat_history=chat_history, user_profile=UserProfile.parse_obj(profile), channel_id=None)
     #     llm_answer = await customer_service.handle(Message(content=m.json(), data=m , role="User"))
     #     # add a column to query_answer, content is llm_answer[0].content
-    #     query_answer.loc[i, 'BMZ Chatbot Answer'] = llm_answer[0].content
+    #     query_answer.loc[i, 'BioImage.IO Chatbot Answer'] = llm_answer[0].content
     #     BMZ_chatbot_answer_list.append(llm_answer)
         
     # # save query_answer to original csv file
     # query_answer.to_csv(os.path.join(dir_path, "Knowledge-Retrieval-Evaluation - Hoja 1.csv"))
     query_answer = load_query_answer()
     chatgpt_answer_list = list(query_answer['ChatGPT Direct Answer'])
-    BMZ_chatbot_answer_list = list(query_answer['BMZ Chatbot Answer'])
+    BMZ_chatbot_answer_list = list(query_answer['BioImage.IO Chatbot Answer'])
     
     question_list = list(query_answer['Question'])
     reference_answer_list = list(query_answer['ChatGPT (3.5) Answer'])
