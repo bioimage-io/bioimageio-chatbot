@@ -105,9 +105,9 @@ async def get_answers(excel_file, eval_index=None):
         
         # gpt-3.5-turbo answer
         # chatgpt_answer = await chatgpt.handle(Message(content=question, role="User"))
-        # query_answer.loc[i, 'GPT-3.5-tubor Answer (Without Context)'] = chatgpt_answer[0].content
+        # query_answer.loc[i, 'GPT-3.5-turbo Answer (Without Context)'] = chatgpt_answer[0].content
         
-        # BMZ chatbot
+        # BioImage.IO Chatbot
         event_bus = customer_service.get_event_bus()
         event_bus.register_default_events()
         profile = UserProfile(name="Lei", occupation="", background="")
@@ -118,11 +118,11 @@ async def get_answers(excel_file, eval_index=None):
         llm_answer_list = llm_answer[0].content.split("<details><summary>")
         
         # add a column to query_answer, content is llm_answer[0].content
-        query_answer.loc[i, 'BMZ Chatbot Answer'] = llm_answer_list[0]
+        query_answer.loc[i, 'BioImage.IO Chatbot Answer'] = llm_answer_list[0]
         if len(llm_answer_list) > 1:
-            query_answer.loc[i, 'BMZ Chatbot Answer References'] = llm_answer_list[1]
+            query_answer.loc[i, 'BioImage.IO Chatbot Answer References'] = llm_answer_list[1]
         else:
-            query_answer.loc[i, 'BMZ Chatbot Answer References'] = "NA"
+            query_answer.loc[i, 'BioImage.IO Chatbot Answer References'] = "NA"
         query_answer.to_csv(os.path.join(dir_path, excel_file))
         print(f"Finish processing {i}th question!")
 
@@ -191,9 +191,9 @@ async def start_evaluate(eval_file, eval_index=None):
     query_answer = load_query_answer(eval_file)
     question_list = list(query_answer['Question'])
     ground_truth_answer_list = list(query_answer['GPT-4-turbo Answer (With Context)- GT'])
-    chatgpt_answer_list = list(query_answer['GPT-3.5-tubor Answer  (Without Context)'])
-    gpt4_direct_answer_list = list(query_answer['GPT-4 Answer'])
-    BMZ_chatbot_answer_list = list(query_answer['BMZ Chatbot Answer'])
+    chatgpt_answer_list = list(query_answer['GPT-3.5-turbo Answer (Without Context)'])
+    gpt4_direct_answer_list = list(query_answer['ChatGPT-4 Answer (Without Context)'])
+    BMZ_chatbot_answer_list = list(query_answer['BioImage.IO Chatbot Answer'])
     
     if eval_index is None:
         eval_index = range(len(question_list))
@@ -204,7 +204,7 @@ async def start_evaluate(eval_file, eval_index=None):
         gpt_direct_answer = chatgpt_answer_list[i]
         gpt4_direct_answer = gpt4_direct_answer_list[i]
         chatbot_answer = BMZ_chatbot_answer_list[i]
-        reference_table= query_answer.iloc[i]["BMZ Chatbot Answer References"]
+        reference_table= query_answer.iloc[i]["BioImage.IO Chatbot Answer References"]
         if pd.isna(reference_table) or reference_table == "":
             retrieved_context_list = []
         else:
@@ -253,13 +253,13 @@ async def start_evaluate(eval_file, eval_index=None):
                 AugmentationConsistency = 'NA'
             
         # save scores to a new dataframe
-        query_answer.loc[i, 'GPT-3.5-tubor Answer (Without Context)- Answer Similarity Score'] = scores_gpt3_direct[0].data.similarity_score
-        query_answer.loc[i, 'GPT4 Direct Answer - Answer Similarity Score'] = scores_gpt4_direct[0].data.similarity_score
-        query_answer.loc[i, 'BMZ Chatbot Answer - Similarity Score'] = SimilaryScore
-        query_answer.loc[i, 'BMZ Chatbot Answer - Retrieval Precision'] = RetrievalPrecision
-        query_answer.loc[i, 'BMZ Chatbot Answer - Augmentation Accuracy'] = AugmentationAccuracy
-        query_answer.loc[i, 'BMZ Chatbot Answer - Augmentation Precision'] = AugmentationPrecision
-        query_answer.loc[i, 'BMZ Chatbot Answer - Augmentation Consistency'] = AugmentationConsistency
+        query_answer.loc[i, 'GPT-3.5-turbo Answer (Without Context) - Answer Similarity Score'] = scores_gpt3_direct[0].data.similarity_score
+        query_answer.loc[i, 'ChatGPT-4 Answer (Without Context) - Answer Similarity Score'] = scores_gpt4_direct[0].data.similarity_score
+        query_answer.loc[i, 'BioImage.IO Chatbot Answer - Similarity Score'] = SimilaryScore
+        query_answer.loc[i, 'BioImage.IO Chatbot Answer - Retrieval Precision'] = RetrievalPrecision
+        query_answer.loc[i, 'BioImage.IO Chatbot Answer - Augmentation Accuracy'] = AugmentationAccuracy
+        query_answer.loc[i, 'BioImage.IO Chatbot Answer - Augmentation Precision'] = AugmentationPrecision
+        query_answer.loc[i, 'BioImage.IO Chatbot Answer - Augmentation Consistency'] = AugmentationConsistency
         print(f"Finish evaluating {i}th question!")
         # save query_answer to a new csv file
         query_answer.to_csv(os.path.join(dir_path, eval_file))
@@ -287,9 +287,9 @@ async def start_evaluate_paral(eval_file, eval_index=None):
     query_answer = load_query_answer(eval_file)
     question_list = list(query_answer['Question'])
     ground_truth_answer_list = list(query_answer['GPT-4-turbo Answer (With Context)- GT'])
-    chatgpt_answer_list = list(query_answer['GPT-3.5-tubor Answer (Without Context)'])
-    gpt4_direct_answer_list = list(query_answer['GPT-4 Answer'])
-    BMZ_chatbot_answer_list = list(query_answer['BMZ Chatbot Answer'])
+    chatgpt_answer_list = list(query_answer['GPT-3.5-turbo Answer (Without Context)'])
+    gpt4_direct_answer_list = list(query_answer['ChatGPT-4 Answer (Without Context)'])
+    BMZ_chatbot_answer_list = list(query_answer['BioImage.IO Chatbot Answer'])
     
     if eval_index is None:
         eval_index = range(len(question_list))
@@ -301,30 +301,30 @@ async def start_evaluate_paral(eval_file, eval_index=None):
         gpt_direct_answer = chatgpt_answer_list[i]
         gpt4_direct_answer = gpt4_direct_answer_list[i]
         chatbot_answer = BMZ_chatbot_answer_list[i]
-        reference_table = query_answer.iloc[i]["BMZ Chatbot Answer References"]
+        reference_table = query_answer.iloc[i]["BioImage.IO Chatbot Answer References"]
         if pd.isna(reference_table) or reference_table == "":
             retrieved_context_list = [""]
         else:
             retrieved_context_list = extract_original_content(reference_table)
         
         # gpt3direct
-        # eval_input_gpt3_direct = EvalInput(question=question, reference_answer=reference_answer, llm_answer=gpt_direct_answer)
-        # # gpt4direct
-        # eval_input_gpt4_direct = EvalInput(question=question, reference_answer=reference_answer, llm_answer=gpt4_direct_answer)
+        eval_input_gpt3_direct = EvalInput(question=question, reference_answer=reference_answer, llm_answer=gpt_direct_answer)
+        # gpt4direct
+        eval_input_gpt4_direct = EvalInput(question=question, reference_answer=reference_answer, llm_answer=gpt4_direct_answer)
         
         # chatbot answer
         eval_input_chatbot = EvalInput(question=question, reference_answer=reference_answer, llm_answer=chatbot_answer, retrieved_context_list=retrieved_context_list)
         
         try:
             tasks = [
-                # evalBot.handle(Message(content=eval_input_gpt3_direct.json(), data=eval_input_gpt3_direct, role="User")),
-                # evalBot.handle(Message(content=eval_input_gpt4_direct.json(), data=eval_input_gpt4_direct, role="User")),
+                evalBot.handle(Message(content=eval_input_gpt3_direct.json(), data=eval_input_gpt3_direct, role="User")),
+                evalBot.handle(Message(content=eval_input_gpt4_direct.json(), data=eval_input_gpt4_direct, role="User")),
                 evalBot.handle(Message(content=eval_input_chatbot.json(), data=eval_input_chatbot, role="User"))
             ]
             results = await asyncio.gather(*tasks)
             
-            # scores_gpt3_direct, scores_gpt4_direct, scores_chatbot = results
-            scores_chatbot = results[0]
+            scores_gpt3_direct, scores_gpt4_direct, scores_chatbot = results
+            # scores_chatbot = results[0]
             
             SimilaryScore = scores_chatbot[0].data.similarity_score
             RetrievalPrecision = sum(scores_chatbot[0].data.context_scores.retrieval_precision) / len(scores_chatbot[0].data.context_scores.retrieval_precision)
@@ -332,35 +332,40 @@ async def start_evaluate_paral(eval_file, eval_index=None):
             AugmentationPrecision = sum(scores_chatbot[0].data.context_scores.augmentation_accuracy) / len(scores_chatbot[0].data.context_scores.augmentation_accuracy)
             AugmentationConsistency = sum(scores_chatbot[0].data.context_scores.augmentation_consistency.main_point_derived_from_context_list) / len(scores_chatbot[0].data.context_scores.augmentation_consistency.main_point_derived_from_context_list)
             
-            # query_answer.loc[i, 'GPT-3.5-tubor Answer (Without Context)- Answer Similarity Score'] = scores_gpt3_direct[0].data.similarity_score
-            # query_answer.loc[i, 'GPT4 Direct Answer - Answer Similarity Score'] = scores_gpt4_direct[0].data.similarity_score
-            query_answer.loc[i, 'BMZ Chatbot Answer - Similarity Score'] = SimilaryScore
-            query_answer.loc[i, 'BMZ Chatbot Answer - Retrieval Precision'] = RetrievalPrecision
-            query_answer.loc[i, 'BMZ Chatbot Answer - Augmentation Accuracy'] = AugmentationAccuracy
-            query_answer.loc[i, 'BMZ Chatbot Answer - Augmentation Precision'] = AugmentationPrecision
-            query_answer.loc[i, 'BMZ Chatbot Answer - Augmentation Consistency'] = AugmentationConsistency     
+            query_answer.loc[i, 'GPT-3.5-turbo Answer (Without Context) - Answer Similarity Score'] = scores_gpt3_direct[0].data.similarity_score
+            query_answer.loc[i, 'ChatGPT-4 Answer (Without Context) - Answer Similarity Score'] = scores_gpt4_direct[0].data.similarity_score
+            query_answer.loc[i, 'BioImage.IO Chatbot Answer - Similarity Score'] = SimilaryScore
+            query_answer.loc[i, 'BioImage.IO Chatbot Answer - Retrieval Precision'] = RetrievalPrecision
+            query_answer.loc[i, 'BioImage.IO Chatbot Answer - Augmentation Accuracy'] = AugmentationAccuracy
+            query_answer.loc[i, 'BioImage.IO Chatbot Answer - Augmentation Precision'] = AugmentationPrecision
+            query_answer.loc[i, 'BioImage.IO Chatbot Answer - Augmentation Consistency'] = AugmentationConsistency     
             query_answer.to_csv(os.path.join(dir_path, eval_file))
         except Exception as e:
             tasks = [
-                # evalBot.handle(Message(content=eval_input_gpt3_direct.json(), data=eval_input_gpt3_direct, role="User")),
-                # evalBot.handle(Message(content=eval_input_gpt4_direct.json(), data=eval_input_gpt4_direct, role="User")),
+                evalBot.handle(Message(content=eval_input_gpt3_direct.json(), data=eval_input_gpt3_direct, role="User")),
+                evalBot.handle(Message(content=eval_input_gpt4_direct.json(), data=eval_input_gpt4_direct, role="User")),
                 evalBot.handle(Message(content=eval_input_chatbot.json(), data=eval_input_chatbot, role="User"))
             ]
             results = await asyncio.gather(*tasks)
             
-            # scores_gpt3_direct, scores_gpt4_direct, scores_chatbot = results
-            scores_chatbot = results[0]
+            scores_gpt3_direct, scores_gpt4_direct, scores_chatbot = results
+            # scores_chatbot = results[0]
             
             SimilaryScore = scores_chatbot[0].data.similarity_score
-            # query_answer.loc[i, 'GPT-3.5-tubor Answer (Without Context)- Answer Similarity Score'] = scores_gpt3_direct[0].data.similarity_score
-            # query_answer.loc[i, 'GPT4 Direct Answer - Answer Similarity Score'] = scores_gpt4_direct[0].data.similarity_score
-            query_answer.loc[i, 'BMZ Chatbot Answer - Similarity Score'] = SimilaryScore
+            query_answer.loc[i, 'GPT-3.5-turbo Answer (Without Context) - Answer Similarity Score'] = scores_gpt3_direct[0].data.similarity_score
+            query_answer.loc[i, 'ChatGPT-4 Answer (Without Context) - Answer Similarity Score'] = scores_gpt4_direct[0].data.similarity_score
+            query_answer.loc[i, 'BioImage.IO Chatbot Answer - Similarity Score'] = SimilaryScore
             query_answer.to_csv(os.path.join(dir_path, eval_file))
     # Create a list of tasks
     tasks = [evaluate_question(i) for i in eval_index]
 
     # Run tasks concurrently
     await asyncio.gather(*tasks)
+    # get the mean of similarity score
+    gpt3_5_mean = query_answer['GPT-3.5-turbo Answer (Without Context) - Answer Similarity Score'].mean()
+    chatgpt4_mean = query_answer['ChatGPT-4 Answer (Without Context) - Answer Similarity Score'].mean()
+    chatbot_mean = query_answer['BioImage.IO Chatbot Answer - Similarity Score'].mean()
+    print(f"gpt3_5_mean: {gpt3_5_mean}, chatgpt4_mean: {chatgpt4_mean}, chatbot_mean: {chatbot_mean}")
     query_answer.to_csv(os.path.join(dir_path, eval_file))  # Save the updated DataFrame to the CSV file
  
 async def get_answer_and_evaluate(excel, eval_index=None):
@@ -371,20 +376,38 @@ async def get_answer_and_evaluate(excel, eval_index=None):
     print("Finish evaluating!")
     
 if __name__ == "__main__":
-    # file = os.path.join(dir_path, "Knowledge-Retrieval-Evaluation - Hoja 1-2.csv")
-    file_with_gt = os.path.join(dir_path, "Knowledge-Retrieval-Evaluation_1210_2.csv")
+    # # get the version of chatbot in pyproject.toml
+    # with open("pyproject.toml", "r") as f:
+    #     pyproject = yaml.safe_load(f)
+    # version = pyproject["tool"]["poetry"]["version"]
+    
+    # Download csv from https://docs.google.com/spreadsheets/d/1E7kLdlkkEwM1Bkhn1BYWxbQf34W-3i3wujuTotiarzY/edit
+    # Select sheet: function-call-18-12-2023 (version 18-12-2023)
+    file_with_gt = os.path.join(dir_path, "Knowledge-Retrieval-Evaluation - Hoja 7.csv")
    
     # load query_answer
     query_answer = load_query_answer(file_with_gt)
-    # find the index of questions which 'BMZ Chatbot Answer - Similarity Score' is lower than 3
-    eval_index = query_answer[query_answer['BMZ Chatbot Answer - Similarity Score'] ==0].index
-    # # find the index of questions which 'BMZ Chatbot Answer - Similarity Score' is NA
-    # eval_index = query_answer[query_answer['BMZ Chatbot Answer - Similarity Score'].isna()].index
-    # eval_index=range(66)
-    asyncio.run(get_ground_truth(file_with_gt, eval_index))
+    # remove columns named 'Unnamed: 0'
+    query_answer = query_answer.loc[:, ~query_answer.columns.str.contains('^Unnamed')]
+    # remove rows which 'Question' is NA
+    query_answer = query_answer[query_answer['Question'].notna()]
+    # remove rows which 'Question' is empty
+    query_answer = query_answer[query_answer['Question'] != ""]
+    # save query_answer to a new csv file
+    query_answer.to_csv(os.path.join(dir_path, file_with_gt))
+    print(f"Length of query_answer: {len(query_answer)}")
+    # find the index of questions which 'BioImage.IO Chatbot Answer - Similarity Score' is lower than 3
+    # eval_index = query_answer[query_answer['BioImage.IO Chatbot Answer - Similarity Score'] ==0].index
+
+    # # find the index of questions which 'BioImage.IO Chatbot Answer - Similarity Score' is NA
+    # eval_index = query_answer[query_answer['BioImage.IO Chatbot Answer - Similarity Score'].isna()].index
+    eval_index=range(60)
+    # asyncio.run(get_ground_truth(file_with_gt, eval_index))
     # asyncio.run(get_answers(file_with_gt, eval_index))
     # asyncio.run(get_answer_and_evaluate(file_with_gt,eval_index))
-    asyncio.run(start_evaluate_paral(file_with_gt, eval_index))
+    asyncio.run(start_evaluate_paral(file_with_gt,eval_index))
+    
+    
     
     
    
