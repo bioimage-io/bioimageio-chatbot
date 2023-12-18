@@ -143,7 +143,6 @@ def download_docs(root_dir, url):
         pdf_file_path = os.path.join(result_folder, filename)
         download_file(url, pdf_file_path)
         print(f"Downloaded {url} to {result_folder}")
-        
     else:
         raise Exception("Unsupported file format")
     
@@ -169,6 +168,9 @@ def create_vector_knowledge_base(output_dir=None, collections=None):
     
     embeddings = OpenAIEmbeddings()
     for collection in collections:
+        if collection.get("format") and collection.get("format").startswith("custom:"):
+            print(f"Skipping {collection['id']} because it is a custom collection.")
+            continue
         url = collection['source']
         cached_docs_file = os.path.join(output_dir, collection['id'] + "-docs.pickle")
         if os.path.exists(cached_docs_file):
