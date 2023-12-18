@@ -18,7 +18,6 @@ from bioimageio_chatbot.knowledge_base import load_knowledge_base
 from bioimageio_chatbot.utils import get_manifest
 from bioimageio_chatbot.biii import search_biii_with_links, BiiiRow
 import pkg_resources
-from bioimageio_chatbot.chatbot_extensions.interface import load_extensions_from_json, ChatbotExtension
 from bioimageio_chatbot.jsonschema_pydantic import jsonschema_to_pydantic, JsonSchemaObject
     
 def load_model_info():
@@ -113,6 +112,19 @@ class DocumentSearchInput(BaseModel):
     format: Optional[str] = Field(None, description="The format of the document.")
     preliminary_response: Optional[str] = Field(None, description="The preliminary response to the user's question. This will be combined with the retrieved documents to produce the Document Response.")
 
+class UserProfile(BaseModel):
+    """The user's profile. This will be used to personalize the response to the user."""
+    name: str = Field(description="The user's name.", max_length=32)
+    occupation: str = Field(description="The user's occupation.", max_length=128)
+    background: str = Field(description="The user's background.", max_length=256)
+
+class ExtensionCallInput(BaseModel):
+    """Result of calling an extension function"""
+    user_question: str = Field(description="The user's original question.")
+    user_profile: Optional[UserProfile] = Field(None, description="The user's profile. You should use this to personalize the response.")
+    result: Optional[Any] = Field(None, description="The result of calling the extension function.")
+    error: Optional[str] = Field(None, description="The error message if the extension function call failed.")
+
 class DocumentResponse(BaseModel):
     """The Document Response to the user's question based on the preliminary response and the documentation search results. The response should be tailored to uer's info if provided. 
     If the documentation search results are relevant to the user's question, provide a text response to the question based on the search results.
@@ -123,18 +135,16 @@ class DocumentResponse(BaseModel):
 class BiiiResponse(BaseModel):
     """Summarize the search results from biii.eu"""
     response: str = Field(description="The answer to the user's question based on the search results. Can be either a detailed response in markdown format if the search results are relevant to the user's question or 'I don't know'. It should resolve relative URLs in the search results using the base_url.")
-    
+
+class ExtensionCallResponse(BaseModel):
+    """Summarize the result of calling an extension function"""
+    response: str = Field(description="The answer to the user's question based on the result of calling the extension function.")
+
 class ChannelInfo(BaseModel):
     """The selected knowledge base channel for the user's question. If provided, rely only on the selected channel when answering the user's question."""
     id: str = Field(description="The channel id.")
     name: str = Field(description="The channel name.")
     description: str = Field(description="The channel description.")
-
-class UserProfile(BaseModel):
-    """The user's profile. This will be used to personalize the response to the user."""
-    name: str = Field(description="The user's name.", max_length=32)
-    occupation: str = Field(description="The user's occupation.", max_length=128)
-    background: str = Field(description="The user's background.", max_length=256)
 
 class QuestionWithHistory(BaseModel):
     """The user's question, chat history, and user's profile."""
@@ -179,13 +189,6 @@ def create_customer_service(db_path):
     tags = list(tags)[:10]
     
     channels_info = "\n".join(f"""- `{collection['id']}`: {collection['description']}""" for collection in collections)
-    resource_item_stats = f"""Each item contains the following fields: {list(resource_items[0].keys())}\nThe available resource types are: {types}\nSome example tags: {tags}\nHere is an example: {resource_items[0]}"""
-    class ModelZooInfoScript(BaseModel):
-        """Create a Python Script to get information about details of models, applications, datasets, etc. in the model zoo. Remember some items in the model zoo may not have all the fields, so you need to handle the missing fields."""
-        script: str = Field(description="The script to be executed which uses a predefined local variable `resources` containing a list of dictionaries with all the resources in the model zoo (including models, applications, datasets etc.). The response to the query should be printed to stdout. Details about the local variable `resources`:\n" + resource_item_stats)
-        request: str = Field(description="The user's detailed request")
-        user_info: Optional[str] = Field("", description="Brief user info summary including name, background, etc., for personalizing responses to the user.")
-
     async def respond_to_user(question_with_history: QuestionWithHistory = None, role: Role = None) -> str:
         """Answer the user's question directly or retrieve relevant documents from the documentation, or create a Python Script to get information about details of models."""
         steps = []
@@ -211,44 +214,23 @@ def create_customer_service(db_path):
         steps = []
         inputs = [question_with_history.user_profile] + list(question_with_history.chat_history) + [question_with_history.question]
 
-        mode_types = [DirectResponse, DocumentRetrievalInput, ModelZooInfoScript, SearchOnBiii, LearningResponse, CodingResponse]
-        if question_with_history.chatbot_extensions:
-            for mode_d in question_with_history.chatbot_extensions:
-                mode_types.append(mode_d['schema_class'])
-        mode_types = tuple(mode_types)
+        builtin_response_types = [DirectResponse, DocumentRetrievalInput, SearchOnBiii, LearningResponse, CodingResponse]
+        extension_types = [mode_d['schema_class'] for mode_d in question_with_history.chatbot_extensions]
+        response_types = tuple(builtin_response_types + extension_types)
 
 
         # The channel info will be inserted at the beginning of the inputs
         if question_with_history.channel_info:
             inputs.insert(0, question_with_history.channel_info)
 
-        if question_with_history.channel_info is not None:
+        if question_with_history.channel_info:
             if question_with_history.channel_info.id == "biii.eu":
                 req = await role.aask(inputs, Union[DirectResponse, SearchOnBiii, LearningResponse, CodingResponse])
             elif question_with_history.channel_info.id == "bioimage.io":
-                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, ModelZooInfoScript, LearningResponse, CodingResponse])
-            elif question_with_history.chatbot_extensions is not None:
-                for mode_d in question_with_history.chatbot_extensions:
-                    mode_name = mode_d['name']
-                    if mode_name == question_with_history.channel_info.id:
-                        try: 
-                            req = await role.aask(inputs, mode_d['schema_class'])
-                        except Exception as e:
-                            req = await role.aask(inputs, mode_d['schema_class'])
-                        response_function = mode_d['execute']
-                        steps.append(ResponseStep(name=mode_name, details=req.dict()))
-                        response = await response_function(req.dict())
-                        steps.append(ResponseStep(name="function call: " + mode_name, details=str(response)))
-                        return RichResponse(text=response, steps=steps)
+                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, LearningResponse, CodingResponse])
             return RichResponse(text=f"Unknown channel selected: {question_with_history.channel_info.id}")
-        if not question_with_history.channel_info or question_with_history.channel_info.id == "bioimage.io":
-            try:
-                req = await role.aask(inputs, Union[mode_types])
-            except Exception as e:
-                # try again
-                req = await role.aask(inputs, Union[mode_types])
         else:
-            req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, ModelZooInfoScript, SearchOnBiii, LearningResponse, CodingResponse])
+            req = await role.aask(inputs, Union[response_types])
 
         if isinstance(req, (DirectResponse, LearningResponse, CodingResponse)):
             return RichResponse(text=req.response, steps=steps)
@@ -306,36 +288,24 @@ def create_customer_service(db_path):
                 steps.append(ResponseStep(name="Document Response", details=response.dict()))
             # source: doc.metadata.get('source', 'N/A')
             return RichResponse(text=response.response, steps=steps)
-        elif isinstance(req, ModelZooInfoScript):
-            steps.append(ResponseStep(name="Model Zoo Info Script", details=req.dict()))
-            loop = asyncio.get_running_loop()
-            print(f"Executing the script:\n{req.script}")
-            result = await loop.run_in_executor(None, execute_code, req.script, {"resources": resource_items})
-            print(f"Script execution result:\n{result}")
-            steps.append(ResponseStep(name="Script Execution", details=result))
-            response = await role.aask(ModelZooInfoScriptResults(
-                stdout=result["stdout"],
-                stderr=result["stderr"],
-                request=req.request,
-                user_info=req.user_info
-            ), DocumentResponse)
-            steps.append(ResponseStep(name="Document Response", details=response.dict()))
-            return RichResponse(text=response.response, steps=steps)
-        elif question_with_history.chatbot_extensions is not None:
-            for mode_d in question_with_history.chatbot_extensions:
-                mode_name = mode_d['name']
-                try: 
-                    req = await role.aask(inputs, mode_d['schema_class'])
-                except Exception as e:
-                    req = await role.aask(inputs, mode_d['schema_class'])
-                response_function = mode_d['execute']
-                steps.append(ResponseStep(name=mode_name, details=req.dict()))
-                try:
-                    await response_function(req.dict())
-                    return RichResponse(text="Successfully executed function: " + mode_name, steps=steps)
-                except Exception as e:
-                    return RichResponse(text="Failed to call the function: " + mode_name, steps=steps)
-        
+        elif isinstance(req, tuple(extension_types)):
+            idx = extension_types.index(type(req))
+            mode_d = question_with_history.chatbot_extensions[idx]
+            response_function = mode_d['execute']
+            mode_name = mode_d['name']
+            steps.append(ResponseStep(name="Call extension: " + mode_name, details=req.dict()))
+            try:
+                result = await response_function(req.dict())
+                steps.append(ResponseStep(name="Summarize result: " + mode_name, details={"result": result}))
+                resp = await role.aask(ExtensionCallInput(user_question=question_with_history.question, user_profile=question_with_history.user_profile, result=result), ExtensionCallResponse)
+                steps.append(ResponseStep(name="Result: " + mode_name, details=resp.dict()))
+                return RichResponse(text=resp.response, steps=steps)
+            except Exception as e:
+                resp = await role.aask(ExtensionCallInput(user_question=question_with_history.question, user_profile=question_with_history.user_profile, error=str(e)), ExtensionCallResponse)
+                steps.append(ResponseStep(name="Result: " + mode_name, details=resp.dict()))
+                return RichResponse(text=resp.response, steps=steps)
+        else:
+            raise ValueError(f"Unknown response type: {type(req)}")
     customer_service = Role(
         name="Melman",
         profile="Customer Service",
