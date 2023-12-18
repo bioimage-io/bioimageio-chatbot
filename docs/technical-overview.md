@@ -20,7 +20,7 @@ As of today, our chatbot utilizes knowledge bases from the following pivotal com
 
 The knowledge base is efficiently and collaboratively constructed by downloading documentation from given URLs. These can be repositories, PDFs, or other forms of documentation. We use a regular expression splitter to segment the documentation into manageable chunks for efficient and accurate retrieval. These chunks are then embedded and stored as vectors in a FAISS [1]-based vector database.
 
-## Schema-Based Agent Design and Response Examples
+## Schema-Based Agent Design
 
 The chatbot's ability to understand and respond to user queries is substantially improved by employing a schema-based agent design. Unlike traditional context-based models, our approach utilizes predefined schemas to guide the conversation and information retrieval process. 
 
@@ -29,24 +29,45 @@ The schema-based agent operates on the function-call LLM [8], and uses input and
 ![role_create](./screenshots/role_create.png)
 *Figure 4. Creation of a chatbot role class named ‘CustomerServiceRole’ by defining fields of the role class.*
 
-### Information Retrieval
+## Response Modes
+The BioImage.IO Chatbot employs diverse methods to generate responses, currently encompassing five distinct response modes. The response mode is chosen by the schema-based agent based on the user's query and the selected channel.
 
-For straightforward queries, the chatbot generates concise and accurate answers directly from its pre-configured profile (see Figure 6).
+### Direct Response
+This mode delivers concise, direct answers for straightforward queries, utilizing the chatbot's internal knowledge base without external data retrieval. 
 
     ![direct-response](./screenshots/direct-response.png)
-    *Figure 6. Direct response for simple queries.*
+    *Figure 6. Direct response example.*
 
-In addition, there are two information retrieval modes:
-
-1. **Response with Text-Based Retrieval**: For complex or specific questions, the chatbot extracts key queries from the user's question and retrieves information from relevant documentation (see Figure 7).
+### Document Retrieval Response
+Complex or specific queries trigger this mode, where the chatbot extracts essential elements from the user's question to fetch information from the relevant documentation. 
 
     ![retrieval-text](./screenshots/retrieval-text.png)
-    *Figure 7. Text-based retrieval from the knowledge base.*
+    *Figure 7. Document retrieval from knowledge base.*
 
-2. **Response with Script Generation and Execution**: For advanced queries requiring specific model details or actions, the chatbot dynamically generates and executes tailored scripts (see Figure 8).
+The process begins with an initial response based on the user's query (`request`), which serves as a foundation for generating a new `query` for targeted information retrieval. This is combined with user profile data (`user_info`) and the chosen retrieval channel (`channel_id`) to produce a comprehensive final response.
+
+### Scripting Retrieval Response
+This mode is designed for queries requiring detailed model information or specific actions, generating and executing Python scripts for tailored solutions.
 
     ![script-gen-exe-retrieval](./screenshots/script-gen-exe-retrieval.png)
-    *Figure 8. Script generation and execution for advanced queries.*
+    *Figure 8. Scripting retrieval for complex queries.*
+
+It involves creating a `ModelZooInfoScript` schema with fields like `request`, `user info`, and `script`, where `script` is Python code for API interactions or data manipulation. The final response is formulated by integrating the script's output with the `request` and `user info`.
+
+### API Call Response
+This mode integrates user-provided APIs for data processing, currently implementing Cellpose[9] for image segmentation tasks on user-uploaded images.
+
+    TODO: add an example screenshot.
+
+The chatbot translates analysis requests into a `CellposeTask` schema, detailing the segmentation task per the `TaskChoice` schema. An LLM agent identifies image axes labels using a `LabeledImage` schema, ensuring compatibility with the segmentation process. Incompatible images trigger a `CellposeHelp` schema for guidance.
+
+### Specialized Skill Response
+This mode offers enriched responses for specific user needs, activating specialized modes like `Learning` and `Coding`.
+
+    TODO: add an example screenshot.
+
+The `Learning` mode provides educational responses enriched with key terms and concepts, while the `Coding` mode generates functional code snippets for specific tasks. These specialized responses are contrasted with the more general Direct Response mode and can be extended or chosen as a channel in the channel selection process.
+
 
 ## References
 
@@ -58,3 +79,4 @@ In addition, there are two information retrieval modes:
 6. [bio.tools](https://bio.tools)
 7. [scikit-image](https://scikit-image.org/docs/stable/)
 8. [Function-Calling API](https://openai.com/blog/function-calling-and-other-api-updates)
+9. [CellPose](https://www.cellpose.org)
