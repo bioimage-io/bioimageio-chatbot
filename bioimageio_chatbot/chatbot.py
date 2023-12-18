@@ -64,18 +64,10 @@ def execute_code(script, context=None):
         sys.stdout = original_stdout
         sys.stderr = original_stderr
 
-
-class ModelZooInfoScriptResults(BaseModel):
-    """Results of executing a model zoo info query script."""
-    stdout: str = Field(description="The query script execution stdout output.")
-    stderr: str = Field(description="The query script execution stderr output.")
-    request: str = Field(description="Details concerning the user's request that triggered the model zoo query script execution")
-    user_info: Optional[str] = Field("", description="The user's info for personalizing response.")
-
 class SearchOnBiii(BaseModel):
     """Search software tools on BioImage Informatics Index (biii.eu) is a platform for sharing bioimage analysis software and tools."""
     keywords: List[str] = Field(description="A list of search keywords, no space allowed in each keyword.")
-    request: str = Field(description="Details concerning the user's request that triggered the model zoo query script execution")
+    request: str = Field(description="Details concerning the user's request that triggered the search on biii.eu.")
     user_info: Optional[str] = Field("", description="The user's info for personalizing response.")
     top_k: int = Field(10, description="The maximum number of search results to return. Should use a small number to avoid overwhelming the user.")
 class BiiiSearchResult(BaseModel):
@@ -94,7 +86,7 @@ class LearningResponse(BaseModel):
     response: str = Field(description="The response to user's question, make sure the response is pedagogical and educational.")
 
 class CodingResponse(BaseModel):
-    """If user's question is related to scripting or coding in bioimage analysis, generate code to help user to create valid scripts or understand code. Note: Don't be confused with the ModelZooInfoScript, which is used to get information about details of models, applications, datasets, etc. in the model zoo."""
+    """If user's question is related to scripting or coding in bioimage analysis, generate code to help user to create valid scripts or understand code."""
     response: str = Field(description="The response to user's question, make sure the response contains valid code, with concise explaination.")
 
 class DocWithScore(BaseModel):
@@ -129,7 +121,7 @@ class DocumentResponse(BaseModel):
     """The Document Response to the user's question based on the preliminary response and the documentation search results. The response should be tailored to uer's info if provided. 
     If the documentation search results are relevant to the user's question, provide a text response to the question based on the search results.
     If the documentation search results contains only low relevance scores or if the question isn't relevant to the search results, return the preliminary response.
-    Importantly, if you can't confidently provide a relevant response to the user's question, return 'Sorry I didn't find relevant information in model zoo, please try again.'."""
+    Importantly, if you can't confidently provide a relevant response to the user's question, return 'Sorry I didn't find relevant information, please try again.'."""
     response: str = Field(description="The answer to the user's question based on the search results. Can be either a detailed response in markdown format if the search results are relevant to the user's question or 'I don't know'.")
 
 class BiiiResponse(BaseModel):
