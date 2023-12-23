@@ -1,6 +1,7 @@
 import asyncio
 import os
 import json
+import uuid
 import datetime
 import secrets
 import aiofiles
@@ -110,7 +111,7 @@ class ExtensionCallInput(BaseModel):
     """Result of calling an extension function"""
     user_question: str = Field(description="The user's original question.")
     user_profile: Optional[UserProfile] = Field(None, description="The user's profile. You should use this to personalize the response.")
-    result: Optional[Any] = Field(None, description="The result of calling the extension function.")
+    result: Optional[Any] = Field(None, description="The result of calling the extension function. Objects that are not serializable will be stored in a temporary storage and a reference id will be returned(format: {'rtype': 'object', 'reference_id': 'xxx'})")
     error: Optional[str] = Field(None, description="The error message if the extension function call failed.")
 
 class DocumentResponse(BaseModel):
@@ -162,6 +163,42 @@ class RichResponse(BaseModel):
     """Rich response with text and intermediate steps"""
     text: str = Field(description="Response text")
     steps: List[ResponseStep] = Field(description="Intermediate steps")
+
+
+storage = {}
+
+def encode_data(result):
+    if result is None:
+        return result
+    elif isinstance(result, (str, int, float, bool)):
+        return result
+    elif isinstance(result, dict):
+        return {k: encode_data(v) for k, v in result.items()}
+    elif isinstance(result, list):
+        return [encode_data(v) for v in result]
+    else:
+        key = str(uuid.uuid4())
+        storage[key] = result
+        return {
+            "rtype": "object",
+            "reference_id": key,
+        }
+
+def decode_data(result):
+    if result is None:
+        return result
+    elif isinstance(result, (str, int, float, bool)):
+        return result
+    elif isinstance(result, dict):
+        if ("rtype" in result) and (result["rtype"] == "object"):
+            key = result["reference_id"]
+            return storage[key]
+        else:
+            return {k: decode_data(v) for k, v in result.items()}
+    elif isinstance(result, list):
+        return [decode_data(v) for v in result]
+    else:
+        return result
 
 def create_customer_service(db_path):
     collections = get_manifest()['collections']
@@ -276,11 +313,13 @@ def create_customer_service(db_path):
             mode_name = mode_d['name']
             steps.append(ResponseStep(name="Extension: " + mode_name, details=req.dict()))
             try:
-                result = await response_function(req.dict())
+                decoded = decode_data(req.dict())
+                result = await response_function(decoded)
+                result = encode_data(result)
                 steps.append(ResponseStep(name="Summarize result: " + mode_name, details={"result": result}))
                 resp = await role.aask(ExtensionCallInput(user_question=question_with_history.question, user_profile=question_with_history.user_profile, result=result), ExtensionCallResponse)
                 steps.append(ResponseStep(name="Result: " + mode_name, details=resp.dict()))
-                return RichResponse(text=resp.response, steps=steps)
+                return RichResponse(text=resp.response + f"\nExtension call results:\n```\n{result}\n```\n", steps=steps)
             except Exception as e:
                 resp = await role.aask(ExtensionCallInput(user_question=question_with_history.question, user_profile=question_with_history.user_profile, error=str(e)), ExtensionCallResponse)
                 steps.append(ResponseStep(name="Result: " + mode_name, details=resp.dict()))
@@ -473,7 +512,7 @@ async def register_chat_service(server):
     
     version = pkg_resources.get_distribution('bioimageio-chatbot').version
     def reload_index():
-        with open(os.path.join(os.path.dirname(__file__), "static/index.html"), "r") as f:
+        with open(os.path.join(os.path.dirname(__file__), "static/index.html"), "r", encoding='utf-8') as f:
             index_html = f.read()
         index_html = index_html.replace("https://ai.imjoy.io", server.config['public_base_url'] or f"http://127.0.0.1:{server.config['port']}")
         index_html = index_html.replace('"bioimageio-chatbot"', f'"{hypha_service_info["id"]}"')
