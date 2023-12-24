@@ -208,7 +208,8 @@ def create_customer_service(db_path):
                 req = await role.aask(inputs, Union[DirectResponse, SearchOnBiii, LearningResponse, CodingResponse])
             elif question_with_history.channel_info.id == "bioimage.io":
                 req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, LearningResponse, CodingResponse])
-            return RichResponse(text=f"Unknown channel selected: {question_with_history.channel_info.id}")
+            else:
+                req = await role.aask(inputs, Union[response_types])
         else:
             req = await role.aask(inputs, Union[response_types])
 
@@ -251,6 +252,7 @@ def create_customer_service(db_path):
                 docs_with_score = sorted(docs_with_score, key=lambda x: x.score, reverse=True)
                 # only keep the top 3 documents
                 docs_with_score = docs_with_score[:3]
+                
                 search_input = DocumentSearchInput(user_question=req.request, relevant_context=docs_with_score, user_info=req.user_info, format=None, preliminary_response=req.preliminary_response)
                 steps.append(ResponseStep(name="Document Search", details=search_input.dict()))
                 response = await role.aask(search_input, DocumentResponse)
