@@ -176,8 +176,6 @@ def create_customer_service(db_path):
         # The channel info will be inserted at the beginning of the inputs
         if question_with_history.channel_info:
             inputs.insert(0, question_with_history.channel_info)
-        
-
         if question_with_history.channel_info:
             channel_prompt = f"The channel_id of the knowledge base to search. It MUST be set to {question_with_history.channel_info.id} (selected by the user)."
         else:
@@ -195,15 +193,13 @@ def create_customer_service(db_path):
         inputs = [question_with_history.user_profile] + list(question_with_history.chat_history) + [question_with_history.question]
 
         builtin_response_types = [DirectResponse, DocumentRetrievalInput, SearchOnBiii, LearningResponse, CodingResponse]
-        extension_types = [mode_d['schema_class'] for mode_d in question_with_history.chatbot_extensions]
+        extension_types = [mode_d['schema_class'] for mode_d in question_with_history.chatbot_extensions] if question_with_history.chatbot_extensions else []
         response_types = tuple(builtin_response_types + extension_types)
+       
 
-
-        # The channel info will be inserted at the beginning of the inputs
         if question_with_history.channel_info:
+            # The channel info will be inserted at the beginning of the inputs
             inputs.insert(0, question_with_history.channel_info)
-
-        if question_with_history.channel_info:
             if question_with_history.channel_info.id == "biii.eu":
                 req = await role.aask(inputs, Union[DirectResponse, SearchOnBiii, LearningResponse, CodingResponse])
             elif question_with_history.channel_info.id == "bioimage.io":
