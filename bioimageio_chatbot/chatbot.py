@@ -57,20 +57,14 @@ def execute_code(script, context=None):
         sys.stdout = original_stdout
         sys.stderr = original_stderr
 
-class SearchOnBiii(BaseModel):
-    """Search software tools on BioImage Informatics Index (biii.eu) is a platform for sharing bioimage analysis software and tools."""
-    preliminary_response: str = Field(description="The preliminary response to the user's question. This will be combined with the retrieved documents to produce the final response.")
+class BiiiQuery(BaseModel):
+    """Generate Query to search on biii.eu."""
     keywords: List[str] = Field(description="A list of search keywords, no space allowed in each keyword.")
-    request: str = Field(description="Details concerning the user's request that triggered the search on biii.eu.")
-    user_info: Optional[str] = Field("", description="The user's info for personalizing response.")
     top_k: int = Field(10, description="The maximum number of search results to return. Should use a small number to avoid overwhelming the user.")
 
 class BiiiSearchResult(BaseModel):
     """Search results from biii.eu"""
-    preliminary_response: str = Field(description="The preliminary response to the user's question. This will be combined with the retrieved documents to produce the final response.")
     results: List[BiiiRow] = Field(description="Search results from biii.eu")
-    request: str = Field(description="The user's detailed request")
-    user_info: Optional[str] = Field("", description="Brief user info summary including name, background, etc., for personalizing responses to the user.")
     base_url: str = Field(description="The based URL of the search results, e.g. ImageJ (/imagej) will become <base_url>/imagej")
 
 class DirectResponse(BaseModel):
@@ -94,11 +88,8 @@ class DocWithScore(BaseModel):
 
 class DocumentSearchInput(BaseModel):
     """Results of a document retrieval process from a documentation base."""
-    user_question: str = Field(description="The user's original question.")
     relevant_context: List[DocWithScore] = Field(description="Chunks of context retrieved from the documentation that are relevant to the user's original question.")
-    user_info: Optional[str] = Field("", description="The user's info for personalizing the response.")
     format: Optional[str] = Field(None, description="The format of the document.")
-    preliminary_response: Optional[str] = Field(None, description="The preliminary response to the user's question. This will be combined with the retrieved documents to produce the Document Response.")
 
 class UserProfile(BaseModel):
     """The user's profile. This will be used to personalize the response to the user."""
@@ -108,18 +99,17 @@ class UserProfile(BaseModel):
 
 class ExtensionCallInput(BaseModel):
     """Result of calling an extension function"""
-    user_question: str = Field(description="The user's original question.")
-    user_profile: Optional[UserProfile] = Field(None, description="The user's profile. You should use this to personalize the response.")
     result: Optional[Any] = Field(None, description="The result of calling the extension function.")
     error: Optional[str] = Field(None, description="The error message if the extension function call failed.")
 
 class DocumentResponse(BaseModel):
-    """The Document Response to the user's question based on the preliminary response and the documentation search results.
+    """The Document Response to the user's question based on the documentation search results.
     Make sure the response is relevant to the user's question, do not provide irrelevant information to the user. The response should be tailored to uer's info if provided. 
     If the documentation search results are relevant to the user's question, provide a text response to the question based on the search results.
-    If the documentation search results contains only low relevance scores or if the question isn't relevant to the search results, return the preliminary response.
+    If the documentation search results contains only low relevance scores, return 'I don't know'.
     Importantly, if you can't confidently provide a relevant response to the user's question, return 'Sorry I didn't find relevant information, please try again.'."""
     response: str = Field(description="The answer to the user's question based on the search results. Can be either a detailed response in markdown format if the search results are relevant to the user's question or 'I don't know'.")
+
 
 class BiiiResponse(BaseModel):
     """Summarize the search results from biii.eu. Make sure the response is relevant to the user's question, do not provide irrelevant information to the user."""
@@ -171,59 +161,27 @@ def create_customer_service(db_path):
     collection_info_dict = {collection['id']: collection for collection in collections}
     
     channels_info = "\n".join(f"""- `{collection['id']}`: {collection['description']}""" for collection in collections)
+
     async def respond_to_user(question_with_history: QuestionWithHistory = None, role: Role = None) -> str:
         """Answer the user's question directly or retrieve relevant documents from the documentation, or create a Python Script to get information about details of models."""
         steps = []
         inputs = [question_with_history.user_profile] + list(question_with_history.chat_history) + [question_with_history.question]
         # The channel info will be inserted at the beginning of the inputs
         if question_with_history.channel_info:
+            inputs.insert(0, question_with_history.channel_info)
+        if question_with_history.channel_info:
             channel_prompt = f"The channel_id of the knowledge base to search. It MUST be set to {question_with_history.channel_info.id} (selected by the user)."
         else:
             channel_prompt = f"The channel_id of the knowledge base to search. It MUST be the same as the user provided channel_id. If not specified, either select 'all' to search through all the available knowledge base channels or select one from the available channels which are:\n{channels_info}. If you are not sure which channel to select, select 'all'."
-
+        
+        
         class DocumentRetrievalInput(BaseModel):
-            """Input for searching knowledge bases and finding documents relevant to the user's request. This response is used to provide specific information about the user's request."""
-            request: str = Field(description="The user's detailed request")
-            preliminary_response: str = Field(description="The preliminary response to the user's question. This will be combined with the retrieved documents to produce the final response.")
-            query: str = Field(description="The query used to retrieve documents related to the user's request. Take preliminary_response as reference to generate query if needed.")
-            user_info: Optional[str] = Field("", description="Brief user info summary including name, background, etc., for personalizing responses to the user.")
+            """Input for searching knowledge bases and finding documents relevant to the user's request."""
+            query: str = Field(description="The query used to retrieve documents related to the user's request.")
             channel_id: str = Field(description=channel_prompt)
 
-        builtin_response_types = [DirectResponse, DocumentRetrievalInput, SearchOnBiii, LearningResponse, CodingResponse]
-        extension_types = [mode_d['schema_class'] for mode_d in question_with_history.chatbot_extensions] if question_with_history.chatbot_extensions else []
-        response_types = tuple(builtin_response_types + extension_types)
-
-        if question_with_history.channel_info:
-            # The channel info will be inserted at the beginning of the inputs
-            inputs.insert(0, question_with_history.channel_info)
-            if question_with_history.channel_info.id == "biii.eu":
-                req = await role.aask(inputs, Union[DirectResponse, SearchOnBiii, LearningResponse, CodingResponse])
-            elif question_with_history.channel_info.id == "bioimage.io":
-                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, LearningResponse, CodingResponse])
-            else:
-                req = await role.aask(inputs, Union[response_types])
-        else:
-            req = await role.aask(inputs, Union[response_types])
-
-        if isinstance(req, (DirectResponse, LearningResponse, CodingResponse)):
-            steps.append(ResponseStep(name=type(req).__name__, details=req.dict()))
-            return RichResponse(text=req.response, steps=steps)
-        elif isinstance(req, SearchOnBiii):
-            print(f"Searching biii.eu with keywords: {req.keywords}, top_k: {req.top_k}")
-            try:
-                loop = asyncio.get_running_loop()
-                steps.append(ResponseStep(name="Search on biii.eu", details=req.dict()))
-                results = await loop.run_in_executor(None, search_biii_with_links, req.keywords, "software", "")
-                if results:
-                    results = BiiiSearchResult(results=results[:req.top_k], request=req.request, user_info=req.user_info, base_url="https://biii.eu", preliminary_response=req.preliminary_response)
-                    steps.append(ResponseStep(name="Summarize results from biii.eu", details=results.dict()))
-                    response = await role.aask(results, BiiiResponse)
-                    return RichResponse(text=response.response, steps=steps)
-                else:
-                    return RichResponse(text=f"Sorry I didn't find relevant information in biii.eu about {req.keywords}", steps=steps)
-            except Exception as e:
-                return RichResponse(text=f"Failed to search biii.eu, error: {e}", steps=steps)
-        elif isinstance(req, DocumentRetrievalInput):
+        async def retrieve(req: DocumentRetrievalInput) -> DocumentSearchInput:
+            """Retrieve documents from the documentation based on the user's question."""
             if question_with_history.channel_info:
                 req.channel_id = question_with_history.channel_info.id
 
@@ -245,10 +203,9 @@ def create_customer_service(db_path):
                 # only keep the top 3 documents
                 docs_with_score = docs_with_score[:3]
                 
-                search_input = DocumentSearchInput(user_question=req.request, relevant_context=docs_with_score, user_info=req.user_info, format=None, preliminary_response=req.preliminary_response)
+                search_input = DocumentSearchInput(relevant_context=docs_with_score, format=None)
                 steps.append(ResponseStep(name="Document Search", details=search_input.dict()))
-                response = await role.aask(search_input, DocumentResponse)
-                steps.append(ResponseStep(name="Document Response", details=response.dict()))
+                
             else:
                 docs_store = docs_store_dict[req.channel_id]
                 collection_info = collection_info_dict[req.channel_id]
@@ -257,151 +214,158 @@ def create_customer_service(db_path):
                 results_with_scores = await docs_store.asimilarity_search_with_relevance_scores(req.query, k=3)
                 docs_with_score = [DocWithScore(doc=doc.page_content, score=score, metadata=doc.metadata, base_url=base_url) for doc, score in results_with_scores]
                 print(f"Retrieved documents:\n{docs_with_score[0].doc[:20] + '...'} (score: {docs_with_score[0].score})\n{docs_with_score[1].doc[:20] + '...'} (score: {docs_with_score[1].score})\n{docs_with_score[2].doc[:20] + '...'} (score: {docs_with_score[2].score})")
-                search_input = DocumentSearchInput(user_question=req.request, relevant_context=docs_with_score, user_info=req.user_info, format=collection_info.get('format'), preliminary_response=req.preliminary_response)
+                search_input = DocumentSearchInput(relevant_context=docs_with_score, format=collection_info.get('format'))
                 steps.append(ResponseStep(name="Document Search", details=search_input.dict()))
-                response = await role.aask(search_input, DocumentResponse)
-                steps.append(ResponseStep(name="Document Response", details=response.dict()))
-            # source: doc.metadata.get('source', 'N/A')
-            return RichResponse(text=response.response, steps=steps)
-        elif isinstance(req, tuple(extension_types)):
-            idx = extension_types.index(type(req))
-            mode_d = question_with_history.chatbot_extensions[idx]
-            response_function = mode_d['execute']
-            mode_name = mode_d['name']
-            steps.append(ResponseStep(name="Extension: " + mode_name, details=req.dict()))
-            try:
-                result = await response_function(req.dict())
-                steps.append(ResponseStep(name="Summarize result: " + mode_name, details={"result": result}))
-                resp = await role.aask(ExtensionCallInput(user_question=question_with_history.question, user_profile=question_with_history.user_profile, result=result), ExtensionCallResponse)
-                steps.append(ResponseStep(name="Result: " + mode_name, details=resp.dict()))
-                return RichResponse(text=resp.response, steps=steps)
-            except Exception as e:
-                resp = await role.aask(ExtensionCallInput(user_question=question_with_history.question, user_profile=question_with_history.user_profile, error=str(e)), ExtensionCallResponse)
-                steps.append(ResponseStep(name="Result: " + mode_name, details=resp.dict()))
-                return RichResponse(text=resp.response, steps=steps)
-        else:
-            raise ValueError(f"Unknown response type: {type(req)}")
-
-    async def respond_to_user2(question_with_history: QuestionWithHistory = None, role: Role = None) -> str:
-        """Answer the user's question directly or retrieve relevant documents from the documentation, or create a Python Script to get information about details of models."""
-        steps = []
-        inputs = [question_with_history.user_profile] + list(question_with_history.chat_history) + [question_with_history.question]
-        # The channel info will be inserted at the beginning of the inputs
-        if question_with_history.channel_info:
-            inputs.insert(0, question_with_history.channel_info)
-        if question_with_history.channel_info:
-            channel_prompt = f"The channel_id of the knowledge base to search. It MUST be set to {question_with_history.channel_info.id} (selected by the user)."
-        else:
-            channel_prompt = f"The channel_id of the knowledge base to search. It MUST be the same as the user provided channel_id. If not specified, either select 'all' to search through all the available knowledge base channels or select one from the available channels which are:\n{channels_info}. If you are not sure which channel to select, select 'all'."
-        
-        class DocumentRetrievalInput(BaseModel):
-            """Input for searching knowledge bases and finding documents relevant to the user's request."""
-            request: str = Field(description="The user's detailed request")
-            preliminary_response: str = Field(description="The preliminary response to the user's question. This will be combined with the retrieved documents to produce the final response.")
-            query: str = Field(description="The query used to retrieve documents related to the user's request. Take preliminary_response as reference to generate query if needed.")
-            user_info: Optional[str] = Field("", description="Brief user info summary including name, background, etc., for personalizing responses to the user.")
-            channel_id: str = Field(description=channel_prompt)
-        
-        builtin_response_types = [DirectResponse, DocumentRetrievalInput, SearchOnBiii, LearningResponse, CodingResponse]
-        extension_types = [mode_d['schema_class'] for mode_d in question_with_history.chatbot_extensions] if question_with_history.chatbot_extensions else []
-        response_types = tuple(builtin_response_types + extension_types)
-        
-        class Planning(BaseModel):
-            """Plan which responses to use based on the user's question. Select one or more responses from the available response types."""
-            reasoning: str = Field(description="The reasoning behind the selected response types.")
-            select_response_types: List[str] = Field(description="The response types to use. The available response types are: " + ", ".join([type.__name__ for type in response_types]))
-        plan_response = await role.aask(inputs, Planning)
-        
-        resp_list = []
-        for response_type in plan_response.select_response_types:
+            return search_input
             
-            if response_type == "DirectResponse":
-                resp = await role.aask(inputs, DirectResponse)
-                steps.append(ResponseStep(name=type(resp).__name__, details=resp.dict()))
-                # return RichResponse(text=resp.response, steps=steps)
-            elif response_type == "SearchOnBiii":
-                req = await role.aask(inputs, SearchOnBiii)
-                print(f"Searching biii.eu with keywords: {req.keywords}, top_k: {req.top_k}")
-                try:
-                    loop = asyncio.get_running_loop()
-                    steps.append(ResponseStep(name="Search on biii.eu", details=req.dict()))
-                    results = await loop.run_in_executor(None, search_biii_with_links, req.keywords, "software", "")
-                    if results:
-                        results = BiiiSearchResult(results=results[:req.top_k], request=req.request, user_info=req.user_info, base_url="https://biii.eu", preliminary_response=req.preliminary_response)
-                        steps.append(ResponseStep(name="Summarize results from biii.eu", details=results.dict()))
-                        resp = await role.aask(results, BiiiResponse)
-                        # return RichResponse(text=resp.response, steps=steps)
-                    # else:
-                    #     return RichResponse(text=f"Sorry I didn't find relevant information in biii.eu about {req.keywords}", steps=steps)
-                except Exception as e:
-                    return RichResponse(text=f"Failed to search biii.eu, error: {e}", steps=steps)
-            elif response_type == "DocumentRetrievalInput":
-                req = await role.aask(inputs, DocumentRetrievalInput)
-                if question_with_history.channel_info:
-                    req.channel_id = question_with_history.channel_info.id
-
-                steps.append(ResponseStep(name="Document Retrieval", details=req.dict()))
-                if req.channel_id == "all":
-                    docs_with_score = []
-                    # loop through all the channels
-                    for channel_id in docs_store_dict.keys():
-                        docs_store = docs_store_dict[channel_id]
-                        collection_info = collection_info_dict[channel_id]
-                        base_url = collection_info.get('base_url')
-                        print(f"Retrieving documents from database {channel_id} with query: {req.query}")
-                        results_with_scores = await docs_store.asimilarity_search_with_relevance_scores(req.query, k=2)
-                        new_docs_with_score = [DocWithScore(doc=doc.page_content, score=score, metadata=doc.metadata, base_url=base_url) for doc, score in results_with_scores]
-                        docs_with_score.extend(new_docs_with_score)
-                        print(f"Retrieved documents:\n{new_docs_with_score[0].doc[:20] + '...'} (score: {new_docs_with_score[0].score})\n{new_docs_with_score[1].doc[:20] + '...'} (score: {new_docs_with_score[1].score})")
-                    # rank the documents by relevance score
-                    docs_with_score = sorted(docs_with_score, key=lambda x: x.score, reverse=True)
-                    # only keep the top 3 documents
-                    docs_with_score = docs_with_score[:3]
-                    
-                    search_input = DocumentSearchInput(user_question=req.request, relevant_context=docs_with_score, user_info=req.user_info, format=None, preliminary_response=req.preliminary_response)
-                    steps.append(ResponseStep(name="Document Search", details=search_input.dict()))
-                    resp = await role.aask(search_input, DocumentResponse)
-                    steps.append(ResponseStep(name="Document Response", details=resp.dict()))
+        async def biii_search(req: BiiiQuery) -> Union[BiiiSearchResult, None]:
+            """Search software tools on BioImage Informatics Index (biii.eu) is a platform for sharing bioimage analysis software and tools."""
+            print(f"Searching biii.eu with keywords: {req.keywords}, top_k: {req.top_k}")
+            try:
+                loop = asyncio.get_running_loop()
+                steps.append(ResponseStep(name="Search on biii.eu", details=req.dict()))
+                results = await loop.run_in_executor(None, search_biii_with_links, req.keywords, "software", "")
+                if results:
+                    results = BiiiSearchResult(results=results[:req.top_k], user_info=req.user_info, base_url="https://biii.eu")
+                    steps.append(ResponseStep(name="Summarize results from biii.eu", details=results.dict()))
+                    return results
                 else:
-                    docs_store = docs_store_dict[req.channel_id]
-                    collection_info = collection_info_dict[req.channel_id]
-                    base_url = collection_info.get('base_url')
-                    print(f"Retrieving documents from database {req.channel_id} with query: {req.query}")
-                    results_with_scores = await docs_store.asimilarity_search_with_relevance_scores(req.query, k=3)
-                    docs_with_score = [DocWithScore(doc=doc.page_content, score=score, metadata=doc.metadata, base_url=base_url) for doc, score in results_with_scores]
-                    print(f"Retrieved documents:\n{docs_with_score[0].doc[:20] + '...'} (score: {docs_with_score[0].score})\n{docs_with_score[1].doc[:20] + '...'} (score: {docs_with_score[1].score})\n{docs_with_score[2].doc[:20] + '...'} (score: {docs_with_score[2].score})")
-                    search_input = DocumentSearchInput(user_question=req.request, relevant_context=docs_with_score, user_info=req.user_info, format=collection_info.get('format'), preliminary_response=req.preliminary_response)
-                    steps.append(ResponseStep(name="Document Search", details=search_input.dict()))
-                    resp = await role.aask(search_input, DocumentResponse)
-                    steps.append(ResponseStep(name="Document Response", details=resp.dict()))
-                # source: doc.metadata.get('source', 'N/A')
-                # return RichResponse(text=resp.response, steps=steps)
-            elif isinstance(req, tuple(extension_types)):
-                idx = extension_types.index(type(req))
-                mode_d = question_with_history.chatbot_extensions[idx]
-                response_function = mode_d['execute']
-                mode_name = mode_d['name']
-                steps.append(ResponseStep(name="Extension: " + mode_name, details=req.dict()))
-                try:
-                    result = await response_function(req.dict())
-                    steps.append(ResponseStep(name="Summarize result: " + mode_name, details={"result": result}))
-                    resp = await role.aask(ExtensionCallInput(user_question=question_with_history.question, user_profile=question_with_history.user_profile, result=result), ExtensionCallResponse)
-                    steps.append(ResponseStep(name="Result: " + mode_name, details=resp.dict()))
-                    return RichResponse(text=resp.response, steps=steps)
-                except Exception as e:
-                    resp = await role.aask(ExtensionCallInput(user_question=question_with_history.question, user_profile=question_with_history.user_profile, error=str(e)), ExtensionCallResponse)
-                    steps.append(ResponseStep(name="Result: " + mode_name, details=resp.dict()))
-                    # return RichResponse(text=resp.response, steps=steps)
-            else:
-                raise ValueError(f"Unknown response type: {type(req)}")
+                    return None
+            except Exception as e:
+                return None
 
-            resp_list.append(resp)
+        available_tools = channels_info + "\n- `biii.eu`: " + biii_search.__doc__
         
-        class SummaryResponse(BaseModel):
-            """Summarize responses from different response types, make sure the response is relevant to the user's question. If the response is not relevant, do not include it in the combined response."""
-            response: str = Field(description="The summarized response from single or multiple responses.")
-        final_resp = await role.aask(resp_list, SummaryResponse)
-        return RichResponse(text=final_resp.response, steps=steps)
+        class UserResponse(BaseModel):
+            """Response to a user's question."""
+            use_tools_and_retrieval: bool = Field(description="Whether to use document retrieval or tools to answer the user's question. If you are confident about the answer without additional information, set this to False.")
+            response: Optional[str] = Field(description="Response to the user's question. Set to None if you want to use document retrieval or tools to answer the user's question.")
+            
+        UserResponse.__doc__ += f"If the question is related to the following, use retrieval and tools to improve your anwser:\n{available_tools}"
+        
+        resp = await role.aask(inputs, UserResponse)
+        steps.append(ResponseStep(name="User Response", details=resp.dict()))
+        if resp.use_tools_and_retrieval:
+            # inputs.append("You can select one or multiple response functions to answer the user's question.")
+            # inputs.append("Preliminary response: " + resp.response)
+            class CallResult(BaseModel):
+                """Result of calling a response function"""
+                response: Optional[str] = Field(description="The response to the user's question. If the call results are relevant to the user's question, the response should summarize them. Otherwise, set response to None")
+                continue_search: bool = Field(description="Set to True if you want to continue searching for more relevant information.")
+
+            async def find_anwser():
+                call_resp = await role.acall(inputs, [retrieve, biii_search], CallResult) # Union[DocumentResponse, BiiiResponse])
+                steps.append(ResponseStep(name="Call Result", details=call_resp.dict()))
+                if call_resp.continue_search:
+                    inputs.append(call_resp)
+                    return find_anwser()
+                else:
+                    return call_resp.response
+                
+            return RichResponse(text=await find_anwser(), steps=steps)
+        else:
+            return RichResponse(text=resp.response, steps=steps)
+        
+        # builtin_response_types = [DirectResponse, DocumentRetrievalInput, SearchOnBiii, LearningResponse, CodingResponse]
+        # extension_types = [mode_d['schema_class'] for mode_d in question_with_history.chatbot_extensions] if question_with_history.chatbot_extensions else []
+        # response_types = tuple(builtin_response_types + extension_types)
+        
+        # class Planning(BaseModel):
+        #     """Plan which responses to use based on the user's question. Select one or more responses from the available response types."""
+        #     reasoning: str = Field(description="The reasoning behind the selected response types.")
+        #     select_response_types: List[str] = Field(description="The response types to use. The available response types are: " + ", ".join([type.__name__ for type in response_types]))
+        # plan_response = await role.aask(inputs, Planning)
+        
+        # resp_list = []
+        # for response_type in plan_response.select_response_types:
+            
+        #     if response_type == "DirectResponse":
+        #         resp = await role.aask(inputs, DirectResponse)
+        #         steps.append(ResponseStep(name=type(resp).__name__, details=resp.dict()))
+        #         # return RichResponse(text=resp.response, steps=steps)
+        #     elif response_type == "SearchOnBiii":
+        #         req = await role.aask(inputs, SearchOnBiii)
+        #         print(f"Searching biii.eu with keywords: {req.keywords}, top_k: {req.top_k}")
+        #         try:
+        #             loop = asyncio.get_running_loop()
+        #             steps.append(ResponseStep(name="Search on biii.eu", details=req.dict()))
+        #             results = await loop.run_in_executor(None, search_biii_with_links, req.keywords, "software", "")
+        #             if results:
+        #                 results = BiiiSearchResult(results=results[:req.top_k], request=req.request, user_info=req.user_info, base_url="https://biii.eu", preliminary_response=req.preliminary_response)
+        #                 steps.append(ResponseStep(name="Summarize results from biii.eu", details=results.dict()))
+        #                 resp = await role.aask(results, BiiiResponse)
+        #                 # return RichResponse(text=resp.response, steps=steps)
+        #             # else:
+        #             #     return RichResponse(text=f"Sorry I didn't find relevant information in biii.eu about {req.keywords}", steps=steps)
+        #         except Exception as e:
+        #             return RichResponse(text=f"Failed to search biii.eu, error: {e}", steps=steps)
+        #     elif response_type == "DocumentRetrievalInput":
+        #         req = await role.aask(inputs, DocumentRetrievalInput)
+        #         if question_with_history.channel_info:
+        #             req.channel_id = question_with_history.channel_info.id
+
+        #         steps.append(ResponseStep(name="Document Retrieval", details=req.dict()))
+        #         if req.channel_id == "all":
+        #             docs_with_score = []
+        #             # loop through all the channels
+        #             for channel_id in docs_store_dict.keys():
+        #                 docs_store = docs_store_dict[channel_id]
+        #                 collection_info = collection_info_dict[channel_id]
+        #                 base_url = collection_info.get('base_url')
+        #                 print(f"Retrieving documents from database {channel_id} with query: {req.query}")
+        #                 results_with_scores = await docs_store.asimilarity_search_with_relevance_scores(req.query, k=2)
+        #                 new_docs_with_score = [DocWithScore(doc=doc.page_content, score=score, metadata=doc.metadata, base_url=base_url) for doc, score in results_with_scores]
+        #                 docs_with_score.extend(new_docs_with_score)
+        #                 print(f"Retrieved documents:\n{new_docs_with_score[0].doc[:20] + '...'} (score: {new_docs_with_score[0].score})\n{new_docs_with_score[1].doc[:20] + '...'} (score: {new_docs_with_score[1].score})")
+        #             # rank the documents by relevance score
+        #             docs_with_score = sorted(docs_with_score, key=lambda x: x.score, reverse=True)
+        #             # only keep the top 3 documents
+        #             docs_with_score = docs_with_score[:3]
+                    
+        #             search_input = DocumentSearchInput(user_question=req.request, relevant_context=docs_with_score, user_info=req.user_info, format=None, preliminary_response=req.preliminary_response)
+        #             steps.append(ResponseStep(name="Document Search", details=search_input.dict()))
+        #             resp = await role.aask(search_input, DocumentResponse)
+        #             steps.append(ResponseStep(name="Document Response", details=resp.dict()))
+        #         else:
+        #             docs_store = docs_store_dict[req.channel_id]
+        #             collection_info = collection_info_dict[req.channel_id]
+        #             base_url = collection_info.get('base_url')
+        #             print(f"Retrieving documents from database {req.channel_id} with query: {req.query}")
+        #             results_with_scores = await docs_store.asimilarity_search_with_relevance_scores(req.query, k=3)
+        #             docs_with_score = [DocWithScore(doc=doc.page_content, score=score, metadata=doc.metadata, base_url=base_url) for doc, score in results_with_scores]
+        #             print(f"Retrieved documents:\n{docs_with_score[0].doc[:20] + '...'} (score: {docs_with_score[0].score})\n{docs_with_score[1].doc[:20] + '...'} (score: {docs_with_score[1].score})\n{docs_with_score[2].doc[:20] + '...'} (score: {docs_with_score[2].score})")
+        #             search_input = DocumentSearchInput(user_question=req.request, relevant_context=docs_with_score, user_info=req.user_info, format=collection_info.get('format'), preliminary_response=req.preliminary_response)
+        #             steps.append(ResponseStep(name="Document Search", details=search_input.dict()))
+        #             resp = await role.aask(search_input, DocumentResponse)
+        #             steps.append(ResponseStep(name="Document Response", details=resp.dict()))
+        #         # source: doc.metadata.get('source', 'N/A')
+        #         # return RichResponse(text=resp.response, steps=steps)
+        #     elif isinstance(req, tuple(extension_types)):
+        #         idx = extension_types.index(type(req))
+        #         mode_d = question_with_history.chatbot_extensions[idx]
+        #         response_function = mode_d['execute']
+        #         mode_name = mode_d['name']
+        #         steps.append(ResponseStep(name="Extension: " + mode_name, details=req.dict()))
+        #         try:
+        #             result = await response_function(req.dict())
+        #             steps.append(ResponseStep(name="Summarize result: " + mode_name, details={"result": result}))
+        #             resp = await role.aask(ExtensionCallInput(user_question=question_with_history.question, user_profile=question_with_history.user_profile, result=result), ExtensionCallResponse)
+        #             steps.append(ResponseStep(name="Result: " + mode_name, details=resp.dict()))
+        #             return RichResponse(text=resp.response, steps=steps)
+        #         except Exception as e:
+        #             resp = await role.aask(ExtensionCallInput(user_question=question_with_history.question, user_profile=question_with_history.user_profile, error=str(e)), ExtensionCallResponse)
+        #             steps.append(ResponseStep(name="Result: " + mode_name, details=resp.dict()))
+        #             # return RichResponse(text=resp.response, steps=steps)
+        #     else:
+        #         raise ValueError(f"Unknown response type: {type(req)}")
+
+        #     resp_list.append(resp)
+        
+        # class SummaryResponse(BaseModel):
+        #     """Summarize responses from different response types, make sure the response is relevant to the user's question. If the response is not relevant, do not include it in the combined response."""
+        #     response: str = Field(description="The summarized response from single or multiple responses.")
+        # final_resp = await role.aask(resp_list, SummaryResponse)
+        # return RichResponse(text=final_resp.response, steps=steps)
         
     customer_service = Role(
         name="Melman",
