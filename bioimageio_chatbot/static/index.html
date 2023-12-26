@@ -763,7 +763,13 @@
             $('#progress-message-content').html(marked(content, { renderer: renderer }));
           }
           else if (message.type === 'text') {
-            $('#progress-message-content').html(marked(message.content, { renderer: renderer }));
+            if (message.status === 'in_progress') {
+              accumulatedArgs += message.content
+            }
+            else{
+              accumulatedArgs = message.content
+            }
+            $('#progress-message-content').html(marked(accumulatedArgs, { renderer: renderer }));
           }
         }
 
