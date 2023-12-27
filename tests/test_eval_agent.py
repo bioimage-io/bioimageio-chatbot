@@ -180,10 +180,10 @@ async def start_evaluate_paral(eval_file, question_col='Question', groundtruth_c
     evalBot = Role(
         name="Thomas",
         profile="Evaluator",
-        goal="Evaluate the performance of the LLM-based system.",
+        goal="You goal is to evaluate the performance of the LLM-based system.",
         constraints=None,
         actions=[bot_answer_evaluate],
-        model="gpt-4"
+        model="gpt-4-1106-preview"
     )
     event_bus = evalBot.get_event_bus()
     event_bus.register_default_events()
@@ -236,7 +236,6 @@ async def start_evaluate_paral(eval_file, question_col='Question', groundtruth_c
                 query_answer.loc[i, target_col + ' - Augmentation Accuracy'] = AugmentationAccuracy
                 query_answer.loc[i, target_col + ' - Augmentation Precision'] = AugmentationPrecision
                 query_answer.loc[i, target_col + ' - Augmentation Consistency'] = AugmentationConsistency 
-            
             
                 
             query_answer.to_csv(os.path.join(dir_path, eval_file))

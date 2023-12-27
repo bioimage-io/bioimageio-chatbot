@@ -201,13 +201,13 @@ def create_customer_service(db_path):
             # The channel info will be inserted at the beginning of the inputs
             inputs.insert(0, question_with_history.channel_info)
             if question_with_history.channel_info.id == "biii.eu":
-                req = await role.aask(inputs, Union[DirectResponse, SearchOnBiii, LearningResponse, CodingResponse])
+                req = await role.aask(inputs, Union[DirectResponse, SearchOnBiii, LearningResponse, CodingResponse], use_tool_calls=True)
             elif question_with_history.channel_info.id == "bioimage.io":
-                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, LearningResponse, CodingResponse])
+                req = await role.aask(inputs, Union[DirectResponse, DocumentRetrievalInput, LearningResponse, CodingResponse], use_tool_calls=True)
             else:
-                req = await role.aask(inputs, Union[response_types])
+                req = await role.aask(inputs, Union[response_types], use_tool_calls=True)
         else:
-            req = await role.aask(inputs, Union[response_types])
+            req = await role.aask(inputs, Union[response_types], use_tool_calls=True)
 
         if isinstance(req, (DirectResponse, LearningResponse, CodingResponse)):
             steps.append(ResponseStep(name=type(req).__name__, details=req.dict()))
@@ -221,7 +221,7 @@ def create_customer_service(db_path):
                 if results:
                     results = BiiiSearchResult(results=results[:req.top_k], request=req.request, user_info=req.user_info, base_url="https://biii.eu", preliminary_response=req.preliminary_response)
                     steps.append(ResponseStep(name="Summarize results from biii.eu", details=results.dict()))
-                    response = await role.aask(results, BiiiResponse)
+                    response = await role.aask(results, BiiiResponse, use_tool_calls=True)
                     return RichResponse(text=response.response, steps=steps)
                 else:
                     return RichResponse(text=f"Sorry I didn't find relevant information in biii.eu about {req.keywords}", steps=steps)
@@ -251,7 +251,7 @@ def create_customer_service(db_path):
                 
                 search_input = DocumentSearchInput(user_question=req.request, relevant_context=docs_with_score, user_info=req.user_info, format=None, preliminary_response=req.preliminary_response)
                 steps.append(ResponseStep(name="Document Search", details=search_input.dict()))
-                response = await role.aask(search_input, DocumentResponse)
+                response = await role.aask(search_input, DocumentResponse, use_tool_calls=True)
                 steps.append(ResponseStep(name="Document Response", details=response.dict()))
             else:
                 docs_store = docs_store_dict[req.channel_id]
@@ -263,7 +263,7 @@ def create_customer_service(db_path):
                 print(f"Retrieved documents:\n{docs_with_score[0].doc[:20] + '...'} (score: {docs_with_score[0].score})\n{docs_with_score[1].doc[:20] + '...'} (score: {docs_with_score[1].score})\n{docs_with_score[2].doc[:20] + '...'} (score: {docs_with_score[2].score})")
                 search_input = DocumentSearchInput(user_question=req.request, relevant_context=docs_with_score, user_info=req.user_info, format=collection_info.get('format'), preliminary_response=req.preliminary_response)
                 steps.append(ResponseStep(name="Document Search", details=search_input.dict()))
-                response = await role.aask(search_input, DocumentResponse)
+                response = await role.aask(search_input, DocumentResponse, use_tool_calls=True)
                 steps.append(ResponseStep(name="Document Response", details=response.dict()))
             # source: doc.metadata.get('source', 'N/A')
             return RichResponse(text=response.response, steps=steps)
@@ -276,11 +276,11 @@ def create_customer_service(db_path):
             try:
                 result = await response_function(req.dict())
                 steps.append(ResponseStep(name="Summarize result: " + mode_name, details={"result": result}))
-                resp = await role.aask(ExtensionCallInput(user_question=question_with_history.question, user_profile=question_with_history.user_profile, result=result), ExtensionCallResponse)
+                resp = await role.aask(ExtensionCallInput(user_question=question_with_history.question, user_profile=question_with_history.user_profile, result=result), ExtensionCallResponse, use_tool_calls=True)
                 steps.append(ResponseStep(name="Result: " + mode_name, details=resp.dict()))
                 return RichResponse(text=resp.response, steps=steps)
             except Exception as e:
-                resp = await role.aask(ExtensionCallInput(user_question=question_with_history.question, user_profile=question_with_history.user_profile, error=str(e)), ExtensionCallResponse)
+                resp = await role.aask(ExtensionCallInput(user_question=question_with_history.question, user_profile=question_with_history.user_profile, error=str(e)), ExtensionCallResponse, use_tool_calls=True)
                 steps.append(ResponseStep(name="Result: " + mode_name, details=resp.dict()))
                 return RichResponse(text=resp.response, steps=steps)
         else:
