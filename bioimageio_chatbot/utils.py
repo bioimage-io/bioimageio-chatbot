@@ -3,6 +3,8 @@ import requests
 import yaml
 import os
 from tqdm import tqdm
+from pydantic import BaseModel, Field
+from typing import Callable
 
 def get_manifest():
     # If no manifest is provided, download from the repo
@@ -28,3 +30,11 @@ def download_file(url, filename):
             # Update the progress bar
             progress.update(len(data))
             f.write(data)
+
+
+class ChatbotExtension(BaseModel):
+    """A class that defines the interface for a user extension"""
+    name: str = Field(..., description="The name of the extension")
+    description: str = Field(..., description="A description of the extension")
+    get_schema: Callable = Field(..., description="A function that returns the schema for the extension")
+    execute: Callable = Field(..., description="The extension's execution function")
