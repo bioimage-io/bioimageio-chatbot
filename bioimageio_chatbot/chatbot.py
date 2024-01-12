@@ -117,10 +117,10 @@ def create_customer_service(builtin_extensions):
                     steps.append(ResponseStep(name="Error: " + ext_name, details={"Error": traceback.format_exc()}))
                     raise e
 
-            reqs = await role.aask(inputs, tuple(extension_types), use_tool_calls=True)
+            responses = await role.aask(inputs, tuple(extension_types), use_tool_calls=True)
             futs = []
-            for req in reqs:
-                futs.append(handle_request(req))
+            for resp in responses:
+                futs.append(handle_request(resp))
 
             results = await asyncio.gather(*futs)
 
