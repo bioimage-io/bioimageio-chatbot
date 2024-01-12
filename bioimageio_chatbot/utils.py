@@ -4,7 +4,9 @@ import yaml
 import os
 from tqdm import tqdm
 from pydantic import BaseModel, Field
-from typing import Callable
+from typing import Callable, Optional
+import typing
+from inspect import signature
 
 def get_manifest():
     # If no manifest is provided, download from the repo
@@ -32,9 +34,29 @@ def download_file(url, filename):
             f.write(data)
 
 
+def extract_schemas(function):
+    sig = signature(function)
+    positional_annotation = [
+        p.annotation
+        for p in sig.parameters.values()
+        if p.kind == p.POSITIONAL_OR_KEYWORD
+    ][0]
+    output_schemas = (
+        [sig.return_annotation]
+        if not isinstance(sig.return_annotation, typing._UnionGenericAlias)
+        else list(sig.return_annotation.__args__)
+    )
+    input_schemas = (
+        [positional_annotation]
+        if not isinstance(positional_annotation, typing._UnionGenericAlias)
+        else list(positional_annotation.__args__)
+    )
+    return input_schemas, output_schemas
+
 class ChatbotExtension(BaseModel):
     """A class that defines the interface for a user extension"""
     name: str = Field(..., description="The name of the extension")
     description: str = Field(..., description="A description of the extension")
-    get_schema: Callable = Field(..., description="A function that returns the schema for the extension")
+    get_schema: Optional[Callable] = Field(None, description="A function that returns the schema for the extension")
     execute: Callable = Field(..., description="The extension's execution function")
+    schema_class: Optional[BaseModel] = Field(None, description="The schema class for the extension")

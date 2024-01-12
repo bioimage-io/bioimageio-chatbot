@@ -116,10 +116,6 @@ def search_biii_with_links(
 
 class SearchOnBiii(BaseModel):
     """Search software tools on BioImage Informatics Index (biii.eu) is a platform for sharing bioimage analysis software and tools."""
-
-    preliminary_response: str = Field(
-        description="The preliminary response to the user's question. This will be combined with the retrieved documents to produce the final response."
-    )
     keywords: List[str] = Field(
         description="A list of search keywords, no space allowed in each keyword."
     )
@@ -137,10 +133,6 @@ class SearchOnBiii(BaseModel):
 
 class BiiiSearchResult(BaseModel):
     """Search results from biii.eu"""
-
-    preliminary_response: str = Field(
-        description="The preliminary response to the user's question. This will be combined with the retrieved documents to produce the final response."
-    )
     results: List[BiiiRow] = Field(description="Search results from biii.eu")
     request: str = Field(description="The user's detailed request")
     user_info: Optional[str] = Field(
@@ -173,28 +165,16 @@ async def run_extension(req: SearchOnBiii):
             request=req.request,
             user_info=req.user_info,
             base_url="https://biii.eu",
-            preliminary_response=req.preliminary_response,
         )
-        # steps.append(ResponseStep(name="Summarize results from biii.eu", details=results.dict()))
-        # response = await role.aask(results, BiiiResponse)
-        # return RichResponse(text=response.response, steps=steps)
         return results
     else:
         raise Exception(f"Sorry I didn't find relevant information in biii.eu about {req.keywords}")
-        # return RichResponse(text=f"Sorry I didn't find relevant information in biii.eu about {req.keywords}", steps=steps)
-
-
-
-async def get_schema():
-    return SearchOnBiii.schema()
-
 
 def get_extensions():
     return [
         ChatbotExtension(
             name="biii.eu",
             description="Search software tools on BioImage Informatics Index (biii.eu) is a platform for sharing bioimage analysis software and tools.",
-            get_schema=get_schema,
             execute=run_extension,
         )
     ]
