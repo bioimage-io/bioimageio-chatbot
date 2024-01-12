@@ -1,9 +1,7 @@
-import sys
-import io
 import os
 from functools import partial
 from pydantic import BaseModel, Field
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 from bioimageio_chatbot.knowledge_base import load_knowledge_base
 from bioimageio_chatbot.utils import get_manifest
 from bioimageio_chatbot.utils import ChatbotExtension
@@ -23,7 +21,6 @@ class DocWithScore(BaseModel):
 
 class DocumentSearchInput(BaseModel):
     """Results of a document retrieval process from a documentation base."""
-
     user_question: str = Field(description="The user's original question.")
     relevant_context: List[DocWithScore] = Field(
         description="Chunks of context retrieved from the documentation that are relevant to the user's original question."
@@ -32,17 +29,6 @@ class DocumentSearchInput(BaseModel):
         "", description="The user's info for personalizing the response."
     )
     format: Optional[str] = Field(None, description="The format of the document.")
-    preliminary_response: Optional[str] = Field(
-        None,
-        description="The preliminary response to the user's question. This will be combined with the retrieved documents to produce the Document Response.",
-    )
-
-
-knowledge_base_path = os.environ.get(
-    "BIOIMAGEIO_KNOWLEDGE_BASE_PATH", "./bioimageio-knowledge-base"
-)
-docs_store_dict = load_knowledge_base(knowledge_base_path)
-
 
 async def get_schema(channel_id):
     class DocumentRetrievalInput(BaseModel):
@@ -64,7 +50,7 @@ async def get_schema(channel_id):
     return DocumentRetrievalInput.schema()
 
 
-async def run_extension(channel_id, req):
+async def run_extension(docs_store_dict, channel_id, req: DocumentSearchInput):
     collections = get_manifest()["collections"]
     docs_store = docs_store_dict[channel_id]
     collection_info_dict = {collection["id"]: collection for collection in collections}
@@ -89,12 +75,22 @@ async def run_extension(channel_id, req):
 
 def get_extensions():
     collections = get_manifest()["collections"]
+    knowledge_base_path = os.environ.get("BIOIMAGEIO_KNOWLEDGE_BASE_PATH", "./bioimageio-knowledge-base")
+    assert knowledge_base_path is not None, "Please set the BIOIMAGEIO_KNOWLEDGE_BASE_PATH environment variable to the path of the knowledge base."
+    if not os.path.exists(knowledge_base_path):
+        print(f"The knowledge base is not found at {knowledge_base_path}, will download it automatically.")
+        os.makedirs(knowledge_base_path, exist_ok=True)
+    
+    knowledge_base_path = os.environ.get(
+        "BIOIMAGEIO_KNOWLEDGE_BASE_PATH", "./bioimageio-knowledge-base"
+    )
+    docs_store_dict = load_knowledge_base(knowledge_base_path)
     return [
         ChatbotExtension(
             name=collection["id"],
             description=collection["description"],
             get_schema=partial(get_schema, collection["id"]),
-            execute=partial(run_extension, collection["id"]),
+            execute=partial(run_extension, docs_store_dict, collection["id"]),
         )
         for collection in collections
     ]

@@ -10,25 +10,21 @@ from imjoy_rpc.hypha import login, connect_to_server
 from pydantic import BaseModel, Field
 from schema_agents.role import Role
 from schema_agents.schema import Message
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 import pkg_resources
 from bioimageio_chatbot.jsonschema_pydantic import jsonschema_to_pydantic, JsonSchemaObject
 from bioimageio_chatbot.chatbot_extensions import get_builtin_extensions
+from bioimageio_chatbot.utils import extract_schemas, ChatbotExtension
 import logging
 
 logger = logging.getLogger('bioimageio-chatbot')
 
-class GenericResponse(BaseModel):
-    """Create response for various scenarios:
-    - General Inquiries: When faced with straightforward questions where a direct answer is possible, the chatbot should provide clear, accurate, and concise responses.
-
-    - Educational Support: If a question is related to learning or seeks explanation about specific concepts or terms, the chatbot's response should be informative and educational, aiding in the user's understanding of the topic.
-
-    - Technical Assistance: For queries that involve technical aspects, such as scripting, coding, or specific professional knowledge, the chatbot should offer detailed, practical advice or solutions. This includes providing example codes, step-by-step guides, or explanations tailored to the user's level of expertise.
-    - Other scenarios: If the chatbot is unable to provide confident anwser, set use_tools to True.
-    """
-    use_tools: bool = Field(description="Whether to use tools to answer the user's question.")
-    response: str = Field(description="The response to the user's question answering what that asked for.")
+GENERIC_RESPONSE_PROMPT = """Create response for various scenarios:
+- General Inquiries: When faced with straightforward questions where a direct answer is possible, the chatbot should provide clear, accurate, and concise responses.
+- Educational Support: If a question is related to learning or seeks explanation about specific concepts or terms, the chatbot's response should be informative and educational, aiding in the user's understanding of the topic.
+- Technical Assistance: For queries that involve technical aspects, such as scripting, coding, or specific professional knowledge, the chatbot should offer detailed, practical advice or solutions. This includes providing example codes, step-by-step guides, or explanations tailored to the user's level of expertise.
+For other scenarios, set use_tools to True to activate the tool call to obtain additional information for the user.
+"""
 
 class UserProfile(BaseModel):
     """The user's profile. This will be used to personalize the response to the user."""
@@ -72,48 +68,62 @@ class RichResponse(BaseModel):
     steps: List[ResponseStep] = Field(description="Intermediate steps")
 
 
-def create_customer_service(db_path):
+def create_customer_service(builtin_extensions):
     async def respond_to_user(question_with_history: QuestionWithHistory = None, role: Role = None) -> str:
         """Answer the user's question directly or retrieve relevant documents from the documentation, or create a Python Script to get information about details of models."""
         steps = []
         inputs = [question_with_history.user_profile] + list(question_with_history.chat_history) + [question_with_history.question]
-        extension_types = [mode_d['schema_class'] for mode_d in question_with_history.chatbot_extensions] if question_with_history.chatbot_extensions else []
-        logger.info("Response types: %s", extension_types)
+        available_tools_prompt = "\n".join([f"- {ext.name}: {ext.description}" for ext in builtin_extensions])
+        class GenericResponse(BaseModel):
+            """Create response to anwser user's question"""
+            use_tools: bool = Field(description="Whether to use tools to answer the user's question. The available tools are:\n" + available_tools_prompt)
+            response: Optional[str] = Field(None, description=GENERIC_RESPONSE_PROMPT+"\nSet to null if use_tools=True.")
+
         resp = await role.aask(inputs, GenericResponse)
         steps.append(ResponseStep(name="GenericResponse", details=resp.dict()))
         if not resp.use_tools:
             return RichResponse(text=resp.response, steps=steps)
         else:
-            reqs = await role.aask(inputs, tuple(extension_types), use_tool_calls=True)
-            async def handle_request(req):
-                if isinstance(req, tuple(extension_types)):
-                    idx = extension_types.index(type(req))
-                    mode_d = question_with_history.chatbot_extensions[idx]
-                    response_function = mode_d['execute']
-                    mode_name = mode_d['name']
-                    arg_mode = mode_d['arg_mode']
-                    steps.append(ResponseStep(name="Extension: " + mode_name, details=req.dict()))
-                    try:
-                        if arg_mode == 'pydantic':
-                            result = await response_function(req)
-                        else:
-                            result = await response_function(req.dict())
-                        steps.append(ResponseStep(name="Summarize result: " + mode_name, details={"result": result}))
-                        return result
-                    except Exception as e:
-                        print(f"Failed to run extension {mode_name}, error: {traceback.format_exc()}")
-                        raise e
+            assert question_with_history.chatbot_extensions is not None
+            chatbot_extensions = []
+            builtin_ext_names = {ext.name: ext for ext in builtin_extensions}
+            for ext in question_with_history.chatbot_extensions:
+                if ext['name'] in builtin_ext_names:
+                    extension = builtin_ext_names[ext['name']]
                 else:
-                    raise ValueError(f"Unknown response type: {type(req)}")
-        
+                    extension = ChatbotExtension.parse_obj(ext)
+                
+                if 'get_schema' in ext:
+                    schema = await ext['get_schema']()
+                    extension.schema_class = jsonschema_to_pydantic(JsonSchemaObject.parse_obj(schema))
+                else:
+                    input_schemas, _ = extract_schemas(extension.execute)
+                    extension.schema_class = input_schemas[0]
+                chatbot_extensions.append(extension)
+
+            extension_types = [mode_d.schema_class for mode_d in chatbot_extensions] if question_with_history.chatbot_extensions else []
+            logger.info("Response types: %s", extension_types)
+            async def handle_request(req):
+                assert isinstance(req, tuple(extension_types)), f"Unknown response type: {type(req)}"
+                idx = extension_types.index(type(req))
+                extension = chatbot_extensions[idx]
+                ext_name = extension.name
+                steps.append(ResponseStep(name="Extension: " + ext_name, details=req.dict()))
+                try:
+                    result = await extension.execute(req)
+                    steps.append(ResponseStep(name="Summarize result: " + ext_name, details={"result": result}))
+                    return result
+                except Exception as e:
+                    print(f"Failed to run extension {ext_name}, error: {traceback.format_exc()}")
+                    raise e
+
+            reqs = await role.aask(inputs, tuple(extension_types), use_tool_calls=True)
             futs = []
             for req in reqs:
                 futs.append(handle_request(req))
 
             results = await asyncio.gather(*futs)
-            if len(reqs) == 1 and isinstance(reqs[0], tuple(builtin_response_types)):
-                return results[0]
-            
+
             resp = await role.aask(ExtensionCallInput(user_question=question_with_history.question, user_profile=question_with_history.user_profile, result=results), ExtensionCallResponse)
             steps.append(ResponseStep(name="Final Result", details=resp.dict()))
             return RichResponse(text=resp.response, steps=steps)
@@ -150,21 +160,13 @@ async def register_chat_service(server):
     """Hypha startup function."""
     builtin_extensions = get_builtin_extensions()
     login_required = os.environ.get("BIOIMAGEIO_LOGIN_REQUIRED") == "true"
-    knowledge_base_path = os.environ.get("BIOIMAGEIO_KNOWLEDGE_BASE_PATH", "./bioimageio-knowledge-base")
-    assert knowledge_base_path is not None, "Please set the BIOIMAGEIO_KNOWLEDGE_BASE_PATH environment variable to the path of the knowledge base."
-    if not os.path.exists(knowledge_base_path):
-        print(f"The knowledge base is not found at {knowledge_base_path}, will download it automatically.")
-        os.makedirs(knowledge_base_path, exist_ok=True)
-
     chat_logs_path = os.environ.get("BIOIMAGEIO_CHAT_LOGS_PATH", "./chat_logs")
     assert chat_logs_path is not None, "Please set the BIOIMAGEIO_CHAT_LOGS_PATH environment variable to the path of the chat logs folder."
     if not os.path.exists(chat_logs_path):
         print(f"The chat session folder is not found at {chat_logs_path}, will create one now.")
         os.makedirs(chat_logs_path, exist_ok=True)
     
-    # channel_id_by_name = {collection['name']: collection['id'] for collection in collections + additional_channels}
-    # description_by_id = {collection['id']: collection['description'] for collection in collections + additional_channels}
-    customer_service = create_customer_service(knowledge_base_path)
+    customer_service = create_customer_service(builtin_extensions)
     event_bus = customer_service.get_event_bus()
     event_bus.register_default_events()
         
@@ -219,29 +221,8 @@ async def register_chat_service(server):
                     await status_callback(message.dict())
 
         event_bus.on("stream", stream_callback)
-        
-        if extensions is not None: 
-            chatbot_extensions = []
-            ext_names = {ext.name: ext for ext in builtin_extensions}
-            for ext in extensions:
-                if ext['name'] in ext_names:
-                    ext = ext_names[ext['name']].dict()
-                    ext['arg_mode'] = "pydantic"
-                else:
-                    ext['arg_mode'] = "dict"
-                    
-                schema = await ext['get_schema']()
-                chatbot_extensions.append(
-                    {
-                        "name": ext['name'],
-                        'description': ext['description'],
-                        "schema_class": jsonschema_to_pydantic(JsonSchemaObject.parse_obj(schema)),
-                        "execute": ext['execute'],
-                        "arg_mode": ext['arg_mode'],
-                    }
-                )
 
-        m = QuestionWithHistory(question=text, chat_history=chat_history, user_profile=UserProfile.parse_obj(user_profile), chatbot_extensions=chatbot_extensions)
+        m = QuestionWithHistory(question=text, chat_history=chat_history, user_profile=UserProfile.parse_obj(user_profile), chatbot_extensions=extensions)
         try:
             response = await customer_service.handle(Message(content="", data=m , role="User", session_id=session_id))
             # get the content of the last response
@@ -272,6 +253,15 @@ async def register_chat_service(server):
             assert check_permission(context.get("user")), "You don't have permission to use the chatbot, please sign up and wait for approval"
         return "pong"
 
+    def encode_base_model(data):
+        return data.dict()
+
+    server.register_codec({
+        "name": "pydantic-base-model",
+        "type": BaseModel,
+        "encoder": encode_base_model,
+    })
+
     hypha_service_info = await server.register_service({
         "name": "BioImage.IO Chatbot",
         "id": "bioimageio-chatbot",
@@ -282,7 +272,7 @@ async def register_chat_service(server):
         "ping": ping,
         "chat": chat,
         "report": report,
-        "builtin_extensions": [{"name": ext.name} for ext in builtin_extensions],
+        "builtin_extensions": [{"name": ext.name, "description": ext.description} for ext in builtin_extensions],
     })
     
     version = pkg_resources.get_distribution('bioimageio-chatbot').version
@@ -319,9 +309,7 @@ async def register_chat_service(server):
     print(f"The BioImage.IO Chatbot is available at: {user_url}")
     
 if __name__ == "__main__":
-    # asyncio.run(main())
     server_url = """https://ai.imjoy.io"""
-    # server_url = "https://hypha.bioimage.io/"
     loop = asyncio.get_event_loop()
     loop.create_task(connect_server(server_url))
     loop.run_forever()
