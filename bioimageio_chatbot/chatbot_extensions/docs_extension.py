@@ -34,11 +34,7 @@ class DocumentSearchInput(BaseModel):
 async def get_schema(channel_info):
     class DocumentRetrievalInput(BaseModel):
         """Searching knowledge base (name: {name}, description: {description})."""
-
         request: str = Field(description="The user's detailed request")
-        preliminary_response: str = Field(
-            description="The preliminary response to the user's question. This will be combined with the retrieved documents to produce the final response."
-        )
         query: str = Field(
             description="The query used to retrieve documents related to the user's request. Take preliminary_response as reference to generate query if needed."
         )
