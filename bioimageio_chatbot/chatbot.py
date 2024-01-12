@@ -36,8 +36,7 @@ class ExtensionCallInput(BaseModel):
     """Result of calling an extension function"""
     user_question: str = Field(description="The user's original question.")
     user_profile: Optional[UserProfile] = Field(None, description="The user's profile. You should use this to personalize the response.")
-    result: Optional[Any] = Field(None, description="The result of calling the extension function.")
-    error: Optional[str] = Field(None, description="The error message if the extension function call failed.")
+    results: Optional[List[Any]] = Field(None, description="The results of calling extensions.")
 
 class DocumentResponse(BaseModel):
     """The Document Response to the user's question based on the preliminary response and the documentation search results. The response should be tailored to uer's info if provided. 
@@ -124,7 +123,7 @@ def create_customer_service(builtin_extensions):
 
             results = await asyncio.gather(*futs)
 
-            resp = await role.aask(ExtensionCallInput(user_question=question_with_history.question, user_profile=question_with_history.user_profile, result=results), ExtensionCallResponse)
+            resp = await role.aask(ExtensionCallInput(user_question=question_with_history.question, user_profile=question_with_history.user_profile, results=results), ExtensionCallResponse)
             steps.append(ResponseStep(name="Final Result", details=resp.dict()))
             return RichResponse(text=resp.response, steps=steps)
 
