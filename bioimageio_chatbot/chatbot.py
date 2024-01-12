@@ -18,17 +18,17 @@ import logging
 
 logger = logging.getLogger('bioimageio-chatbot')
 
-class DirectResponse(BaseModel):
-    """Direct response to a user's question if you are confident about the answer."""
+class GenericResponse(BaseModel):
+    """Create response for various scenarios:
+    - General Inquiries: When faced with straightforward questions where a direct answer is possible, the chatbot should provide clear, accurate, and concise responses.
+
+    - Educational Support: If a question is related to learning or seeks explanation about specific concepts or terms, the chatbot's response should be informative and educational, aiding in the user's understanding of the topic.
+
+    - Technical Assistance: For queries that involve technical aspects, such as scripting, coding, or specific professional knowledge, the chatbot should offer detailed, practical advice or solutions. This includes providing example codes, step-by-step guides, or explanations tailored to the user's level of expertise.
+    - Other scenarios: If the chatbot is unable to provide confident anwser, set use_tools to True.
+    """
+    use_tools: bool = Field(description="Whether to use tools to answer the user's question.")
     response: str = Field(description="The response to the user's question answering what that asked for.")
-
-class LearningResponse(BaseModel):
-    """Pedagogical response to user's question if the user's question is related to learning, the response should include such as key terms and important concepts about the topic."""
-    response: str = Field(description="The response to user's question, make sure the response is pedagogical and educational.")
-
-class CodingResponse(BaseModel):
-    """If user's question is related to scripting or coding in bioimage analysis, generate code to help user to create valid scripts or understand code."""
-    response: str = Field(description="The response to user's question, make sure the response contains valid code, with concise explaination.")
 
 class UserProfile(BaseModel):
     """The user's profile. This will be used to personalize the response to the user."""
@@ -77,38 +77,46 @@ def create_customer_service(db_path):
         """Answer the user's question directly or retrieve relevant documents from the documentation, or create a Python Script to get information about details of models."""
         steps = []
         inputs = [question_with_history.user_profile] + list(question_with_history.chat_history) + [question_with_history.question]
-        builtin_response_types = [DirectResponse, LearningResponse, CodingResponse]
         extension_types = [mode_d['schema_class'] for mode_d in question_with_history.chatbot_extensions] if question_with_history.chatbot_extensions else []
-        response_types = tuple(builtin_response_types + extension_types)
-        
-        logger.info("Response types: %s", response_types)
-        req = await role.aask(inputs, response_types, use_tool_calls=True)
-        if isinstance(req, tuple(builtin_response_types)):
-            steps.append(ResponseStep(name=type(req).__name__, details=req.dict()))
-            return RichResponse(text=req.response, steps=steps)
-        elif isinstance(req, tuple(extension_types)):
-            idx = extension_types.index(type(req))
-            mode_d = question_with_history.chatbot_extensions[idx]
-            response_function = mode_d['execute']
-            mode_name = mode_d['name']
-            arg_mode = mode_d['arg_mode']
-            steps.append(ResponseStep(name="Extension: " + mode_name, details=req.dict()))
-            try:
-                if arg_mode == 'pydantic':
-                    result = await response_function(req)
-                else:
-                    result = await response_function(req.dict())
-                steps.append(ResponseStep(name="Summarize result: " + mode_name, details={"result": result}))
-                resp = await role.aask(ExtensionCallInput(user_question=question_with_history.question, user_profile=question_with_history.user_profile, result=result), ExtensionCallResponse)
-                steps.append(ResponseStep(name="Result: " + mode_name, details=resp.dict()))
-                return RichResponse(text=resp.response, steps=steps)
-            except Exception as e:
-                print(f"Failed to run extension {mode_name}, error: {traceback.format_exc()}")
-                resp = await role.aask(ExtensionCallInput(user_question=question_with_history.question, user_profile=question_with_history.user_profile, error=str(e)), ExtensionCallResponse)
-                steps.append(ResponseStep(name="Result: " + mode_name, details=resp.dict()))
-                return RichResponse(text=resp.response, steps=steps)
+        logger.info("Response types: %s", extension_types)
+        resp = await role.aask(inputs, GenericResponse)
+        steps.append(ResponseStep(name="GenericResponse", details=resp.dict()))
+        if not resp.use_tools:
+            return RichResponse(text=resp.response, steps=steps)
         else:
-            raise ValueError(f"Unknown response type: {type(req)}")
+            reqs = await role.aask(inputs, tuple(extension_types), use_tool_calls=True)
+            async def handle_request(req):
+                if isinstance(req, tuple(extension_types)):
+                    idx = extension_types.index(type(req))
+                    mode_d = question_with_history.chatbot_extensions[idx]
+                    response_function = mode_d['execute']
+                    mode_name = mode_d['name']
+                    arg_mode = mode_d['arg_mode']
+                    steps.append(ResponseStep(name="Extension: " + mode_name, details=req.dict()))
+                    try:
+                        if arg_mode == 'pydantic':
+                            result = await response_function(req)
+                        else:
+                            result = await response_function(req.dict())
+                        steps.append(ResponseStep(name="Summarize result: " + mode_name, details={"result": result}))
+                        return result
+                    except Exception as e:
+                        print(f"Failed to run extension {mode_name}, error: {traceback.format_exc()}")
+                        raise e
+                else:
+                    raise ValueError(f"Unknown response type: {type(req)}")
+        
+            futs = []
+            for req in reqs:
+                futs.append(handle_request(req))
+
+            results = await asyncio.gather(*futs)
+            if len(reqs) == 1 and isinstance(reqs[0], tuple(builtin_response_types)):
+                return results[0]
+            
+            resp = await role.aask(ExtensionCallInput(user_question=question_with_history.question, user_profile=question_with_history.user_profile, result=results), ExtensionCallResponse)
+            steps.append(ResponseStep(name="Final Result", details=resp.dict()))
+            return RichResponse(text=resp.response, steps=steps)
 
     customer_service = Role(
         name="Melman",
