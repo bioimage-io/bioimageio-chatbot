@@ -5,7 +5,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>BioImage.IO Chatbot</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://www.unpkg.com/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <!-- Add the Font Awesome library -->
   <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css"
     integrity="sha384-DyZ88mC6Up2uqS4h/KRgHuoeGwBcD4Ng9SiP4dIRy0EXTlnuz47vAwmeGwVChigm" crossorigin="anonymous" />
@@ -334,15 +334,10 @@
             </button>
           </div>
           <!-- Add the "Extensions" dropdown menu -->
-          <div class="form-outline btn-info mt-3" id="extensions-container">
-          </div>
-          <!-- Add the "Channels" dropdown menu -->
-          <div class="form-outline btn-info mt-3">
-            <label for="channelSelect">Knowledge Base Channel: </label>
-            <select class="form-select" id="channelSelect">
-              <option value="" disabled selected>Select a Channel</option>
-            </select>
-          </div>
+          <br>
+          <br>
+          <span>Extensions: </span>
+          <select multiple="multiple" style="width: calc(100% - 100px);" id="extensions"></select>
         </div>
       </div>
       <div class="card-footer text-center">
@@ -371,11 +366,17 @@
   </div>
   <div id="window-container" style="height:0px;"></div>
 
-  <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/imjoy-rpc@0.5.46/dist/hypha-rpc-websocket.min.js"></script>
+  <script src="https://unpkg.com/jquery@3.6.0/dist/jquery.min.js"></script>
+  
+  <!-- Latest compiled and minified CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/multiple-select@1.7.0/dist/multiple-select.min.css">
+
+  <!-- Latest compiled and minified JavaScript -->
+  <script src="https://unpkg.com/multiple-select@1.7.0/dist/multiple-select.min.js"></script>
+  <script src="https://www.unpkg.com/imjoy-rpc@0.5.46/dist/hypha-rpc-websocket.min.js"></script>
   <script src="https://lib.imjoy.io/imjoy-loader.js"></script>
   <script src="https://unpkg.com/marked@2.1.3/lib/marked.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
+  <script src="https://www.unpkg.com/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
   <script>
     let extensions = [];
     function fileSelected() {
@@ -396,20 +397,53 @@
       label.classList.remove('file-selected');
     }
 
+    function updateDropdownOptions(extensions) {
+      const options = extensions.map((ext)=>{
+        return {
+          text: `${ext.name}: ${ext.description}`,
+          value: ext.id 
+        }
+      })
+    
+      var $select = $('#extensions');
+    
+      // Clear existing options
+      $select.empty();
+    
+      // Add new options from the 'options' array
+      options.forEach(function(option) {
+        $select.append($('<option>', { 
+          value: option.value, 
+          text : option.text.slice(0, 128) + (option.text.length > 128 ? "..." : "")
+        }));
+      });
+    
+      // Refresh the multipleSelect to reflect the changes
+      $select.multipleSelect('refresh');
+      $select.multipleSelect('checkAll');
+    }
+
+    function getSelectedExtensions() {
+      var selectedValues = $('#extensions').val(); // Gets the array of selected values
+  
+      const exts = []
+      // If you want to do something with these values, you can iterate over them
+      for (var i = 0; i < selectedValues.length; i++) {
+          exts.push(extensions[selectedValues[i]])
+      }
+  
+      return exts; // Returns the array of selected values
+    }
+    
     async function _registerExtension(extension) {
       if(!extension.name || !extension.execute || !extension.get_schema) 
         throw new Error("Invalid extension")
       const schema = await extension.get_schema()
       if(!schema || !schema.title || schema.title.includes(" ") || !schema.description)
         throw new Error("Invalid extension schema")
-
+      extension.id = extensions.length
       extensions.push(extension);
-      const container = $('#extensions-container')
-      let htmlContent = `<span>Extensions:&nbsp;</span>`
-      for(let ext of extensions){
-        htmlContent += `<div class="step" title="${ext.description}">${ext.name}</div>`
-      }
-      container.html(htmlContent);
+      updateDropdownOptions(extensions);
     }
 
     async function setupImJoyApp(imjoy_api){
@@ -441,6 +475,27 @@
           );
           if (uri) app.loadPlugin(uri);
           },
+      });
+
+      
+      app.addMenuItem({
+        label: "🧩 ImJoy Fiddle",
+        async callback() {
+          const plugin = await app.loadPlugin("https://if.imjoy.io")
+          await app.runPlugin(plugin)
+          app.removeMenuItem("🧩 ImJoy Fiddle")
+        },
+      });
+
+      app.addMenuItem({
+        label: "Load Model Zoo Extension",
+        async callback() {
+          const uri = prompt(
+              `Please type a ImJoy plugin URL`,
+              "https://raw.githubusercontent.com/bioimage-io/bioimageio-chatbot/display-steps/bioimageio_chatbot/static/index.html"
+          );
+          if (uri) app.loadPlugin(uri);
+        },
       });
 
       const api = app.imjoy.api
@@ -563,10 +618,8 @@
       });
 
       async function initializeService() {
-        
         $('.message-holder').append(spinner);
         showConnectingStatus();
-
         try {
           // get service_id from query string
           const urlParams = new URLSearchParams(window.location.search);
@@ -578,26 +631,12 @@
           })
           const svc = await server.getService(service_id || "bioimageio-chatbot")
           await svc.ping()
-          const channels = svc.channels;
-          const channelSelect = document.getElementById('channelSelect');
-
-          // Clear any existing options
-          channelSelect.innerHTML = '<option value="" disabled selected>Select a Channel</option>';
-
-          channels.forEach((channel) => {
-            const option = document.createElement('option');
-            option.value = channel;
-            option.textContent = channel;
-            channelSelect.appendChild(option);
+          const builtin_extensions = svc.builtin_extensions;
+          builtin_extensions.forEach((ext) => {
+            ext.id = extensions.length
+            extensions.push(ext)
           });
-
-          // add 'auto' channel
-          const option = document.createElement('option');
-          option.value = 'auto';
-          option.textContent = 'auto';
-          channelSelect.appendChild(option);
-          channelSelect.value = 'auto';
-
+          updateDropdownOptions(extensions);
           showReadyStatus();
           appendRobotMessage(shortIntroMessage, "message-0"); // Append robot message to the message container
           return svc;
@@ -775,7 +814,7 @@
 
         try {
           // Call the chat function with text and image data
-          response = await svc.chat(textMessage, chat_history, user_profile, selectedChannel, statusCallback, sessionId, imageData, extensions);
+          response = await svc.chat(textMessage, chat_history, user_profile, statusCallback, sessionId, getSelectedExtensions());
           // const regex = /!\[.*?\]\(data:.+?\)/g;
           // const replacementText = '`image placeholder`';
           // responseWithoutImage = response.replace(regex, replacementText);
