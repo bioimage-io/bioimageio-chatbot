@@ -30,27 +30,25 @@ class DocumentSearchInput(BaseModel):
     )
     format: Optional[str] = Field(None, description="The format of the document.")
 
-class DocumentRetrievalInput(BaseModel):
-    """Input for searching knowledge bases and finding documents relevant to the user's request."""
 
-    request: str = Field(description="The user's detailed request")
-    preliminary_response: str = Field(
-        description="The preliminary response to the user's question. This will be combined with the retrieved documents to produce the final response."
-    )
-    query: str = Field(
-        description="The query used to retrieve documents related to the user's request. Take preliminary_response as reference to generate query if needed."
-    )
-    user_info: Optional[str] = Field(
-        "",
-        description="Brief user info summary including name, background, etc., for personalizing responses to the user.",
-    )
+async def get_schema(channel_info):
+    class DocumentRetrievalInput(BaseModel):
+        """Searching knowledge base (name: {name}, description: {description})."""
+        request: str = Field(description="The user's detailed request")
+        query: str = Field(
+            description="The query used to retrieve documents related to the user's request. Take preliminary_response as reference to generate query if needed."
+        )
+        user_info: Optional[str] = Field(
+            "",
+            description="Brief user info summary including name, background, etc., for personalizing responses to the user.",
+        )
 
-async def get_schema(channel_id):
-    DocumentRetrievalInput.__name__ = channel_id.replace(".", "_").replace("-", "_")
+    DocumentRetrievalInput.__name__ = channel_info['id'].replace(".", "_").replace("-", "_")
+    DocumentRetrievalInput.__doc__ = DocumentRetrievalInput.__doc__.format(name=channel_info['name'], description=channel_info['description'])
     return DocumentRetrievalInput.schema()
 
 
-async def run_extension(docs_store_dict, channel_id, req: DocumentRetrievalInput):
+async def run_extension(docs_store_dict, channel_id, req):
     collections = get_manifest()["collections"]
     docs_store = docs_store_dict[channel_id]
     collection_info_dict = {collection["id"]: collection for collection in collections}
@@ -89,7 +87,7 @@ def get_extensions():
         ChatbotExtension(
             name=collection["id"],
             description=collection["description"],
-            get_schema=partial(get_schema, collection["id"]),
+            get_schema=partial(get_schema, collection),
             execute=partial(run_extension, docs_store_dict, collection["id"]),
         )
         for collection in collections
