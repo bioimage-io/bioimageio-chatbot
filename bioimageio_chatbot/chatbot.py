@@ -19,11 +19,12 @@ import logging
 
 logger = logging.getLogger('bioimageio-chatbot')
 
-GENERIC_RESPONSE_PROMPT = """Create response for various scenarios:
+GENERIC_RESPONSE_PROMPT = """Create direct response for various scenarios:
 - General Inquiries: When faced with straightforward questions where a direct answer is possible, the chatbot should provide clear, accurate, and concise responses.
 - Educational Support: If a question is related to learning or seeks explanation about specific concepts or terms, the chatbot's response should be informative and educational, aiding in the user's understanding of the topic.
 - Technical Assistance: For queries that involve technical aspects, such as scripting, coding, or specific professional knowledge, the chatbot should offer detailed, practical advice or solutions. This includes providing example codes, step-by-step guides, or explanations tailored to the user's level of expertise.
-For other scenarios, set use_tools to True to activate the tool call to obtain additional information for the user.
+- Coding Assistance: If a question is related to coding, the chatbot should provide detailed, practical advice or solutions. This includes providing valid source code or script with comments tailored to the user's level of expertise.
+For other types of queries, set use_tools to True to use tools to obtain additional information to help the user.
 """
 
 class UserProfile(BaseModel):
