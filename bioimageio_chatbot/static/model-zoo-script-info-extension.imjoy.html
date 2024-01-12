@@ -112,8 +112,16 @@ async def register_chatbot_extension(chatbot):
 class ImJoyPlugin():
     async def setup(self):
         if api.registerExtension:
+            # Loading inside the chatbot
             await register_chatbot_extension(api)
             await api.showMessage("ModelZooInfoScript Chatbot Extension registered")
+        else:
+            # Use together with the chatbot
+            chatbot = await api.getWindow("BioImage.IO Chatbot")
+            if chatbot:
+                await register_chatbot_extension(chatbot)
+                await api.showMessage("ModelZooInfoScript Chatbot Extension registered")
+
         await api.log('initialized')
 
 api.export(ImJoyPlugin())
