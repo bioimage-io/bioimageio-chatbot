@@ -463,7 +463,7 @@
         window_manager_container: "window-container",
         expose_api: true,
         imjoy_api: {
-          async registerExtension(plugin, config){
+          async registerChatbotExtension(plugin, config){
             return await _registerExtension(config)
           }
         }
@@ -505,7 +505,7 @@
       app.addMenuItem({
         label: "Enable ImageJMacro",
         async callback() {
-          await api.registerExtension({
+          await api.registerChatbotExtension({
             _rintf: true,
             name: "runImageJMacro",
             description: "Run a macro in ImageJ.JS",
