@@ -46,8 +46,11 @@ class DocumentResponse(BaseModel):
     response: str = Field(description="The answer to the user's question based on the search results. Can be either a detailed response in markdown format if the search results are relevant to the user's question or 'I don't know'.")
 
 class ExtensionCallResponse(BaseModel):
-    """Summarize the result of calling an extension function"""
-    response: str = Field(description="The answer to the user's question based on the result of calling the extension function. If the function call results are irrelevant to the user's question or if the extension function fails, tell the user that you don't know the answer and provide a summary fo the results.")
+    """Summarize the result of calling an extension function.
+    If the function call results are irrelevant to the user's question or if the extension function fails, tell the user that you don't know the answer and provide a summary fo the results.
+    """
+    relevant: bool = Field(description="Whether the results of calling the extension function are relevant to the user's question.")
+    response: str = Field(description="The answer to the user's question based on the result of calling the extension function.")
 
 class QuestionWithHistory(BaseModel):
     """The user's question, chat history, and user's profile."""
