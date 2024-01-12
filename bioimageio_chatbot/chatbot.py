@@ -281,7 +281,7 @@ async def register_chat_service(server):
     
     version = pkg_resources.get_distribution('bioimageio-chatbot').version
     def reload_index():
-        with open(os.path.join(os.path.dirname(__file__), "static/index.html"), "r") as f:
+        with open(os.path.join(os.path.dirname(__file__), "static/index.html"), "r", encoding="utf-8") as f:
             index_html = f.read()
         index_html = index_html.replace("https://ai.imjoy.io", server.config['public_base_url'] or f"http://127.0.0.1:{server.config['port']}")
         index_html = index_html.replace('"bioimageio-chatbot"', f'"{hypha_service_info["id"]}"')
