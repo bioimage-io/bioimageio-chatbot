@@ -107,13 +107,14 @@ def create_customer_service(builtin_extensions):
                 idx = extension_types.index(type(req))
                 extension = chatbot_extensions[idx]
                 ext_name = extension.name
-                steps.append(ResponseStep(name="Extension: " + ext_name, details=req.dict()))
+                steps.append(ResponseStep(name="Execute: " + ext_name, details=req.dict()))
                 try:
                     result = await extension.execute(req)
-                    steps.append(ResponseStep(name="Summarize result: " + ext_name, details={"result": result}))
+                    steps.append(ResponseStep(name="Output: " + ext_name, details={"result": result}))
                     return result
                 except Exception as e:
                     print(f"Failed to run extension {ext_name}, error: {traceback.format_exc()}")
+                    steps.append(ResponseStep(name="Error: " + ext_name, details={"Error": traceback.format_exc()}))
                     raise e
 
             reqs = await role.aask(inputs, tuple(extension_types), use_tool_calls=True)
