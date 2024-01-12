@@ -157,12 +157,7 @@ class ResponseStep(BaseModel):
     """Response step"""
     name: str = Field(description="Step name")
     details: Optional[dict] = Field(None, description="Step details")
-
-class RichResponse(BaseModel):
-    """Rich response with text and intermediate steps"""
-    text: str = Field(description="Response text")
-    steps: List[ResponseStep] = Field(description="Intermediate steps")
-
+    
 def create_customer_service(db_path):
     collections = get_manifest()['collections']
     docs_store_dict = load_knowledge_base(db_path)
