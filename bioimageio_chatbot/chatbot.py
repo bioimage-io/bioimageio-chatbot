@@ -92,8 +92,8 @@ def create_customer_service(builtin_extensions):
                 else:
                     extension = ChatbotExtension.parse_obj(ext)
                 
-                if 'get_schema' in ext:
-                    schema = await ext['get_schema']()
+                if extension.get_schema:
+                    schema = await extension.get_schema()
                     extension.schema_class = jsonschema_to_pydantic(JsonSchemaObject.parse_obj(schema))
                 else:
                     input_schemas, _ = extract_schemas(extension.execute)
