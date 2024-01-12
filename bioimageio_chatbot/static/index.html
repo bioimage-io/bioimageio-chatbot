@@ -400,8 +400,8 @@
     function updateDropdownOptions(extensions) {
       const options = extensions.map((ext)=>{
         return {
-          text: ext.name,
-          value: ext.id
+          text: `${ext.name}: ${ext.description}`,
+          value: ext.id 
         }
       })
     
@@ -414,7 +414,7 @@
       options.forEach(function(option) {
         $select.append($('<option>', { 
           value: option.value, 
-          text : option.text 
+          text : option.text.slice(0, 128) + (option.text.length > 128 ? "..." : "")
         }));
       });
     
@@ -620,10 +620,8 @@
           await svc.ping()
           const builtin_extensions = svc.builtin_extensions;
           builtin_extensions.forEach((ext) => {
-            extensions.push({
-              id: extensions.length,
-              name: ext.name,
-            })
+            ext.id = extensions.length
+            extensions.push(ext)
           });
           updateDropdownOptions(extensions);
           showReadyStatus();
