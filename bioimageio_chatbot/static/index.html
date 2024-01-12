@@ -491,7 +491,7 @@
       });
 
       app.addMenuItem({
-        label: "Load Model Zoo Extension",
+        label: "Enable ModelZooScript",
         async callback() {
           const uri = prompt(
               `Please type a ImJoy plugin URL`,
@@ -502,42 +502,48 @@
       });
 
       const api = app.imjoy.api
-      await api.registerExtension({
-        _rintf: true,
-        name: "runImageJMacro",
-        description: "Run a macro in ImageJ.JS",
-        async get_schema(){
-          return {
-            "type": "object",
-            "title": "RunImageJMacro",
-            "description": "Run a macro in ImageJ.JS",
-            "properties": {
-              "macro": {
-                "type": "string",
-                "description": "The macro to run"
-              },
-              "args": {
+      app.addMenuItem({
+        label: "Enable ImageJMacro",
+        async callback() {
+          await api.registerExtension({
+            _rintf: true,
+            name: "runImageJMacro",
+            description: "Run a macro in ImageJ.JS",
+            async get_schema(){
+              return {
                 "type": "object",
-                "description": "Arguments for the macro"
+                "title": "RunImageJMacro",
+                "description": "Run a macro in ImageJ.JS",
+                "properties": {
+                  "macro": {
+                    "type": "string",
+                    "description": "The macro to run"
+                  },
+                  "args": {
+                    "type": "object",
+                    "description": "Arguments for the macro"
+                  }
+                }
+              }
+            },
+            async execute(config){
+              let ij = await api.getWindow("ImageJ.JS")
+              if(!ij){
+                ij = await api.createWindow({src: "https://ij.imjoy.io", name: "ImageJ.JS"})
+              }
+              try{
+                const result = await ij.runMacro(config['macro'], config['args'])
+                return result
+              }
+              catch(e){
+                console.error(e)
+                return e.toString()
               }
             }
-          }
+          })
+          await api.showMessage("ImageJMacro extension is enabled")
         },
-        async execute(config){
-          let ij = await api.getWindow("ImageJ.JS")
-          if(!ij){
-            ij = await api.createWindow({src: "https://ij.imjoy.io", name: "ImageJ.JS"})
-          }
-          try{
-            const result = await ij.runMacro(config['macro'], config['args'])
-            return result
-          }
-          catch(e){
-            console.error(e)
-            return e.toString()
-          }
-        }
-      })
+      });
       return app;
     }
 
