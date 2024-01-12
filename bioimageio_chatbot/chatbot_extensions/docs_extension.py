@@ -21,7 +21,7 @@ class DocWithScore(BaseModel):
 
 class DocumentSearchInput(BaseModel):
     """Results of a document retrieval process from a documentation base."""
-    user_question: str = Field(description="The user's original question.")
+    user_question: str = Field(description="The user's original question.") 
     relevant_context: List[DocWithScore] = Field(
         description="Chunks of context retrieved from the documentation that are relevant to the user's original question."
     )
@@ -30,27 +30,27 @@ class DocumentSearchInput(BaseModel):
     )
     format: Optional[str] = Field(None, description="The format of the document.")
 
+class DocumentRetrievalInput(BaseModel):
+    """Input for searching knowledge bases and finding documents relevant to the user's request."""
+
+    request: str = Field(description="The user's detailed request")
+    preliminary_response: str = Field(
+        description="The preliminary response to the user's question. This will be combined with the retrieved documents to produce the final response."
+    )
+    query: str = Field(
+        description="The query used to retrieve documents related to the user's request. Take preliminary_response as reference to generate query if needed."
+    )
+    user_info: Optional[str] = Field(
+        "",
+        description="Brief user info summary including name, background, etc., for personalizing responses to the user.",
+    )
+
 async def get_schema(channel_id):
-    class DocumentRetrievalInput(BaseModel):
-        """Input for searching knowledge bases and finding documents relevant to the user's request."""
-
-        request: str = Field(description="The user's detailed request")
-        preliminary_response: str = Field(
-            description="The preliminary response to the user's question. This will be combined with the retrieved documents to produce the final response."
-        )
-        query: str = Field(
-            description="The query used to retrieve documents related to the user's request. Take preliminary_response as reference to generate query if needed."
-        )
-        user_info: Optional[str] = Field(
-            "",
-            description="Brief user info summary including name, background, etc., for personalizing responses to the user.",
-        )
-
     DocumentRetrievalInput.__name__ = channel_id.replace(".", "_").replace("-", "_")
     return DocumentRetrievalInput.schema()
 
 
-async def run_extension(docs_store_dict, channel_id, req: DocumentSearchInput):
+async def run_extension(docs_store_dict, channel_id, req: DocumentRetrievalInput):
     collections = get_manifest()["collections"]
     docs_store = docs_store_dict[channel_id]
     collection_info_dict = {collection["id"]: collection for collection in collections}
