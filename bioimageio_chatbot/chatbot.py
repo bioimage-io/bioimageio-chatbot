@@ -47,7 +47,7 @@ class DocumentResponse(BaseModel):
 
 class ExtensionCallResponse(BaseModel):
     """Summarize the result of calling an extension function"""
-    response: str = Field(description="The answer to the user's question based on the result of calling the extension function.")
+    response: str = Field(description="The answer to the user's question based on the result of calling the extension function. If the function call results are irrelevant to the user's question or if the extension function fails, tell the user that you don't know the answer and provide a summary fo the results.")
 
 class QuestionWithHistory(BaseModel):
     """The user's question, chat history, and user's profile."""
@@ -102,7 +102,7 @@ def create_customer_service(builtin_extensions):
 
             extension_types = [mode_d.schema_class for mode_d in chatbot_extensions] if question_with_history.chatbot_extensions else []
             logger.info("Response types: %s", extension_types)
-            async def handle_request(req):
+            async def run_extension(req):
                 assert isinstance(req, tuple(extension_types)), f"Unknown response type: {type(req)}"
                 idx = extension_types.index(type(req))
                 extension = chatbot_extensions[idx]
@@ -120,7 +120,7 @@ def create_customer_service(builtin_extensions):
             responses = await role.aask(inputs, tuple(extension_types), use_tool_calls=True)
             futs = []
             for resp in responses:
-                futs.append(handle_request(resp))
+                futs.append(run_extension(resp))
 
             results = await asyncio.gather(*futs)
 

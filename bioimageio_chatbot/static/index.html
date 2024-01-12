@@ -444,14 +444,6 @@
       extension.id = extensions.length
       extensions.push(extension);
       updateDropdownOptions(extensions);
-      
-      
-      //const container = $('#extensions-container')
-      //let htmlContent = `<span>Extensions:&nbsp;</span>`
-      //for(let ext of extensions){
-      //  htmlContent += `<div class="step" title="${ext.description}">${ext.name}</div>`
-      //}
-      //container.html(htmlContent);
     }
 
     async function setupImJoyApp(imjoy_api){
@@ -483,6 +475,27 @@
           );
           if (uri) app.loadPlugin(uri);
           },
+      });
+
+      
+      app.addMenuItem({
+        label: "🧩 ImJoy Fiddle",
+        async callback() {
+          const plugin = await app.loadPlugin("https://if.imjoy.io")
+          await app.runPlugin(plugin)
+          app.removeMenuItem("🧩 ImJoy Fiddle")
+        },
+      });
+
+      app.addMenuItem({
+        label: "Load Model Zoo Extension",
+        async callback() {
+          const uri = prompt(
+              `Please type a ImJoy plugin URL`,
+              "https://raw.githubusercontent.com/bioimage-io/bioimageio-chatbot/display-steps/bioimageio_chatbot/static/index.html"
+          );
+          if (uri) app.loadPlugin(uri);
+        },
       });
 
       const api = app.imjoy.api
