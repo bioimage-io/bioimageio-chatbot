@@ -76,7 +76,7 @@ def execute_code(script, context=None):
         sys.stderr = original_stderr
 
 
-async def register_chatbot_extension(chatbot):
+async def register_chatbot_extension(register):
     resource_items = await load_model_info()
     types = set()
     tags = set()
@@ -100,7 +100,7 @@ async def register_chatbot_extension(chatbot):
         result = execute_code(req['script'], {"resources": resource_items})
         return result
 
-    await chatbot.registerExtension({
+    await register({
         "_rintf": True,
         "name": "ModelZooInfoScript",
         "description": ModelZooInfoScript.__doc__,
@@ -111,15 +111,15 @@ async def register_chatbot_extension(chatbot):
 
 class ImJoyPlugin():
     async def setup(self):
-        if api.registerExtension:
+        if api.registerChatbotExtension:
             # Loading inside the chatbot
-            await register_chatbot_extension(api)
+            await register_chatbot_extension(api.registerChatbotExtension)
             await api.showMessage("ModelZooInfoScript Chatbot Extension registered")
         else:
             # Use together with the chatbot
             chatbot = await api.getWindow("BioImage.IO Chatbot")
             if chatbot:
-                await register_chatbot_extension(chatbot)
+                await register_chatbot_extension(chatbot.registerExtension)
                 await api.showMessage("ModelZooInfoScript Chatbot Extension registered")
 
         await api.log('initialized')
