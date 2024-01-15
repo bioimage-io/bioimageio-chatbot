@@ -85,7 +85,7 @@ def get_extensions():
     docs_store_dict = load_knowledge_base(knowledge_base_path)
     return [
         ChatbotExtension(
-            name=collection["id"],
+            name=collection["id"]+"(docs)",
             description=collection["description"],
             get_schema=partial(get_schema, collection),
             execute=partial(run_extension, docs_store_dict, collection["id"]),
