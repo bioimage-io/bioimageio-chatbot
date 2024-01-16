@@ -29,7 +29,7 @@ from datamodel_code_generator.parser.jsonschema import (
 )
 from datamodel_code_generator.types import DataTypeManager, StrictTypes
 
-from pydantic import BaseConfig, BaseModel, create_model
+from pydantic import BaseConfig, BaseModel, create_model, Field
 
 
 # extend the data-model json-schema-parser to accept a source of a JsonSchemaObject
@@ -189,7 +189,10 @@ def jsonschema_to_pydantic(
     fields = {}
     for attr in results.fields:
         if attr.name not in fields_to_exclude:
-            fields[attr.name] = (attr.type_hint, ... if attr.required else attr.default)
+            if attr.required:
+                fields[attr.name] = (attr.type_hint, Field(..., description=schema.properties[attr.name].description))
+            else:
+                fields[attr.name] = (attr.type_hint, Field(attr.default, description=schema.properties[attr.name].description))
 
     model = create_model(schema.title, __config__=config, **fields)
     model.__doc__ = schema.description
