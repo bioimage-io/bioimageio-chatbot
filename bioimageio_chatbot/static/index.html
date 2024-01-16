@@ -5,7 +5,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>BioImage.IO Chatbot</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://www.unpkg.com/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <!-- Add the Font Awesome library -->
   <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css"
     integrity="sha384-DyZ88mC6Up2uqS4h/KRgHuoeGwBcD4Ng9SiP4dIRy0EXTlnuz47vAwmeGwVChigm" crossorigin="anonymous" />
@@ -202,6 +202,10 @@
       margin: 0 auto;
       /* Center the chat container horizontally */
     }
+    .window {
+      /* Avoid window with 0 height */
+      min-height: 220px !important;
+    }
 
 
 
@@ -334,15 +338,10 @@
             </button>
           </div>
           <!-- Add the "Extensions" dropdown menu -->
-          <div class="form-outline btn-info mt-3" id="extensions-container">
-          </div>
-          <!-- Add the "Channels" dropdown menu -->
-          <div class="form-outline btn-info mt-3">
-            <label for="channelSelect">Knowledge Base Channel: </label>
-            <select class="form-select" id="channelSelect">
-              <option value="" disabled selected>Select a Channel</option>
-            </select>
-          </div>
+          <br>
+          <br>
+          <span>Extensions: </span>
+          <select multiple="multiple" style="width: calc(100% - 100px);" id="extensions"></select>
         </div>
       </div>
       <div class="card-footer text-center">
@@ -371,13 +370,20 @@
   </div>
   <div id="window-container" style="height:0px;"></div>
 
-  <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/imjoy-rpc@0.5.46/dist/hypha-rpc-websocket.min.js"></script>
+  <script src="https://unpkg.com/jquery@3.6.0/dist/jquery.min.js"></script>
+  
+  <!-- Latest compiled and minified CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/multiple-select@1.7.0/dist/multiple-select.min.css">
+
+  <!-- Latest compiled and minified JavaScript -->
+  <script src="https://unpkg.com/multiple-select@1.7.0/dist/multiple-select.min.js"></script>
+  <script src="https://www.unpkg.com/imjoy-rpc@0.5.46/dist/hypha-rpc-websocket.min.js"></script>
   <script src="https://lib.imjoy.io/imjoy-loader.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/2.1.3/marked.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
+  <script src="https://unpkg.com/marked@2.1.3/lib/marked.js"></script>
+  <script src="https://www.unpkg.com/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
   <script>
     let extensions = [];
+    const registeredExtensions = []
     function fileSelected() {
       var input = document.getElementById('fileUpload');
       var label = document.getElementById('paperclipIcon');
@@ -396,71 +402,55 @@
       label.classList.remove('file-selected');
     }
 
-    const storage = {};
-    function encodeData(result) {
-        if (result === null || typeof result === 'string' || typeof result === 'number' || typeof result === 'boolean') {
-            return result;
-        } else if (Array.isArray(result)) {
-            return result.map(encodeData);
-        } else if (typeof result === 'object') {
-            let encodedObject = {};
-            for (let [key, value] of Object.entries(result)) {
-                encodedObject[key] = encodeData(value);
-            }
-            return encodedObject;
-        } else {
-            let key = uuidv4(); // Implement or import uuidv4 function
-            storage[key] = result;
-            return {
-                _rtype: "object",
-                reference_id: key
-            };
+    function updateDropdownOptions(extensions) {
+      const options = extensions.map((ext)=>{
+        return {
+          text: `${ext.name}: ${ext.description}`,
+          value: ext.id 
         }
+      })
+    
+      var $select = $('#extensions');
+    
+      // Clear existing options
+      $select.empty();
+    
+      // Add new options from the 'options' array
+      options.forEach(function(option) {
+        $select.append($('<option>', { 
+          value: option.value, 
+          text : option.text.slice(0, 128) + (option.text.length > 128 ? "..." : "")
+        }));
+      });
+    
+      // Refresh the multipleSelect to reflect the changes
+      $select.multipleSelect('refresh');
+      $select.multipleSelect('checkAll');
     }
 
-    function decodeData(result) {
-        if (result === null || typeof result === 'string' || typeof result === 'number' || typeof result === 'boolean') {
-            return result;
-        } else if (Array.isArray(result)) {
-            return result.map(decodeData);
-        } else if (typeof result === 'object') {
-            if ('_rtype' in result && result['_rtype'] === "object") {
-                let key = result['reference_id'];
-                return storage[key];
-            } else {
-                let decodedObject = {};
-                for (let [key, value] of Object.entries(result)) {
-                    decodedObject[key] = decodeData(value);
-                }
-                return decodedObject;
-            }
-        } else {
-            return result;
-        }
+    function getSelectedExtensions() {
+      var selectedValues = $('#extensions').val(); // Gets the array of selected values
+  
+      const exts = []
+      // If you want to do something with these values, you can iterate over them
+      for (var i = 0; i < selectedValues.length; i++) {
+          exts.push(extensions[selectedValues[i]])
+      }
+  
+      return exts; // Returns the array of selected values
     }
-
+    
+    
     async function _registerExtension(extension) {
       if(!extension.name || !extension.execute || !extension.get_schema) 
         throw new Error("Invalid extension")
       const schema = await extension.get_schema()
       if(!schema || !schema.title || schema.title.includes(" ") || !schema.description)
         throw new Error("Invalid extension schema")
-
-      const _execute = extension.execute;
-
-      extension.execute = async function(config){
-        config = decodeData(config)
-        const result = await _execute(config)
-        return encodeData(result)
-      }
-      
+      extension.id = extensions.length
       extensions.push(extension);
-      const container = $('#extensions-container')
-      let htmlContent = `<span>Extensions:&nbsp;</span>`
-      for(let ext of extensions){
-        htmlContent += `<div class="step" title="${ext.description}">${ext.name}</div>`
-      }
-      container.html(htmlContent);
+      registeredExtensions.push(extension);
+      updateDropdownOptions(extensions);
     }
 
     async function setupImJoyApp(imjoy_api){
@@ -477,7 +467,7 @@
         window_manager_container: "window-container",
         expose_api: true,
         imjoy_api: {
-          async registerExtension(plugin, config){
+          async registerChatbotExtension(plugin, config){
             return await _registerExtension(config)
           }
         }
@@ -494,108 +484,92 @@
           },
       });
 
+      
+      app.addMenuItem({
+        label: "🧩 ImJoy Fiddle",
+        async callback() {
+          const plugin = await app.loadPlugin("https://if.imjoy.io")
+          await app.runPlugin(plugin)
+          app.removeMenuItem("🧩 ImJoy Fiddle")
+        },
+      });
+
+      app.addMenuItem({
+        label: "Enable ModelZooScript",
+        async callback() {
+          const uri = prompt(
+              `Please type a ImJoy plugin URL`,
+              "https://raw.githubusercontent.com/bioimage-io/bioimageio-chatbot/main/bioimageio_chatbot/static/model-zoo-script-info-extension.imjoy.html"
+          );
+          if (uri) app.loadPlugin(uri);
+        },
+      });
+
+      app.addMenuItem({
+        label: "Enable PythonConsole",
+        async callback() {
+          const uri = prompt(
+              `Please type a ImJoy plugin URL`,
+              "https://nanguage.github.io/web-python-console/chatbot-extension.imjoy.html"
+          );
+          if (uri) app.loadPlugin(uri);
+        },
+      });
+
+      app.addMenuItem({
+        label: "Enable BioengineWebClient",
+        async callback() {
+          const uri = prompt(
+              `Please type a ImJoy plugin URL`,
+              "https://bioimage-io.github.io/bioengine-web-client/chatbot-extension.imjoy.html"
+          );
+          if (uri) app.loadPlugin(uri);
+        },
+      });
+
       const api = app.imjoy.api
-      await api.registerExtension({
-        _rintf: true,
-        name: "runImageJMacro",
-        description: "Run a macro in ImageJ.JS",
-        async get_schema(){
-          return {
-            "type": "object",
-            "title": "RunImageJMacro",
-            "description": "Run a macro in ImageJ.JS",
-            "properties": {
-              "macro": {
-                "type": "string",
-                "description": "The macro to run"
-              },
-              "args": {
+      app.addMenuItem({
+        label: "Enable ImageJMacro",
+        async callback() {
+          await api.registerChatbotExtension({
+            _rintf: true,
+            name: "runImageJMacro",
+            description: "Run a macro in ImageJ.JS",
+            async get_schema(){
+              return {
                 "type": "object",
-                "description": "Arguments for the macro"
+                "title": "RunImageJMacro",
+                "description": "Run a macro in ImageJ.JS",
+                "properties": {
+                  "macro": {
+                    "type": "string",
+                    "description": "The macro to run"
+                  },
+                  "args": {
+                    "type": "object",
+                    "description": "Arguments for the macro"
+                  }
+                }
+              }
+            },
+            async execute(config){
+              let ij = await api.getWindow("ImageJ.JS")
+              if(!ij){
+                ij = await api.createWindow({src: "https://ij.imjoy.io", name: "ImageJ.JS"})
+              }
+              try{
+                const result = await ij.runMacro(config['macro'], config['args'])
+                return result
+              }
+              catch(e){
+                console.error(e)
+                return e.toString()
               }
             }
-          }
+          })
+          await api.showMessage("ImageJMacro extension is enabled")
         },
-        async execute(config){
-          let ij = await api.getWindow("ImageJ.JS")
-          if(!ij){
-            ij = await api.createWindow({src: "https://ij.imjoy.io", name: "ImageJ.JS"})
-          }
-          try{
-            const result = await ij.runMacro(config['macro'], config['args'])
-            return result
-          }
-          catch(e){
-            console.error(e)
-            return e.toString()
-          }
-        }
-      })
-
-      await api.registerExtension({
-        _rintf: true,
-        name: "getImage",
-        description: "Get an image from the current window",
-        async get_schema() {
-          console.log("get schema of getImage")
-          return {
-            type: "object",
-            title: "getImage",
-            description: "Get an image from the current window",
-            properties: {
-            },
-          };
-        },
-        async execute(config) {
-          let ij = await api.getWindow("ImageJ.JS")
-          if(!ij){
-            ij = await api.createWindow({src: "https://ij.imjoy.io", name: "ImageJ.JS"})
-          }
-          const image = await ij.getImage();
-          return image;
-        },
-      })
-  
-      await api.registerExtension({
-        _rintf: true,
-        name: "showImage",
-        description: "Show an image in the current window",
-        async get_schema() {
-          return {
-            type: "object",
-            title: "showImage",
-            description: "Show an image in the current window, the input should be an image.",
-            properties: {
-              image: {
-                type: "object",
-                title: "image",
-                description: "The image to show.",
-                properties: {
-                  rtype: {
-                    type: "string",
-                    enum: ["object"],
-                  },
-                  reference_id: {
-                    type: "string",
-                    description: "The reference id of the image",
-                  },
-                },
-                required: ["rtype", "reference_id"],
-              },
-            },
-            required: ["image"],
-            allow_additional_properties: false,
-          };
-        },
-        async execute(config) {
-          let ij = await api.getWindow("ImageJ.JS")
-          if(!ij){
-            ij = await api.createWindow({src: "https://ij.imjoy.io", name: "ImageJ.JS"})
-          }
-          const image = config["image"] || config["object"];
-          await ij.viewImage(image);
-        },
-      })
+      });
       return app;
     }
 
@@ -679,7 +653,6 @@
       });
 
       async function initializeService() {
-        
         $('.message-holder').append(spinner);
         showConnectingStatus();
 
@@ -694,26 +667,19 @@
           })
           const svc = await server.getService(service_id || "bioimageio-chatbot")
           await svc.ping()
-          const channels = svc.channels;
-          const channelSelect = document.getElementById('channelSelect');
+          const builtinExtensions = svc.builtin_extensions;
+          
+          // clear extension except registered from ImJoy
+          extensions = [];
+          for(let ext of registeredExtensions){
+            extensions.push(ext)
+          }
 
-          // Clear any existing options
-          channelSelect.innerHTML = '<option value="" disabled selected>Select a Channel</option>';
-
-          channels.forEach((channel) => {
-            const option = document.createElement('option');
-            option.value = channel;
-            option.textContent = channel;
-            channelSelect.appendChild(option);
+          builtinExtensions.forEach((ext) => {
+            ext.id = extensions.length
+            extensions.push(ext)
           });
-
-          // add 'auto' channel
-          const option = document.createElement('option');
-          option.value = 'auto';
-          option.textContent = 'auto';
-          channelSelect.appendChild(option);
-          channelSelect.value = 'auto';
-
+          updateDropdownOptions(extensions);
           showReadyStatus();
           appendRobotMessage(shortIntroMessage, "message-0"); // Append robot message to the message container
           return svc;
@@ -879,13 +845,19 @@
             $('#progress-message-content').html(marked(content, { renderer: renderer }));
           }
           else if (message.type === 'text') {
-            $('#progress-message-content').html(marked(message.content, { renderer: renderer }));
+            if (message.status === 'in_progress') {
+              accumulatedArgs += message.content
+            }
+            else{
+              accumulatedArgs = message.content
+            }
+            $('#progress-message-content').html(marked(accumulatedArgs, { renderer: renderer }));
           }
         }
 
         try {
           // Call the chat function with text and image data
-          response = await svc.chat(textMessage, chat_history, user_profile, selectedChannel, statusCallback, sessionId, imageData, extensions);
+          response = await svc.chat(textMessage, chat_history, user_profile, statusCallback, sessionId, getSelectedExtensions());
           // const regex = /!\[.*?\]\(data:.+?\)/g;
           // const replacementText = '`image placeholder`';
           // responseWithoutImage = response.replace(regex, replacementText);
