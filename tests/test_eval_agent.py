@@ -143,7 +143,7 @@ async def generate_all_anwsers(eval_file, eval_index):
 
 async def get_ground_truth(excel_file, eval_index=None):
     query_answer = pd.read_csv(excel_file)
-    prompt_chatgpt = "Here is the contexts I found from the documentation: ```\n{contextx}\n```\nNow based on the given context, please answer the question: ```\n{question}\n```."
+    prompt_chatgpt = "Here is the contexts I found from the documentation: ```\n{context}\n```\nNow based on the given context, please answer the question: ```\n{question}\n```."
     chatgpt = create_gpt(model="gpt-4-1106-preview")
     event_bus = chatgpt.get_event_bus()
     event_bus.register_default_events()
@@ -151,7 +151,7 @@ async def get_ground_truth(excel_file, eval_index=None):
     async def process_question(i):
         nonlocal query_answer, prompt_chatgpt, chatgpt
         print(f"\n==================\nGenerating GT answer for {i}th question...")
-        prompt = prompt_chatgpt.format(contextx=query_answer.iloc[i]["Documentation"], question=query_answer.iloc[i]["Question"])
+        prompt = prompt_chatgpt.format(context=query_answer.iloc[i]["Documentation"], question=query_answer.iloc[i]["Question"])
         ground_truth_answer = await chatgpt.handle(Message(content=prompt, role="User"))
         query_answer.loc[i, 'GPT-4-turbo Answer (With Context)- GT'] = ground_truth_answer[0].content
         query_answer.to_csv(os.path.join(dir_path, excel_file))
@@ -170,6 +170,7 @@ async def get_ground_truth(excel_file, eval_index=None):
     query_answer.to_csv(os.path.join(dir_path, excel_file))
     print(f"Update {excel_file} successfully!")
  
+
 
 async def start_evaluate_paral(eval_file, question_col='Question', groundtruth_col='GPT-4-turbo Answer (With Context)- GT', target_col='BioImage.IO Chatbot Answer', retrieval_col=None, eval_index=None):
     async def bot_answer_evaluate(req: EvalInput, role: Role) -> EvalScores:
@@ -260,7 +261,7 @@ if __name__ == "__main__":
     
     # Download csv from https://docs.google.com/spreadsheets/d/1E7kLdlkkEwM1Bkhn1BYWxbQf34W-3i3wujuTotiarzY/edit
     # Select sheet: function-call-18-12-2023 (version 18-12-2023)
-    file_with_gt = os.path.join(dir_path, "Knowledge-Retrieval-Evaluation - Hoja 8.csv")
+    file_with_gt = os.path.join(dir_path, "Minimal-Eval-Test-20240111 - Minimal-Eval-Test-20240111.csv")
    
     # load query_answer
     query_answer = load_query_answer(file_with_gt)
@@ -273,18 +274,19 @@ if __name__ == "__main__":
     # save query_answer to a new csv file
     query_answer.to_csv(os.path.join(dir_path, file_with_gt))
     print(f"Length of query_answer: {len(query_answer)}")
+    asyncio.run(get_ground_truth(file_with_gt))
     # find the index of questions which 'BioImage.IO Chatbot Answer - Similarity Score' is lower than 3
     # eval_index = query_answer[query_answer['BioImage.IO Chatbot Answer - Similarity Score'] <3].index
-    eval_index=range(60)
+    # eval_index=range(60)
     # # find the index of questions which 'BioImage.IO Chatbot Answer - Similarity Score' is NA
     # eval_index = query_answer[query_answer['BioImage.IO Chatbot Answer - Similarity Score'].isna()].index
 
     # asyncio.run(generate_all_anwsers(file_with_gt, eval_index))
-    target_cols = ['BioImage.IO Chatbot Answer', 'GPT-3.5-turbo Answer (Without Context)', 'ChatGPT-4 Answer (Without Context)']
-    asyncio.run(start_evaluate_paral(file_with_gt, 
-                                     target_col=target_cols[0], 
-                                     eval_index=eval_index)
-    )
+    # target_cols = ['BioImage.IO Chatbot Answer', 'GPT-3.5-turbo Answer (Without Context)', 'ChatGPT-4 Answer (Without Context)']
+    # asyncio.run(start_evaluate_paral(file_with_gt, 
+    #                                  target_col=target_cols[0], 
+    #                                  eval_index=eval_index)
+    # )
     
     
     # asyncio.run(asyncio.start_evaluate_paral(file_with_gt, 
@@ -295,12 +297,12 @@ if __name__ == "__main__":
     #                                          target_col=target_cols[2], 
     #                                          eval_index=eval_index)
     # )
-    query_answer = load_query_answer(file_with_gt)
-    # get the mean of similarity score
-    gpt3_5_mean = query_answer['GPT-3.5-turbo Answer (Without Context) - Answer Similarity Score'].mean()
-    chatgpt4_mean = query_answer['ChatGPT-4 Answer (Without Context) - Answer Similarity Score'].mean()
-    chatbot_mean = query_answer['BioImage.IO Chatbot Answer - Similarity Score'].mean()
-    print(f"gpt3_5_mean: {gpt3_5_mean}, chatgpt4_mean: {chatgpt4_mean}, chatbot_mean: {chatbot_mean}")
+    # query_answer = load_query_answer(file_with_gt)
+    # # get the mean of similarity score
+    # gpt3_5_mean = query_answer['GPT-3.5-turbo Answer (Without Context) - Answer Similarity Score'].mean()
+    # chatgpt4_mean = query_answer['ChatGPT-4 Answer (Without Context) - Answer Similarity Score'].mean()
+    # chatbot_mean = query_answer['BioImage.IO Chatbot Answer - Similarity Score'].mean()
+    # print(f"gpt3_5_mean: {gpt3_5_mean}, chatgpt4_mean: {chatgpt4_mean}, chatbot_mean: {chatbot_mean}")
     
     
     
