@@ -1,4 +1,4 @@
-"""Jsonschema parser from https://stackoverflow.com/a/76713850"""
+"""Jsonschema to pydantic schema from https://github.com/c32168/dyntamic"""
 from typing import Annotated, Union, Any
 
 import typing
