@@ -1,0 +1,128 @@
+<docs lang="markdown">
+[TODO: write documentation for this plugin.]
+</docs>
+
+<config lang="json">
+{
+    "name": "ModelZooScriptInfo",
+    "type": "web-python",
+    "version": "0.1.0",
+    "description": "BioImage.IO Chatbot Extension for getting information about models, applications, datasets, etc. in the model zoo.",
+    "tags": [],
+    "ui": "",
+    "cover": "",
+    "inputs": null,
+    "outputs": null,
+    "flags": [],
+    "icon": "extension",
+    "api_version": "0.1.8",
+    "env": "",
+    "permissions": [],
+    "requirements": ["pydantic"],
+    "dependencies": []
+}
+</config>
+
+<script lang="python">
+import sys
+import io
+from imjoy import api
+from js import fetch
+from pydantic import BaseModel, Field
+from typing import Callable, Type, Optional
+    
+async def load_model_info():
+    response = await fetch("https://bioimage-io.github.io/collection-bioimage-io/collection.json")
+    model_info = await response.json()
+    model_info = model_info.to_py()
+    resource_items = model_info['collection']
+    return resource_items
+
+def execute_code(script, context=None):
+    if context is None:
+        context = {}
+
+    # Redirect stdout and stderr to capture their output
+    original_stdout = sys.stdout
+    original_stderr = sys.stderr
+    sys.stdout = io.StringIO()
+    sys.stderr = io.StringIO()
+
+    try:
+        # Create a copy of the context to avoid modifying the original
+        local_vars = context.copy()
+
+        # Execute the provided Python script with access to context variables
+        exec(script, local_vars)
+
+        # Capture the output from stdout and stderr
+        stdout_output = sys.stdout.getvalue()
+        stderr_output = sys.stderr.getvalue()
+
+        return {
+            "stdout": stdout_output,
+            "stderr": stderr_output,
+            # "context": local_vars  # Include context variables in the result
+        }
+    except Exception as e:
+        return {
+            "stdout": "",
+            "stderr": str(e),
+            # "context": context  # Include context variables in the result even if an error occurs
+        }
+    finally:
+        # Restore the original stdout and stderr
+        sys.stdout = original_stdout
+        sys.stderr = original_stderr
+
+
+async def register_chatbot_extension(register):
+    resource_items = await load_model_info()
+    types = set()
+    tags = set()
+    for resource in resource_items:
+        types.add(resource['type'])
+        tags.update(resource['tags'])
+    types = list(types)
+    tags = list(tags)[:10]
+    resource_item_stats = f"""Each item contains the following fields: {list(resource_items[0].keys())}\nThe available resource types are: {types}\nSome example tags: {tags}\nHere is an example: {resource_items[0]}"""
+
+    class ModelZooInfoScript(BaseModel):
+        """Create a Python Script to get information about details of models, applications, datasets, etc. in the model zoo. Remember some items in the model zoo may not have all the fields, so you need to handle the missing fields."""
+        script: str = Field(description="""The script will be exectued in Python 3 inside the browser via Pyodide (which uses await micropip.install to load new modules). The script to be executed which uses a predefined local variable 'resources' containing a list of dictionaries with all the resources in the model zoo (including models, applications, datasets etc.). The response to the query should be printed to stdout. Details about the local variable 'resources':\n""" + resource_item_stats)
+        request: str = Field(description="The user's detailed request")
+        user_info: Optional[str] = Field("", description="Brief user info summary including name, background, etc., for personalizing responses to the user.")
+
+    def get_schema():
+        return ModelZooInfoScript.schema()
+
+    async def execute(req):
+        result = execute_code(req['script'], {"resources": resource_items})
+        return result
+
+    await register({
+        "_rintf": True,
+        "name": "ModelZooInfoScript",
+        "description": ModelZooInfoScript.__doc__,
+        "get_schema": get_schema,
+        "execute": execute
+    })
+
+
+class ImJoyPlugin():
+    async def setup(self):
+        if api.registerChatbotExtension:
+            # Loading inside the chatbot
+            await register_chatbot_extension(api.registerChatbotExtension)
+            await api.showMessage("ModelZooInfoScript Chatbot Extension registered")
+        else:
+            # Use together with the chatbot
+            chatbot = await api.getWindow("BioImage.IO Chatbot")
+            if chatbot:
+                await register_chatbot_extension(chatbot.registerExtension)
+                await api.showMessage("ModelZooInfoScript Chatbot Extension registered")
+
+        await api.log('initialized')
+
+api.export(ImJoyPlugin())
+</script>
