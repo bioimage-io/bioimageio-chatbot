@@ -3,7 +3,7 @@ requires = ["setuptools", "wheel"]
 
 [project]
 name = "bioimageio-chatbot"
-version = "0.1.50"
+version = "0.1.51"
 readme = "README.md"
 description = "Your Personal Assistant in BioImage Analysis."
 dependencies = [
@@ -15,7 +15,6 @@ dependencies = [
   "tqdm",
   "aiofiles",
   "langchain>=0.0.335",
-  "datamodel-code-generator",
   "beautifulsoup4",
   "pandas",
 ]

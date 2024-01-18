@@ -440,6 +440,61 @@
       return exts; // Returns the array of selected values
     }
     
+    const storage = {};
+    function uuidv4() {
+      return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, c =>
+        (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+      );
+    }
+    function encodeData(result) {
+        if (result === null || typeof result === 'string' || typeof result === 'number' || typeof result === 'boolean') {
+            return result;
+        } else if (Array.isArray(result)) {
+            return result.map(encodeData);
+        } else if (typeof result === 'object') {
+            if(result._rtype){
+              let key = uuidv4(); // Implement or import uuidv4 function
+              storage[key] = result;
+              return {
+                  rtype: "obj",
+                  reference_id: key
+              };
+            }
+            let encodedObject = {};
+            for (let [key, value] of Object.entries(result)) {
+                encodedObject[key] = encodeData(value);
+            }
+            return encodedObject;
+        } else {
+            let key = uuidv4(); // Implement or import uuidv4 function
+            storage[key] = result;
+            return {
+                rtype: "obj",
+                reference_id: key
+            };
+        }
+    }
+
+    function decodeData(result) {
+        if (result === null || typeof result === 'string' || typeof result === 'number' || typeof result === 'boolean') {
+            return result;
+        } else if (Array.isArray(result)) {
+            return result.map(decodeData);
+        } else if (typeof result === 'object') {
+            if ('rtype' in result && result['rtype'] === "obj") {
+                let key = result['reference_id'];
+                return storage[key];
+            } else {
+                let decodedObject = {};
+                for (let [key, value] of Object.entries(result)) {
+                    decodedObject[key] = decodeData(value);
+                }
+                return decodedObject;
+            }
+        } else {
+            return result;
+        }
+    }
     
     async function _registerExtension(extension) {
       if(!extension.name || !extension.execute || !extension.get_schema) 
@@ -448,6 +503,15 @@
       if(!schema || !schema.title || schema.title.includes(" ") || !schema.description)
         throw new Error("Invalid extension schema")
       extension.id = extensions.length
+      const _execute = extension.execute;
+
+      extension.execute = async function(config){
+        config = decodeData(config)
+        const result = await _execute(config)
+        debugger
+        return encodeData(result)
+      }
+
       extensions.push(extension);
       registeredExtensions.push(extension);
       updateDropdownOptions(extensions);
@@ -526,11 +590,75 @@
           if (uri) app.loadPlugin(uri);
         },
       });
-
       const api = app.imjoy.api
       app.addMenuItem({
         label: "Enable ImageJMacro",
         async callback() {
+          await api.createWindow({src: "https://ij.imjoy.io", name: "ImageJ.JS"})
+
+          await api.registerChatbotExtension({
+            _rintf: true,
+            name: "getImage",
+            description: "Get an image from the current window",
+            async get_schema() {
+              return {
+                type: "object",
+                title: "getImage",
+                description: "Get an image from the current window",
+                properties: {
+                },
+              };
+            },
+            async execute(config) {
+              let ij = await api.getWindow("ImageJ.JS")
+              if(!ij){
+                ij = await api.createWindow({src: "https://ij.imjoy.io", name: "ImageJ.JS"})
+              }
+              const image = await ij.getImage();
+              return image;
+            },
+          })
+    
+          await api.registerChatbotExtension({
+            _rintf: true,
+            name: "showImage",
+            description: "Show an image in the current window",
+            async get_schema() {
+              return {
+                type: "object",
+                title: "showImage",
+                description: "Show an image in the current window, the input should be an image.",
+                properties: {
+                  image: {
+                    type: "object",
+                    title: "image",
+                    description: "The image to show.",
+                    properties: {
+                      rtype: {
+                        type: "string"
+                      },
+                      reference_id: {
+                        type: "string",
+                        description: "The reference id of the image",
+                      },
+                    },
+                    required: ["rtype", "reference_id"],
+                  },
+                },
+                required: ["image"],
+                allow_additional_properties: false,
+              };
+            },
+            async execute(config) {
+              let ij = await api.getWindow("ImageJ.JS")
+              if(!ij){
+                ij = await api.createWindow({src: "https://ij.imjoy.io", name: "ImageJ.JS"})
+              }
+              const image = config["image"];
+              await ij.viewImage(image);
+              return "Done"
+            },
+          })
           await api.registerChatbotExtension({
             _rintf: true,
             name: "runImageJMacro",
