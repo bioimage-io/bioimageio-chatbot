@@ -12,7 +12,7 @@ from schema_agents.role import Role
 from schema_agents.schema import Message
 from typing import Any, Dict, List, Optional
 import pkg_resources
-from bioimageio_chatbot.jsonschema_pydantic import jsonschema_to_pydantic, JsonSchemaObject
+from bioimageio_chatbot.jsonschema_pydantic import json_schema_to_pydantic_model
 from bioimageio_chatbot.chatbot_extensions import get_builtin_extensions
 from bioimageio_chatbot.utils import extract_schemas, ChatbotExtension
 import logging
@@ -51,7 +51,7 @@ class ExtensionCallResponse(BaseModel):
     If the function call results are irrelevant to the user's question or if the extension function fails, tell the user that you don't know the answer and provide a summary fo the results.
     """
     relevant: bool = Field(description="Whether the results of calling the extension function are relevant to the user's question.")
-    response: str = Field(description="The answer to the user's question based on the result of calling the extension function.")
+    response: str = Field(description="The answer to the user's question based on the result of calling the extension function. Objects that are not serializable will be stored in a temporary storage and a reference id will be returned(format: {'rtype': 'obj', 'reference_id': 'xxx'})")
 
 class QuestionWithHistory(BaseModel):
     """The user's question, chat history, and user's profile."""
@@ -98,7 +98,7 @@ def create_customer_service(builtin_extensions):
                 
                 if extension.get_schema:
                     schema = await extension.get_schema()
-                    extension.schema_class = jsonschema_to_pydantic(JsonSchemaObject.parse_obj(schema))
+                    extension.schema_class = json_schema_to_pydantic_model(schema)
                 else:
                     input_schemas, _ = extract_schemas(extension.execute)
                     extension.schema_class = input_schemas[0]
