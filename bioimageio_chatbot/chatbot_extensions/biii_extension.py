@@ -119,12 +119,6 @@ class SearchOnBiii(BaseModel):
     keywords: List[str] = Field(
         description="A list of search keywords, no space allowed in each keyword."
     )
-    request: str = Field(
-        description="Details concerning the user's request that triggered the search on biii.eu."
-    )
-    user_info: Optional[str] = Field(
-        "", description="The user's info for personalizing response."
-    )
     top_k: int = Field(
         10,
         description="The maximum number of search results to return. Should use a small number to avoid overwhelming the user.",
@@ -134,11 +128,6 @@ class SearchOnBiii(BaseModel):
 class BiiiSearchResult(BaseModel):
     """Search results from biii.eu"""
     results: List[BiiiRow] = Field(description="Search results from biii.eu")
-    request: str = Field(description="The user's detailed request")
-    user_info: Optional[str] = Field(
-        "",
-        description="Brief user info summary including name, background, etc., for personalizing responses to the user.",
-    )
     base_url: str = Field(
         description="The based URL of the search results, e.g. ImageJ (/imagej) will become <base_url>/imagej"
     )
@@ -162,18 +151,16 @@ async def run_extension(req: SearchOnBiii):
     if results:
         results = BiiiSearchResult(
             results=results[: req.top_k],
-            request=req.request,
-            user_info=req.user_info,
             base_url="https://biii.eu",
         )
         return results
     else:
-        raise Exception(f"Sorry I didn't find relevant information in biii.eu about {req.keywords}")
+        return f"Sorry I didn't find relevant information in biii.eu about {req.keywords}"
 
 def get_extensions():
     return [
         ChatbotExtension(
-            name="biii.eu",
+            name="biii",
             description="Search software tools on BioImage Informatics Index (biii.eu) is a platform for sharing bioimage analysis software and tools.",
             execute=run_extension,
         )
