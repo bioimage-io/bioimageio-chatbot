@@ -2,12 +2,13 @@ import asyncio
 from openai import AsyncOpenAI
 from pydantic import BaseModel
 from bioimageio_chatbot.chatbot_extensions import get_builtin_extensions
-client = AsyncOpenAI()
+
 from bioimageio_chatbot.jsonschema_pydantic import json_schema_to_pydantic_model
 from schema_agents.utils.schema_conversion import get_service_function_schema
 
 from bioimageio_chatbot.utils import extract_schemas, ChatbotExtension
 
+client = AsyncOpenAI()
 
 def convert_to_dict(obj):
     if isinstance(obj, BaseModel):

@@ -7,7 +7,7 @@ import json
 import streamlit as st
 import openai
 from openai.types.beta.threads import MessageContentImageFile
-from tools import TOOL_MAP
+from bioimageio_chatbot.build_assitant import load_extensions
 
 
 api_key = os.environ.get("OPENAI_API_KEY")
@@ -17,6 +17,7 @@ instructions = os.environ.get("RUN_INSTRUCTIONS", "")
 assistant_title = os.environ.get("ASSISTANT_TITLE", "Assistants API UI")
 enabled_file_upload_message = os.environ.get("ENABLED_FILE_UPLOAD_MESSAGE", "Upload a file")
 
+extension_services = load_extensions()
 #https://github.com/ryo-ma/gpt-assistants-api-ui
 
 def create_thread(content, file):
@@ -178,7 +179,7 @@ def execute_action(run, thread):
         print("name:", tool_function_name)
         print("arguments:", tool_function_arguments)
 
-        tool_function_output = TOOL_MAP[tool_function_name](**tool_function_arguments)
+        tool_function_output = extension_services[tool_function_name](**tool_function_arguments)
         print("tool_function_output", tool_function_output)
         tool_outputs.append({"tool_call_id": tool_id, "output": tool_function_output})
 
