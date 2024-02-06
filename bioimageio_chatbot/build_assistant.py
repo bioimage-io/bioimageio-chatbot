@@ -23,17 +23,22 @@ async def load_extensions():
     extension_services = {}
     builtin_extensions = get_builtin_extensions()
 
-    def execute_factory(extension: ChatbotExtension):
+    async def execute_factory(extension: ChatbotExtension):
         async def execute(req: extension.schema_class):
             print("Executing extension:", extension.name, req)
             req = extension.schema_class.parse_obj(req)
             result = await extension.execute(req)
             return convert_to_dict(result)
-         # if extension.execute is partial
-        if hasattr(extension.execute, "func"):
-            execute.__doc__ = extension.execute.func.__doc__ or extension.description
-        else:
-            execute.__doc__ = extension.execute.__doc__ or extension.description
+        if extension.get_schema:
+            schema = await extension.get_schema()
+            execute.__doc__ = schema['description']
+        
+        if not execute.__doc__:
+            # if extension.execute is partial
+            if hasattr(extension.execute, "func"):
+                execute.__doc__ = extension.execute.func.__doc__ or extension.description
+            else:
+                execute.__doc__ = extension.execute.__doc__ or extension.description
         return execute
 
     for extension in builtin_extensions:
@@ -43,7 +48,7 @@ async def load_extensions():
         else:
             input_schemas, _ = extract_schemas(extension.execute)
             extension.schema_class = input_schemas[0]
-        extension_services[extension.name] = execute_factory(extension)
+        extension_services[extension.name] = await execute_factory(extension)
 
     return extension_services
 

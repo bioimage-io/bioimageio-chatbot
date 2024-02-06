@@ -17,7 +17,7 @@ api_key = os.environ.get("OPENAI_API_KEY")
 client = openai.AsyncOpenAI(api_key=api_key)
 assistant_id = os.environ.get("ASSISTANT_ID")
 instructions = os.environ.get("RUN_INSTRUCTIONS", "")
-assistant_title = os.environ.get("ASSISTANT_TITLE", "Assistants API UI")
+assistant_title = os.environ.get("ASSISTANT_TITLE", "BioImage.IO Chatbot")
 enabled_file_upload_message = os.environ.get("ENABLED_FILE_UPLOAD_MESSAGE", "Upload a file")
 
 #https://github.com/ryo-ma/gpt-assistants-api-ui
@@ -63,7 +63,6 @@ async def get_message_value_list(messages):
     messages_value_list = []
     for message in messages:
         message_content = ""
-        print(message)
         if not isinstance(message, MessageContentImageFile):
             message_content = message.content[0].text
             annotations = message_content.annotations
@@ -102,7 +101,9 @@ async def get_message_list(thread, run):
         run = await client.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
         print("run.status:", run.status)
         messages = await client.beta.threads.messages.list(thread_id=thread.id)
-        print("messages:", "\n".join(await get_message_value_list(messages.data)))
+        messages = await get_message_value_list(messages.data)
+        if messages:
+            print("messages:", "\n".join(messages))
         if run.status == "completed":
             completed = True
         elif run.status == "failed":
@@ -248,6 +249,9 @@ def main():
     user_msg = st.chat_input(
         "Message", on_submit=disable_form, disabled=st.session_state.in_progress
     )
+    
+    # st.sidebar.selectbox("Assistants", ["code_interpreter"])
+    
     if enabled_file_upload_message:
         uploaded_file = st.sidebar.file_uploader(
             enabled_file_upload_message,
