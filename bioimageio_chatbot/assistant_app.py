@@ -3,24 +3,26 @@ import time
 import base64
 import re
 import json
+import asyncio
+import threading
 
 import streamlit as st
 import openai
+from pydantic import BaseModel
 from openai.types.beta.threads import MessageContentImageFile
-from bioimageio_chatbot.build_assitant import load_extensions
-
+from bioimageio_chatbot.build_assistant import load_extensions
+from streamlit.runtime.scriptrunner import add_script_run_ctx
 
 api_key = os.environ.get("OPENAI_API_KEY")
-client = openai.OpenAI(api_key=api_key)
+client = openai.AsyncOpenAI(api_key=api_key)
 assistant_id = os.environ.get("ASSISTANT_ID")
 instructions = os.environ.get("RUN_INSTRUCTIONS", "")
 assistant_title = os.environ.get("ASSISTANT_TITLE", "Assistants API UI")
 enabled_file_upload_message = os.environ.get("ENABLED_FILE_UPLOAD_MESSAGE", "Upload a file")
 
-extension_services = load_extensions()
 #https://github.com/ryo-ma/gpt-assistants-api-ui
 
-def create_thread(content, file):
+async def create_thread(content, file):
     messages = [
         {
             "role": "user",
@@ -29,35 +31,35 @@ def create_thread(content, file):
     ]
     if file is not None:
         messages[0].update({"file_ids": [file.id]})
-    thread = client.beta.threads.create(messages=messages)
+    thread = await client.beta.threads.create(messages=messages)
     return thread
 
 
-def create_message(thread, content, file):
+async def create_message(thread, content, file):
     file_ids = []
     if file is not None:
         file_ids.append(file.id)
-    client.beta.threads.messages.create(
+    await client.beta.threads.messages.create(
         thread_id=thread.id, role="user", content=content, file_ids=file_ids
     )
 
 
-def create_run(thread):
-    run = client.beta.threads.runs.create(
+async def create_run(thread):
+    run = await client.beta.threads.runs.create(
         thread_id=thread.id, assistant_id=assistant_id, instructions=instructions
     )
     return run
 
 
-def create_file_link(file_name, file_id):
-    content = client.files.content(file_id)
+async def create_file_link(file_name, file_id):
+    content = await client.files.content(file_id)
     content_type = content.response.headers["content-type"]
     b64 = base64.b64encode(content.text.encode(content.encoding)).decode()
     link_tag = f'<a href="data:{content_type};base64,{b64}" download="{file_name}">Download Link</a>'
     return link_tag
 
 
-def get_message_value_list(messages):
+async def get_message_value_list(messages):
     messages_value_list = []
     for message in messages:
         message_content = ""
@@ -66,7 +68,7 @@ def get_message_value_list(messages):
             message_content = message.content[0].text
             annotations = message_content.annotations
         else:
-            image_file = client.files.retrieve(message.file_id)
+            image_file = await client.files.retrieve(message.file_id)
             messages_value_list.append(
                 f"Click <here> to download {image_file.filename}"
             )
@@ -77,12 +79,12 @@ def get_message_value_list(messages):
             )
 
             if file_citation := getattr(annotation, "file_citation", None):
-                cited_file = client.files.retrieve(file_citation.file_id)
+                cited_file = await client.files.retrieve(file_citation.file_id)
                 citations.append(
                     f"[{index}] {file_citation.quote} from {cited_file.filename}"
                 )
             elif file_path := getattr(annotation, "file_path", None):
-                link_tag = create_file_link(
+                link_tag = await create_file_link(
                     annotation.text.split("/")[-1], file_path.file_id
                 )
                 message_content.value = re.sub(
@@ -94,13 +96,13 @@ def get_message_value_list(messages):
         return messages_value_list
 
 
-def get_message_list(thread, run):
+async def get_message_list(thread, run):
     completed = False
     while not completed:
-        run = client.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
+        run = await client.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
         print("run.status:", run.status)
-        messages = client.beta.threads.messages.list(thread_id=thread.id)
-        print("messages:", "\n".join(get_message_value_list(messages)))
+        messages = await client.beta.threads.messages.list(thread_id=thread.id)
+        print("messages:", "\n".join(await get_message_value_list(messages.data)))
         if run.status == "completed":
             completed = True
         elif run.status == "failed":
@@ -108,17 +110,18 @@ def get_message_list(thread, run):
         else:
             time.sleep(1)
 
-    messages = client.beta.threads.messages.list(thread_id=thread.id)
-    return get_message_value_list(messages)
+    messages = await client.beta.threads.messages.list(thread_id=thread.id)
+    return await get_message_value_list(messages.data)
 
-
-def get_response(user_input, file):
+async def get_response(user_input, file):
+    if "extension_services" not in st.session_state:
+        st.session_state.extension_services = await load_extensions()
     if "thread" not in st.session_state:
-        st.session_state.thread = create_thread(user_input, file)
+        st.session_state.thread = await create_thread(user_input, file)
     else:
-        create_message(st.session_state.thread, user_input, file)
-    run = create_run(st.session_state.thread)
-    run = client.beta.threads.runs.retrieve(
+        await create_message(st.session_state.thread, user_input, file)
+    run = await create_run(st.session_state.thread)
+    run = await client.beta.threads.runs.retrieve(
         thread_id=st.session_state.thread.id, run_id=run.id
     )
 
@@ -126,10 +129,10 @@ def get_response(user_input, file):
         print("run.status:", run.status)
 
         time.sleep(1)
-        run = client.beta.threads.runs.retrieve(
+        run = await client.beta.threads.runs.retrieve(
             thread_id=st.session_state.thread.id, run_id=run.id
         )
-        run_steps = client.beta.threads.runs.steps.list(
+        run_steps = await client.beta.threads.runs.steps.list(
             thread_id=st.session_state.thread.id, run_id=run.id
         )
         print("run_steps:", run_steps)
@@ -161,12 +164,12 @@ def get_response(user_input, file):
 
     if run.status == "requires_action":
         print("run.status:", run.status)
-        run = execute_action(run, st.session_state.thread)
+        run = await execute_action(run, st.session_state.thread, st.session_state.extension_services)
 
-    return "\n".join(get_message_list(st.session_state.thread, run))
+    return "\n".join(await get_message_list(st.session_state.thread, run))
 
 
-def execute_action(run, thread):
+async def execute_action(run, thread, extension_services):
     tool_outputs = []
     for tool_call in run.required_action.submit_tool_outputs.tool_calls:
         tool_id = tool_call.id
@@ -180,10 +183,21 @@ def execute_action(run, thread):
         print("arguments:", tool_function_arguments)
 
         tool_function_output = extension_services[tool_function_name](**tool_function_arguments)
+        # check if tool_function_output is awaitable
+        if asyncio.iscoroutine(tool_function_output):
+            tool_function_output = await tool_function_output
+
+
+        if isinstance(tool_function_output, BaseModel):
+            tool_function_output = tool_function_output.json()
+        elif not isinstance(tool_function_output, str):
+            tool_function_output = json.dumps(tool_function_output)
+
+        assert isinstance(tool_function_output, str), f"tool_function_output is not a string: {tool_function_output}"
         print("tool_function_output", tool_function_output)
         tool_outputs.append({"tool_call_id": tool_id, "output": tool_function_output})
 
-    run = client.beta.threads.runs.submit_tool_outputs(
+    run = await client.beta.threads.runs.submit_tool_outputs(
         thread_id=thread.id,
         run_id=run.id,
         tool_outputs=tool_outputs,
@@ -191,8 +205,8 @@ def execute_action(run, thread):
     return run
 
 
-def handle_uploaded_file(uploaded_file):
-    file = client.files.create(file=uploaded_file, purpose="assistants")
+async def handle_uploaded_file(uploaded_file):
+    file = await client.files.create(file=uploaded_file, purpose="assistants")
     return file
 
 
@@ -216,7 +230,20 @@ def disable_form():
     st.session_state.in_progress = True
 
 
+
+loop = asyncio.new_event_loop()
+
+def _start_loop(loop):
+    asyncio.set_event_loop(loop)
+    loop.run_forever()
+    
+
+
 def main():
+    thread = threading.Thread(target=_start_loop, args=(loop, ), daemon=True)
+    add_script_run_ctx(thread)   
+    thread.start()
+
     st.title(assistant_title)
     user_msg = st.chat_input(
         "Message", on_submit=disable_form, disabled=st.session_state.in_progress
@@ -249,7 +276,7 @@ def main():
         if uploaded_file is not None:
             file = handle_uploaded_file(uploaded_file)
         with st.spinner("Wait for response..."):
-            response = get_response(user_msg, file)
+            response = asyncio.run_coroutine_threadsafe(get_response(user_msg, file), loop).result()
         with st.chat_message("Assistant"):
             st.markdown(response, True)
 
