@@ -4,14 +4,32 @@ import base64
 import re
 import json
 import asyncio
-import threading
 
-import streamlit as st
 import openai
 from pydantic import BaseModel
 from openai.types.beta.threads import MessageContentImageFile
 from bioimageio_chatbot.build_assistant import load_extensions
-from streamlit.runtime.scriptrunner import add_script_run_ctx
+
+import asyncio
+import os
+import json
+import datetime
+import secrets
+import aiofiles
+import traceback
+from imjoy_rpc.hypha import login, connect_to_server
+
+from pydantic import BaseModel, Field
+from schema_agents.schema import Message
+from typing import Any, Dict, List, Optional
+import pkg_resources
+from bioimageio_chatbot.jsonschema_pydantic import json_schema_to_pydantic_model
+from bioimageio_chatbot.chatbot_extensions import get_builtin_extensions
+from bioimageio_chatbot.utils import extract_schemas, ChatbotExtension
+import logging
+
+logger = logging.getLogger('bioimageio-chatbot')
+
 
 api_key = os.environ.get("OPENAI_API_KEY")
 client = openai.AsyncOpenAI(api_key=api_key)
@@ -22,13 +40,16 @@ enabled_file_upload_message = os.environ.get("ENABLED_FILE_UPLOAD_MESSAGE", "Upl
 
 #https://github.com/ryo-ma/gpt-assistants-api-ui
 
-async def create_thread(content, file):
-    messages = [
-        {
-            "role": "user",
-            "content": content,
-        }
-    ]
+async def create_thread(content=None, file=None):
+    if content is not None:
+        messages = [
+            {
+                "role": "user",
+                "content": content,
+            }
+        ]
+    else:
+        messages = []
     if file is not None:
         messages[0].update({"file_ids": [file.id]})
     thread = await client.beta.threads.create(messages=messages)
@@ -109,36 +130,43 @@ async def get_message_list(thread, run):
         elif run.status == "failed":
             break
         else:
-            time.sleep(1)
+            time.sleep(0.3)
 
     messages = await client.beta.threads.messages.list(thread_id=thread.id)
     return await get_message_value_list(messages.data)
 
-async def get_response(user_input, file):
-    if "extension_services" not in st.session_state:
-        st.session_state.extension_services = await load_extensions()
-    if "thread" not in st.session_state:
-        st.session_state.thread = await create_thread(user_input, file)
-    else:
-        await create_message(st.session_state.thread, user_input, file)
-    run = await create_run(st.session_state.thread)
+
+class ResponseStep(BaseModel):
+    """Response step"""
+    name: str = Field(description="Step name")
+    details: Optional[dict] = Field(None, description="Step details")
+
+class RichResponse(BaseModel):
+    """Rich response with text and intermediate steps"""
+    text: str = Field(description="Response text")
+    steps: List[ResponseStep] = Field(description="Intermediate steps")
+
+async def get_response(user_input, file, thread, extension_services, status_callback):
+    await create_message(thread, user_input, file)
+    run = await create_run(thread)
     run = await client.beta.threads.runs.retrieve(
-        thread_id=st.session_state.thread.id, run_id=run.id
+        thread_id=thread.id, run_id=run.id
     )
-
+    steps = []
     while run.status == "in_progress":
+        await status_callback({"type": "text", "content": "In progress..."})
         print("run.status:", run.status)
-
-        time.sleep(1)
+        time.sleep(0.3)
         run = await client.beta.threads.runs.retrieve(
-            thread_id=st.session_state.thread.id, run_id=run.id
+            thread_id=thread.id, run_id=run.id
         )
         run_steps = await client.beta.threads.runs.steps.list(
-            thread_id=st.session_state.thread.id, run_id=run.id
+            thread_id=thread.id, run_id=run.id
         )
         print("run_steps:", run_steps)
         for step in run_steps.data:
             if hasattr(step.step_details, "tool_calls"):
+                await status_callback({"type": "text", "content": "tool calls..."})
                 for tool_call in step.step_details.tool_calls:
                     if (
                         hasattr(tool_call, "code_interpreter")
@@ -146,28 +174,20 @@ async def get_response(user_input, file):
                     ):
                         input_code = f"### code interpreter\ninput:\n```python\n{tool_call.code_interpreter.input}\n```"
                         print(input_code)
-                        if (
-                            len(st.session_state.tool_calls) == 0
-                            or tool_call.id not in [x.id for x in st.session_state.tool_calls]
-                        ):
-                            st.session_state.tool_calls.append(tool_call)
-                            with st.chat_message("Assistant"):
-                                st.markdown(
-                                    input_code,
-                                    True,
-                                )
-                                st.session_state.chat_log.append(
-                                    {
-                                        "name": "assistant",
-                                        "msg": input_code,
-                                    }
-                                )
+                        steps.append(ResponseStep(name="code interpreter", details={"code": input_code}))
 
     if run.status == "requires_action":
         print("run.status:", run.status)
-        run = await execute_action(run, st.session_state.thread, st.session_state.extension_services)
+        tool_calls = run.required_action.submit_tool_outputs.tool_calls
+        tools = [tool_call.function.name for tool_call in tool_calls]
+        await status_callback({"type": "text", "content": "Running chatbot extension: " + ", ".join(tools)})
+        steps.append(ResponseStep(name="start tool calls", details={"tool_calls": str(run.required_action.submit_tool_outputs.tool_calls)}))
+        run, tool_outputs = await execute_action(run, thread, extension_services)
+        steps.append(ResponseStep(name="tool call completed", details=tool_outputs))
 
-    return "\n".join(await get_message_list(st.session_state.thread, run))
+    await status_callback({"type": "text", "content": "Finishing..."})
+    messages = await get_message_list(thread, run)
+    return RichResponse(text="\n".join(messages), steps=steps)
 
 
 async def execute_action(run, thread, extension_services):
@@ -203,93 +223,166 @@ async def execute_action(run, thread, extension_services):
         run_id=run.id,
         tool_outputs=tool_outputs,
     )
-    return run
-
+    return run, tool_outputs
 
 async def handle_uploaded_file(uploaded_file):
     file = await client.files.create(file=uploaded_file, purpose="assistants")
     return file
 
+async def save_chat_history(chat_log_full_path, chat_his_dict):    
+    # Serialize the chat history to a json string
+    chat_history_json = json.dumps(chat_his_dict)
 
-def render_chat():
-    for chat in st.session_state.chat_log:
-        with st.chat_message(chat["name"]):
-            st.markdown(chat["msg"], True)
+    # Write the serialized chat history to the json file
+    async with aiofiles.open(chat_log_full_path, mode='w', encoding='utf-8') as f:
+        await f.write(chat_history_json)
 
-
-if "tool_call" not in st.session_state:
-    st.session_state.tool_calls = []
-
-if "chat_log" not in st.session_state:
-    st.session_state.chat_log = []
-
-if "in_progress" not in st.session_state:
-    st.session_state.in_progress = False
-
-
-def disable_form():
-    st.session_state.in_progress = True
-
-
-
-loop = asyncio.new_event_loop()
-
-def _start_loop(loop):
-    asyncio.set_event_loop(loop)
-    loop.run_forever()
-    
-
-
-def main():
-    thread = threading.Thread(target=_start_loop, args=(loop, ), daemon=True)
-    add_script_run_ctx(thread)   
-    thread.start()
-
-    st.title(assistant_title)
-    user_msg = st.chat_input(
-        "Message", on_submit=disable_form, disabled=st.session_state.in_progress
-    )
-    
-    # st.sidebar.selectbox("Assistants", ["code_interpreter"])
-    
-    if enabled_file_upload_message:
-        uploaded_file = st.sidebar.file_uploader(
-            enabled_file_upload_message,
-            type=[
-                "txt",
-                "pdf",
-                "png",
-                "jpg",
-                "jpeg",
-                "csv",
-                "json",
-                "geojson",
-                "xlsx",
-                "xls",
-            ],
-            disabled=st.session_state.in_progress,
-        )
+async def connect_server(server_url):
+    """Connect to the server and register the chat service."""
+    login_required = os.environ.get("BIOIMAGEIO_LOGIN_REQUIRED") == "true"
+    if login_required:
+        token = await login({"server_url": server_url})
     else:
-        uploaded_file = None
-    if user_msg:
-        render_chat()
-        with st.chat_message("user"):
-            st.markdown(user_msg, True)
-        st.session_state.chat_log.append({"name": "user", "msg": user_msg})
-        file = None
-        if uploaded_file is not None:
-            file = handle_uploaded_file(uploaded_file)
-        with st.spinner("Wait for response..."):
-            response = asyncio.run_coroutine_threadsafe(get_response(user_msg, file), loop).result()
-        with st.chat_message("Assistant"):
-            st.markdown(response, True)
+        token = None
+    server = await connect_to_server({"server_url": server_url, "token": token, "method_timeout": 100})
+    await register_chat_service(server)
 
-        st.session_state.chat_log.append({"name": "assistant", "msg": response})
-        st.session_state.in_progress = False
-        st.session_state.tool_call = None
-        st.rerun()
-    render_chat()
+async def register_chat_service(server):
+    """Hypha startup function."""
+    builtin_extensions = get_builtin_extensions()
+    login_required = os.environ.get("BIOIMAGEIO_LOGIN_REQUIRED") == "true"
+    chat_logs_path = os.environ.get("BIOIMAGEIO_CHAT_LOGS_PATH", "./chat_logs")
+    assert chat_logs_path is not None, "Please set the BIOIMAGEIO_CHAT_LOGS_PATH environment variable to the path of the chat logs folder."
+    if not os.path.exists(chat_logs_path):
+        print(f"The chat session folder is not found at {chat_logs_path}, will create one now.")
+        os.makedirs(chat_logs_path, exist_ok=True)
+        
+    def load_authorized_emails():
+        if login_required:
+            authorized_users_path = os.environ.get("BIOIMAGEIO_AUTHORIZED_USERS_PATH")
+            if authorized_users_path:
+                assert os.path.exists(authorized_users_path), f"The authorized users file is not found at {authorized_users_path}"
+                with open(authorized_users_path, "r") as f:
+                    authorized_users = json.load(f)["users"]
+                authorized_emails = [user["email"] for user in authorized_users if "email" in user]
+            else:
+                authorized_emails = None
+        else:
+            authorized_emails = None
+        return authorized_emails
 
+    authorized_emails = load_authorized_emails()
+    def check_permission(user):
+        if authorized_emails is None or user["email"] in authorized_emails:
+            return True
+        else:
+            return False
+        
+    async def report(user_report, context=None):
+        if login_required and context and context.get("user"):
+            assert check_permission(context.get("user")), "You don't have permission to report the chat history."
+        # get the chatbot version
+        version = pkg_resources.get_distribution('bioimageio-chatbot').version
+        chat_his_dict = {'type':user_report['type'],
+                         'feedback':user_report['feedback'],
+                         'conversations':user_report['messages'], 
+                         'session_id':user_report['session_id'], 
+                        'timestamp': str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), 
+                        'user': context.get('user'),
+                        'version': version}
+        session_id = user_report['session_id'] + secrets.token_hex(4)
+        filename = f"report-{session_id}.json"
+        # Create a chat_log.json file inside the session folder
+        chat_log_full_path = os.path.join(chat_logs_path, filename)
+        await save_chat_history(chat_log_full_path, chat_his_dict)
+        print(f"User report saved to {filename}")
+    
+    extension_services = await load_extensions()
+    thread = await create_thread()
+    
+    async def chat(text, chat_history, user_profile=None, status_callback=None, session_id=None, extensions=None, context=None):
+        if login_required and context and context.get("user"):
+            assert check_permission(context.get("user")), "You don't have permission to use the chatbot, please sign up and wait for approval"
+        session_id = session_id or secrets.token_hex(8)
+        response = await get_response(text, None, thread, extension_services, status_callback)
+        print(f"\nUser: {text}\nChatbot: {response.text}")
 
+        if session_id:
+            chat_history.append({ 'role': 'user', 'content': text })
+            chat_history.append({ 'role': 'assistant', 'content': response.text })
+            version = pkg_resources.get_distribution('bioimageio-chatbot').version
+            chat_his_dict = {'conversations':chat_history, 
+                     'timestamp': str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), 
+                     'user': context.get('user'),
+                     'version': version}
+            filename = f"chatlogs-{session_id}.json"
+            chat_log_full_path = os.path.join(chat_logs_path, filename)
+            await save_chat_history(chat_log_full_path, chat_his_dict)
+            print(f"Chat history saved to {filename}")
+        return response.dict()
+
+    async def ping(context=None):
+        if login_required and context and context.get("user"):
+            assert check_permission(context.get("user")), "You don't have permission to use the chatbot, please sign up and wait for approval"
+        return "pong"
+
+    def encode_base_model(data):
+        return data.dict()
+
+    server.register_codec({
+        "name": "pydantic-base-model",
+        "type": BaseModel,
+        "encoder": encode_base_model,
+    })
+
+    hypha_service_info = await server.register_service({
+        "name": "BioImage.IO Chatbot",
+        "id": "bioimageio-chatbot",
+        "config": {
+            "visibility": "public",
+            "require_context": True
+        },
+        "ping": ping,
+        "chat": chat,
+        "report": report,
+        "builtin_extensions": [{"name": ext.name, "description": ext.description} for ext in builtin_extensions],
+    })
+    
+    version = pkg_resources.get_distribution('bioimageio-chatbot').version
+    def reload_index():
+        with open(os.path.join(os.path.dirname(__file__), "static/index.html"), "r", encoding="utf-8") as f:
+            index_html = f.read()
+        index_html = index_html.replace("https://ai.imjoy.io", server.config['public_base_url'] or f"http://127.0.0.1:{server.config['port']}")
+        index_html = index_html.replace('"bioimageio-chatbot"', f'"{hypha_service_info["id"]}"')
+        index_html = index_html.replace('v0.1.0', f'v{version}')
+        index_html = index_html.replace("LOGIN_REQUIRED", "true" if login_required else "false")
+        return index_html
+    
+    index_html = reload_index()
+    debug = os.environ.get("BIOIMAGEIO_DEBUG") == "true"
+    async def index(event, context=None):
+        return {
+            "status": 200,
+            "headers": {'Content-Type': 'text/html'},
+            "body": reload_index() if debug else index_html,
+        }
+    
+    await server.register_service({
+        "id": "bioimageio-chatbot-client",
+        "type": "functions",
+        "config": {
+            "visibility": "public",
+            "require_context": False
+        },
+        "index": index,
+    })
+    server_url = server.config['public_base_url']
+
+    user_url = f"{server_url}/{server.config['workspace']}/apps/bioimageio-chatbot-client/index"
+    print(f"The BioImage.IO Chatbot is available at: {user_url}")
+    
 if __name__ == "__main__":
-    main()
+    server_url = """https://ai.imjoy.io"""
+    loop = asyncio.get_event_loop()
+    loop.create_task(connect_server(server_url))
+    loop.run_forever()
