@@ -114,7 +114,7 @@ def search_biii_with_links(
             return df
 
 
-class SearchOnBiii(BaseModel):
+class SearchBiii(BaseModel):
     """Find bioimage analysis tools on BioImage Informatics Index (biii.eu). It contains most basic information about image analysis tools."""
     keywords: List[str] = Field(
         description="A list of search keywords, no space allowed in each keyword."
@@ -162,7 +162,7 @@ async def run_extension(req: SearchOnBiii):
 def get_extensions():
     return [
         ChatbotExtension(
-            name="SearchOnBiii",
+            name="SearchInBiii",
             description="Search software tools on BioImage Informatics Index (biii.eu) is a platform for sharing bioimage analysis software and tools.",
             execute=run_extension,
         )
