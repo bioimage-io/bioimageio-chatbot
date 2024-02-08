@@ -87,7 +87,7 @@ def get_extensions():
     )
     docs_store_dict = load_knowledge_base(knowledge_base_path)
     return [ChatbotExtension(
-        name="BioImageKnowledgeBase",
+        name="SearchInKnowledgeBase",
         description="""Search the BioImage Knowledge Base for relevant information or documentation.""",
         get_schema=partial(get_schema, collections),
         execute=partial(run_extension, docs_store_dict),

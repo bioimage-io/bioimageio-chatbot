@@ -162,7 +162,7 @@ async def run_extension(req: SearchOnBiii):
 def get_extensions():
     return [
         ChatbotExtension(
-            name="biii",
+            name="SearchOnBiii",
             description="Search software tools on BioImage Informatics Index (biii.eu) is a platform for sharing bioimage analysis software and tools.",
             execute=run_extension,
         )

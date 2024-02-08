@@ -21,7 +21,7 @@ class DyntamicFactory:
 
     def __init__(self,
                  json_schema: dict,
-                 base_model: type[Model] | tuple[type[Model], ...] | None = None,
+                 base_model: Union[type[Model], tuple[type[Model], ...], None] = None,
                  ref_template: str = "definitions"
                  ) -> None:
         """
@@ -89,7 +89,7 @@ class DyntamicFactory:
     def _make_field(self, factory, field, alias, description) -> None:
         """Create an annotated field"""
         if field not in self.required:
-            factory_annotation = Annotated[Union[factory | None], factory]
+            factory_annotation = Annotated[Union[factory, None], factory]
         else:
             factory_annotation = factory
         self.model_fields[field] = (
