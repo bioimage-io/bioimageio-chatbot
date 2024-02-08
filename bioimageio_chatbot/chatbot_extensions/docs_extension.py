@@ -67,9 +67,10 @@ async def run_extension(docs_store_dict, req):
     # sort by relevance score
     docs_with_score = sorted(docs_with_score, key=lambda x: x.score, reverse=True)[:req.top_k]
     
-    print(
-        f"Retrieved documents:\n{docs_with_score[0].doc[:20] + '...'} (score: {docs_with_score[0].score})\n{docs_with_score[1].doc[:20] + '...'} (score: {docs_with_score[1].score})\n{docs_with_score[2].doc[:20] + '...'} (score: {docs_with_score[2].score})"
-    )
+    if len(docs_with_score) > 0:
+        print(
+            f"Retrieved documents:\n{docs_with_score[0].doc[:20] + '...'} (score: {docs_with_score[0].score})\n{docs_with_score[1].doc[:20] + '...'} (score: {docs_with_score[1].score})\n{docs_with_score[2].doc[:20] + '...'} (score: {docs_with_score[2].score})"
+        )
     return docs_with_score
 
 
