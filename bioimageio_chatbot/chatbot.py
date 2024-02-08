@@ -72,6 +72,7 @@ class RichResponse(BaseModel):
 
 
 def create_customer_service(builtin_extensions):
+    debug = os.environ.get("BIOIMAGEIO_DEBUG") == "true"
     async def respond_to_user(question_with_history: QuestionWithHistory = None, role: Role = None) -> str:
         """Answer the user's question directly or retrieve relevant documents from the documentation, or create a Python Script to get information about details of models."""
         steps = []
@@ -120,7 +121,11 @@ def create_customer_service(builtin_extensions):
                     print(f"Failed to run extension {ext_name}, error: {traceback.format_exc()}")
                     steps.append(ResponseStep(name="Error: " + ext_name, details={"Error": traceback.format_exc()}))
                     raise e
-
+            if debug:
+                print(f"Using Extensions:")
+                for ext in extension_types:
+                    print(f"  - {ext.__name__}: {ext.schema()}")
+            
             responses = await role.aask(inputs, tuple(extension_types), use_tool_calls=True)
             futs = []
             for resp in responses:
@@ -162,6 +167,7 @@ async def connect_server(server_url):
     
 async def register_chat_service(server):
     """Hypha startup function."""
+    debug = os.environ.get("BIOIMAGEIO_DEBUG") == "true"
     builtin_extensions = get_builtin_extensions()
     login_required = os.environ.get("BIOIMAGEIO_LOGIN_REQUIRED") == "true"
     chat_logs_path = os.environ.get("BIOIMAGEIO_CHAT_LOGS_PATH", "./chat_logs")
@@ -290,7 +296,6 @@ async def register_chat_service(server):
         return index_html
     
     index_html = reload_index()
-    debug = os.environ.get("BIOIMAGEIO_DEBUG") == "true"
     async def index(event, context=None):
         return {
             "status": 200,

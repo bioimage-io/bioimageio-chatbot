@@ -70,7 +70,9 @@ async def run_extension(docs_store_dict, req):
     docs_with_score = sorted(docs_with_score, key=lambda x: x.score, reverse=True)[:req.top_k]
     
     if len(docs_with_score) > 0:
-        print(f"Retrieved documents:\n{docs_with_score[0].doc[:20] + '...'} (score: {docs_with_score[0].score})")
+        print(
+            f"Retrieved documents:\n{docs_with_score[0].doc[:20] + '...'} (score: {docs_with_score[0].score})\n{docs_with_score[1].doc[:20] + '...'} (score: {docs_with_score[1].score})\n{docs_with_score[2].doc[:20] + '...'} (score: {docs_with_score[2].score})"
+        )
     return docs_with_score
 
 
@@ -87,8 +89,9 @@ def get_extensions():
     )
     docs_store_dict = load_knowledge_base(knowledge_base_path)
     return [ChatbotExtension(
-        name="SearchInKnowledgeBase",
-        description="""Search the BioImage Knowledge Base for relevant information or documentation.""",
+
+        name="SearchInBioImageKnowledgeBase",
+        description="""Search the BioImage Knowledge Base for relevant documentation.""",
         get_schema=partial(get_schema, collections),
         execute=partial(run_extension, docs_store_dict),
     )]
