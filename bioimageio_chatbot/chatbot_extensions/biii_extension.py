@@ -141,7 +141,7 @@ class BiiiResponse(BaseModel):
     )
 
 
-async def run_extension(req: SearchOnBiii):
+async def run_extension(req: SearchBiii):
     # limit top_k from 1 to 15
     req.top_k = max(1, min(req.top_k, 15))
     print(f"Searching biii.eu with keywords: {req.keywords}, top_k: {req.top_k}")
