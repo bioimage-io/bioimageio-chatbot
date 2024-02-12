@@ -22,7 +22,7 @@ class DocWithScore(BaseModel):
 class DocumentRetrievalInput(BaseModel):
     """Searching knowledge base for relevant documents."""
     query: str = Field(
-        description="The query used to retrieve documents related to the user's request. Take preliminary_response as reference to generate query if needed."
+        description="The query used to retrieve documents related to the user's request. It should be a sentence which will be used to match descriptions using the OpenAI text embedding to match document chunks in a vector database."
     )
     top_k: int = Field(
         3,
@@ -44,6 +44,7 @@ async def get_schema(channels):
 async def run_extension(docs_store_dict, req):
     collections = get_manifest()["collections"]
     channel_results = []
+    channel_urls = []
     # limit top_k from 1 to 15
     req.top_k = max(1, min(req.top_k, 15))
     for channel_id in docs_store_dict:
@@ -55,6 +56,7 @@ async def run_extension(docs_store_dict, req):
         channel_results.append(docs_store.asimilarity_search_with_relevance_scores(
             req.query, k=req.top_k
         ))
+        channel_urls.append(base_url)
 
     channel_results = await asyncio.gather(*channel_results)
     
@@ -63,7 +65,7 @@ async def run_extension(docs_store_dict, req):
         DocWithScore(
             doc=doc.page_content, score=score, metadata=doc.metadata, base_url=base_url
         )
-        for results_with_scores in channel_results
+        for results_with_scores, base_url in zip(channel_results, channel_urls)
         for doc, score in results_with_scores
     ]
     # sort by relevance score

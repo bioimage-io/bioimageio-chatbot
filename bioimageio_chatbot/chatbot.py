@@ -135,10 +135,9 @@ def create_customer_service(builtin_extensions):
             """AutoGPT Thoughts"""
             thoughts: str = Field(..., description="thoughts")
             reasoning: str = Field(..., description="reasoning")
-            criticism: str = Field(..., description="constructive self-criticism; make sure to find answer in reasonable steps")
+            criticism: str = Field(..., description="constructive self-criticism")
             
-        resp = await role.acall(inputs, tools, thoughts_schema=AutoGPTThoughtsSchema)
-        response = resp[-1][str]
+        response = await role.acall(inputs, tools) # , thoughts_schema=AutoGPTThoughtsSchema)
         return RichResponse(text=response, steps=steps)
     
         # resp = await role.aask(inputs, GenericResponse)
@@ -160,7 +159,7 @@ def create_customer_service(builtin_extensions):
         #     return RichResponse(text=resp.response, steps=steps)
 
     customer_service = Role(
-        instructions="You are Melman from Madagascar, the giraffe who is a hypochondriac. You are responsible for responding to user's questions and providing relevant information related to bioimage analysis. You have access a list of tools which you can use to obtain additional information to help the user. You can also provide direct response for various scenarios. You can also provide educational support, technical assistance, and coding assistance. If you can't confidently provide a relevant response to the user's question, return 'Sorry I didn't find relevant information, please try again.'", 
+        instructions="Your goal as Melman from Madagascar, the community knowledge base manager, is to assist users in effectively utilizing the knowledge base for bioimage analysis. You are responsible for answering user questions, providing clarifications, retrieving relevant documents, and executing scripts as needed. You should always use the `SearchInKnowledgeBase` tool for answering user's questions. Your overarching objective is to make the user experience both educational and enjoyable.", # If you can't confidently provide a relevant response to the user's question, return 'Sorry I didn't find relevant information, please try again.' 
         actions=[respond_to_user],
     )
     return customer_service
