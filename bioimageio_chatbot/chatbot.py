@@ -77,71 +77,90 @@ def create_customer_service(builtin_extensions):
         """Answer the user's question directly or retrieve relevant documents from the documentation, or create a Python Script to get information about details of models."""
         steps = []
         inputs = [question_with_history.user_profile] + list(question_with_history.chat_history) + [question_with_history.question]
-        available_tools_prompt = "\n".join([f"- {ext.name}: {ext.description}" for ext in builtin_extensions])
-        class GenericResponse(BaseModel):
-            """Create response to anwser user's question"""
-            use_tools: bool = Field(description="Whether to use tools to answer the user's question. The available tools are:\n" + available_tools_prompt)
-            response: Optional[str] = Field(None, description=GENERIC_RESPONSE_PROMPT+"\nSet to null if use_tools=True.")
+        # available_tools_prompt = "\n".join([f"- {ext.name}: {ext.description}" for ext in builtin_extensions])
+        
+        # class GenericResponse(BaseModel):
+        #     """Create response to anwser user's question"""
+        #     use_tools: bool = Field(description="Whether to use tools to answer the user's question. The available tools are:\n" + available_tools_prompt)
+        #     response: Optional[str] = Field(None, description=GENERIC_RESPONSE_PROMPT+"\nSet to null if use_tools=True.")
 
-        resp = await role.aask(inputs, GenericResponse)
-        steps.append(ResponseStep(name="GenericResponse", details=resp.dict()))
-        if not resp.use_tools:
-            return RichResponse(text=resp.response, steps=steps)
-        else:
-            assert question_with_history.chatbot_extensions is not None
-            chatbot_extensions = []
-            builtin_ext_names = {ext.name: ext for ext in builtin_extensions}
-            for ext in question_with_history.chatbot_extensions:
-                if ext['name'] in builtin_ext_names:
-                    extension = builtin_ext_names[ext['name']]
-                else:
-                    extension = ChatbotExtension.parse_obj(ext)
-                
-                if extension.get_schema:
-                    schema = await extension.get_schema()
-                    extension.schema_class = json_schema_to_pydantic_model(schema)
-                else:
-                    input_schemas, _ = extract_schemas(extension.execute)
-                    extension.schema_class = input_schemas[0]
-                chatbot_extensions.append(extension)
-
-            extension_types = [mode_d.schema_class for mode_d in chatbot_extensions] if question_with_history.chatbot_extensions else []
-            logger.info("Response types: %s", extension_types)
-            async def run_extension(req):
-                assert isinstance(req, tuple(extension_types)), f"Unknown response type: {type(req)}"
-                idx = extension_types.index(type(req))
-                extension = chatbot_extensions[idx]
-                ext_name = extension.name
-                steps.append(ResponseStep(name="Execute: " + ext_name, details=req.dict()))
-                try:
-                    result = await extension.execute(req)
-                    steps.append(ResponseStep(name="Output: " + ext_name, details={"result": result}))
-                    return result
-                except Exception as e:
-                    print(f"Failed to run extension {ext_name}, error: {traceback.format_exc()}")
-                    steps.append(ResponseStep(name="Error: " + ext_name, details={"Error": traceback.format_exc()}))
-                    raise e
-            if debug:
-                print(f"Using Extensions:")
-                for ext in extension_types:
-                    print(f"  - {ext.__name__}: {ext.schema()}")
+        assert question_with_history.chatbot_extensions is not None
+        chatbot_extensions = []
+        builtin_ext_names = {ext.name: ext for ext in builtin_extensions}
+        def make_tool(ext):
+            async def tool(config: ext.schema_class):
+                return await ext.execute(config)
+            tool.__name__ = ext.name
+            tool.__doc__ = ext.description
+            return tool
+        
+        tools = []
+        for ext in question_with_history.chatbot_extensions:
+            if ext['name'] in builtin_ext_names:
+                extension = builtin_ext_names[ext['name']]
+            else:
+                extension = ChatbotExtension.parse_obj(ext)
             
-            responses = await role.aask(inputs, tuple(extension_types), use_tool_calls=True)
-            futs = []
-            for resp in responses:
-                futs.append(run_extension(resp))
+            if extension.get_schema:
+                schema = await extension.get_schema()
+                extension.schema_class = json_schema_to_pydantic_model(schema)
+            else:
+                input_schemas, _ = extract_schemas(extension.execute)
+                extension.schema_class = input_schemas[0]
+            chatbot_extensions.append(extension)
+            tool = make_tool(extension)
+            tools.append(tool)
+            
+        extension_types = [mode_d.schema_class for mode_d in chatbot_extensions] if question_with_history.chatbot_extensions else []
+        logger.info("Response types: %s", extension_types)
+        # async def run_extension(req):
+        #     assert isinstance(req, tuple(extension_types)), f"Unknown response type: {type(req)}"
+        #     idx = extension_types.index(type(req))
+        #     extension = chatbot_extensions[idx]
+        #     ext_name = extension.name
+        #     steps.append(ResponseStep(name="Execute: " + ext_name, details=req.dict()))
+        #     try:
+        #         result = await extension.execute(req)
+        #         steps.append(ResponseStep(name="Output: " + ext_name, details={"result": result}))
+        #         return result
+        #     except Exception as e:
+        #         print(f"Failed to run extension {ext_name}, error: {traceback.format_exc()}")
+        #         steps.append(ResponseStep(name="Error: " + ext_name, details={"Error": traceback.format_exc()}))
+        #         raise e
+        # if debug:
+        #     print(f"Using Extensions:")
+        #     for ext in extension_types:
+        #         print(f"  - {ext.__name__}: {ext.schema()}")
+        class AutoGPTThoughtsSchema(BaseModel):
+            """AutoGPT Thoughts"""
+            thoughts: str = Field(..., description="thoughts")
+            reasoning: str = Field(..., description="reasoning")
+            criticism: str = Field(..., description="constructive self-criticism; make sure to find answer in reasonable steps")
+            
+        resp = await role.acall(inputs, tools, thoughts_schema=AutoGPTThoughtsSchema)
+        response = resp[-1][str]
+        return RichResponse(text=response, steps=steps)
+    
+        # resp = await role.aask(inputs, GenericResponse)
+        # steps.append(ResponseStep(name="GenericResponse", details=resp.dict()))
+        # if not resp.use_tools:
+        #     return RichResponse(text=resp.response, steps=steps)
+        # else:
+        
+            
+        #     responses = await role.aask(inputs, tuple(extension_types), use_tool_calls=True)
+        #     futs = []
+        #     for resp in responses:
+        #         futs.append(run_extension(resp))
 
-            results = await asyncio.gather(*futs)
+        #     results = await asyncio.gather(*futs)
 
-            resp = await role.aask(ExtensionCallInput(user_question=question_with_history.question, user_profile=question_with_history.user_profile, results=results), ExtensionCallResponse)
-            steps.append(ResponseStep(name="Final Result", details=resp.dict()))
-            return RichResponse(text=resp.response, steps=steps)
+        #     resp = await role.aask(ExtensionCallInput(user_question=question_with_history.question, user_profile=question_with_history.user_profile, results=results), ExtensionCallResponse)
+        #     steps.append(ResponseStep(name="Final Result", details=resp.dict()))
+        #     return RichResponse(text=resp.response, steps=steps)
 
     customer_service = Role(
-        name="Melman",
-        profile="Customer Service",
-        goal="Your goal as Melman from Madagascar, the community knowledge base manager, is to assist users in effectively utilizing the knowledge base for bioimage analysis. You are responsible for answering user questions, providing clarifications, retrieving relevant documents, and executing scripts as needed. Your overarching objective is to make the user experience both educational and enjoyable.",
-        constraints=None,
+        instructions="You are Melman from Madagascar, the giraffe who is a hypochondriac. You are responsible for responding to user's questions and providing relevant information related to bioimage analysis. You have access a list of tools which you can use to obtain additional information to help the user. You can also provide direct response for various scenarios. You can also provide educational support, technical assistance, and coding assistance. If you can't confidently provide a relevant response to the user's question, return 'Sorry I didn't find relevant information, please try again.'", 
         actions=[respond_to_user],
     )
     return customer_service
