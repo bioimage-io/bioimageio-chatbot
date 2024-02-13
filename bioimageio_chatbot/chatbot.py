@@ -63,7 +63,7 @@ def create_customer_service(builtin_extensions):
 
         class ThoughtsSchema(BaseModel):
             """Details about the thoughts"""
-            reasoning: str = Field(..., description="concise and clear reasoning and constructive self-criticism")
+            reasoning: str = Field(..., description="reasoning and constructive self-criticism; make it short and concise in less than 20 words")
             # reasoning: str = Field(..., description="brief explanation about the reasoning")
             # criticism: str = Field(..., description="constructive self-criticism")     
         
@@ -167,14 +167,14 @@ async def register_chat_service(server):
         m = QuestionWithHistory(question=text, chat_history=chat_history, user_profile=UserProfile.parse_obj(user_profile), chatbot_extensions=extensions)
         try:
             response = await customer_service.handle(Message(content="", data=m , role="User", session_id=session_id))
-            # get the content of the last response
-            response = response[-1].data # type: RichResponse
-            print(f"\nUser: {text}\nChatbot: {response.text}")
         except Exception as e:
             event_bus.off("stream", stream_callback)
             raise e
-        else:
-            event_bus.off("stream", stream_callback)
+
+        event_bus.off("stream", stream_callback)
+        # get the content of the last response
+        response = response[-1].data # type: RichResponse
+        print(f"\nUser: {text}\nChatbot: {response.text}")
 
         if session_id:
             chat_history.append({ 'role': 'user', 'content': text })
