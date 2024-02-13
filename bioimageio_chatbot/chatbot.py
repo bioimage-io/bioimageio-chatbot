@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional
 import pkg_resources
 from bioimageio_chatbot.chatbot_extensions import convert_to_dict, get_builtin_extensions, extension_to_tool
 from bioimageio_chatbot.utils import ChatbotExtension
+from bioimageio_chatbot.gpts_action import serve_actions
 import logging
 
 
@@ -96,6 +97,7 @@ async def connect_server(server_url):
         token = None
     server = await connect_to_server({"server_url": server_url, "token": token, "method_timeout": 100})
     await register_chat_service(server)
+    await serve_actions(server, server_url)
     
 async def register_chat_service(server):
     """Hypha startup function."""
