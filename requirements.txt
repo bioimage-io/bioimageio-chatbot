@@ -5,6 +5,9 @@ pypdf
 hypha
 tqdm
 aiofiles
-langchain==0.0.335
+langchain==0.1.6
 beautifulsoup4
 pandas
+duckduckgo-search==4.2.0
+langchain-openai==0.0.5
+rank-bm25==0.2.2

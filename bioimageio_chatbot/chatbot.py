@@ -4,7 +4,6 @@ import json
 import datetime
 import secrets
 import aiofiles
-import traceback
 from imjoy_rpc.hypha import login, connect_to_server
 
 from pydantic import BaseModel, Field
@@ -12,46 +11,18 @@ from schema_agents.role import Role
 from schema_agents.schema import Message
 from typing import Any, Dict, List, Optional
 import pkg_resources
-from bioimageio_chatbot.jsonschema_pydantic import json_schema_to_pydantic_model
-from bioimageio_chatbot.chatbot_extensions import get_builtin_extensions
-from bioimageio_chatbot.utils import extract_schemas, ChatbotExtension
+from bioimageio_chatbot.chatbot_extensions import convert_to_dict, get_builtin_extensions, extension_to_tool
+from bioimageio_chatbot.utils import ChatbotExtension
 import logging
 
-logger = logging.getLogger('bioimageio-chatbot')
 
-GENERIC_RESPONSE_PROMPT = """Create direct response for various scenarios:
-- General Inquiries: When faced with straightforward questions where a direct answer is possible, the chatbot should provide clear, accurate, and concise responses.
-- Educational Support: If a question is related to learning or seeks explanation about specific concepts or terms, the chatbot's response should be informative and educational, aiding in the user's understanding of the topic.
-- Technical Assistance: For queries that involve technical aspects, such as scripting, coding, or specific professional knowledge, the chatbot should offer detailed, practical advice or solutions. This includes providing example codes, step-by-step guides, or explanations tailored to the user's level of expertise.
-- Coding Assistance: If a question is related to coding, the chatbot should provide detailed, practical advice or solutions. This includes providing valid source code or script with comments tailored to the user's level of expertise.
-For other types of queries, set use_tools to True to use tools to obtain additional information to help the user.
-"""
+logger = logging.getLogger('bioimageio-chatbot')
 
 class UserProfile(BaseModel):
     """The user's profile. This will be used to personalize the response to the user."""
     name: str = Field(description="The user's name.", max_length=32)
     occupation: str = Field(description="The user's occupation.", max_length=128)
     background: str = Field(description="The user's background.", max_length=256)
-
-class ExtensionCallInput(BaseModel):
-    """Result of calling an extension function"""
-    user_question: str = Field(description="The user's original question.")
-    user_profile: Optional[UserProfile] = Field(None, description="The user's profile. You should use this to personalize the response.")
-    results: Optional[List[Any]] = Field(None, description="The results of calling extensions.")
-
-class DocumentResponse(BaseModel):
-    """The Document Response to the user's question based on the preliminary response and the documentation search results. The response should be tailored to uer's info if provided. 
-    If the documentation search results are relevant to the user's question, provide a text response to the question based on the search results.
-    If the documentation search results contains only low relevance scores or if the question isn't relevant to the search results, return the preliminary response.
-    Importantly, if you can't confidently provide a relevant response to the user's question, return 'Sorry I didn't find relevant information, please try again.'."""
-    response: str = Field(description="The answer to the user's question based on the search results. Can be either a detailed response in markdown format if the search results are relevant to the user's question or 'I don't know'.")
-
-class ExtensionCallResponse(BaseModel):
-    """Summarize the result of calling an extension function.
-    If the function call results are irrelevant to the user's question or if the extension function fails, tell the user that you don't know the answer and provide a summary fo the results.
-    """
-    relevant: bool = Field(description="Whether the results of calling the extension function are relevant to the user's question.")
-    response: str = Field(description="The answer to the user's question based on the result of calling the extension function. Objects that are not serializable will be stored in a temporary storage and a reference id will be returned(format: {'rtype': 'obj', 'reference_id': 'xxx'})")
 
 class QuestionWithHistory(BaseModel):
     """The user's question, chat history, and user's profile."""
@@ -71,102 +42,37 @@ class RichResponse(BaseModel):
     steps: List[ResponseStep] = Field(description="Intermediate steps")
 
 
-def convert_to_dict(obj):
-    if isinstance(obj, BaseModel):
-        return obj.dict()
-    if isinstance(obj, dict):
-        return {k: convert_to_dict(v) for k, v in obj.items()}
-    if isinstance(obj, list):
-        return [convert_to_dict(v) for v in obj]
-    return obj
-
 def create_customer_service(builtin_extensions):
-    debug = os.environ.get("BIOIMAGEIO_DEBUG") == "true"
+    # debug = os.environ.get("BIOIMAGEIO_DEBUG") == "true"
+
     async def respond_to_user(question_with_history: QuestionWithHistory = None, role: Role = None) -> str:
         """Answer the user's question directly or retrieve relevant documents from the documentation, or create a Python Script to get information about details of models."""
         steps = []
         inputs = [question_with_history.user_profile] + list(question_with_history.chat_history) + [question_with_history.question]
         assert question_with_history.chatbot_extensions is not None
-        chatbot_extensions = []
-        builtin_ext_names = {ext.name: ext for ext in builtin_extensions}
-
-        async def make_tool(extension: ChatbotExtension):
-    
-            async def execute(req: extension.schema_class):
-                print("Executing extension:", extension.name, req)
-                # req = extension.schema_class.parse_obj(req)
-                result = await extension.execute(req)
-                return convert_to_dict(result)
-
-            execute.__name__ = extension.name
-
-            if extension.get_schema:
-                schema = await extension.get_schema()
-                execute.__doc__ = schema['description']
-            
-            if not execute.__doc__:
-                # if extension.execute is partial
-                if hasattr(extension.execute, "func"):
-                    execute.__doc__ = extension.execute.func.__doc__ or extension.description
-                else:
-                    execute.__doc__ = extension.execute.__doc__ or extension.description
-            return execute
-        
-        # async def make_tool(ext):
-        #     async def tool(config: ext.schema_class):
-        #         return await ext.execute(config)
-        #     tool.__name__ = ext.name
-        #     tool.__doc__ = ext.description
-        #     return tool
-        
+        extensions_by_name = {ext.name: ext for ext in builtin_extensions}
         tools = []
         for ext in question_with_history.chatbot_extensions:
-            if ext['name'] in builtin_ext_names:
-                extension = builtin_ext_names[ext['name']]
+            if ext['name'] in extensions_by_name:
+                extension = extensions_by_name[ext['name']]
             else:
                 extension = ChatbotExtension.parse_obj(ext)
             
-            if extension.get_schema:
-                schema = await extension.get_schema()
-                extension.schema_class = json_schema_to_pydantic_model(schema)
-            else:
-                input_schemas, _ = extract_schemas(extension.execute)
-                extension.schema_class = input_schemas[0]
-            chatbot_extensions.append(extension)
-            tool = await make_tool(extension)
+            tool = await extension_to_tool(extension)
             tools.append(tool)
-            
-        extension_types = [mode_d.schema_class for mode_d in chatbot_extensions] if question_with_history.chatbot_extensions else []
-        logger.info("Response types: %s", extension_types)
-        class AutoGPTThoughtsSchema(BaseModel):
-            """AutoGPT Thoughts"""
-            thoughts: str = Field(..., description="thoughts")
-            reasoning: str = Field(..., description="reasoning")
-            criticism: str = Field(..., description="constructive self-criticism")
+
+
+        # class AutoGPTThoughtsSchema(BaseModel):
+        #     """AutoGPT Thoughts"""
+        #     thoughts: str = Field(..., description="thoughts")
+        #     reasoning: str = Field(..., description="reasoning")
+        #     criticism: str = Field(..., description="constructive self-criticism")
             
         response, metadata = await role.acall(inputs, tools, return_metadata=True) # , thoughts_schema=AutoGPTThoughtsSchema)
         result_steps = metadata["steps"]
         for idx, step_list in enumerate(result_steps):
             steps.append(ResponseStep(name=f"step-{idx}", details={"details": convert_to_dict(step_list)}))
         return RichResponse(text=response, steps=steps)
-    
-        # resp = await role.aask(inputs, GenericResponse)
-        # steps.append(ResponseStep(name="GenericResponse", details=resp.dict()))
-        # if not resp.use_tools:
-        #     return RichResponse(text=resp.response, steps=steps)
-        # else:
-        
-            
-        #     responses = await role.aask(inputs, tuple(extension_types), use_tool_calls=True)
-        #     futs = []
-        #     for resp in responses:
-        #         futs.append(run_extension(resp))
-
-        #     results = await asyncio.gather(*futs)
-
-        #     resp = await role.aask(ExtensionCallInput(user_question=question_with_history.question, user_profile=question_with_history.user_profile, results=results), ExtensionCallResponse)
-        #     steps.append(ResponseStep(name="Final Result", details=resp.dict()))
-        #     return RichResponse(text=resp.response, steps=steps)
 
     customer_service = Role(
         instructions="Your goal as Melman from Madagascar, the community knowledge base manager, is to assist users in effectively utilizing the knowledge base for bioimage analysis. You are responsible for answering user questions, providing clarifications, retrieving relevant documents, and executing scripts as needed. You should always use the `SearchInKnowledgeBase` tool for answering user's questions. Your overarching objective is to make the user experience both educational and enjoyable.", # If you can't confidently provide a relevant response to the user's question, return 'Sorry I didn't find relevant information, please try again.' 
@@ -181,7 +87,6 @@ async def save_chat_history(chat_log_full_path, chat_his_dict):
     # Write the serialized chat history to the json file
     async with aiofiles.open(chat_log_full_path, mode='w', encoding='utf-8') as f:
         await f.write(chat_history_json)
-
     
 async def connect_server(server_url):
     """Connect to the server and register the chat service."""
@@ -238,9 +143,9 @@ async def register_chat_service(server):
                          'feedback':user_report['feedback'],
                          'conversations':user_report['messages'], 
                          'session_id':user_report['session_id'], 
-                        'timestamp': str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), 
-                        'user': context.get('user'),
-                        'version': version}
+                         'timestamp': str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), 
+                         'user': context.get('user'),
+                         'version': version}
         session_id = user_report['session_id'] + secrets.token_hex(4)
         filename = f"report-{session_id}.json"
         # Create a chat_log.json file inside the session folder
