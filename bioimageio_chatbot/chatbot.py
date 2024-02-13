@@ -70,6 +70,15 @@ class RichResponse(BaseModel):
     text: str = Field(description="Response text")
     steps: List[ResponseStep] = Field(description="Intermediate steps")
 
+# to_dict function to convert the pydantic model or list/dict of pydantic model to dict recursively
+def to_dict(obj):
+    if isinstance(obj, BaseModel):
+        return obj.dict()
+    if isinstance(obj, dict):
+        return {k: to_dict(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [to_dict(v) for v in obj]
+    return obj
 
 def create_customer_service(builtin_extensions):
     debug = os.environ.get("BIOIMAGEIO_DEBUG") == "true"
@@ -137,7 +146,10 @@ def create_customer_service(builtin_extensions):
             reasoning: str = Field(..., description="reasoning")
             criticism: str = Field(..., description="constructive self-criticism")
             
-        response = await role.acall(inputs, tools) # , thoughts_schema=AutoGPTThoughtsSchema)
+        response, metadata = await role.acall(inputs, tools, return_metadata=True) # , thoughts_schema=AutoGPTThoughtsSchema)
+        result_steps = metadata["steps"]
+        for idx, step_list in enumerate(result_steps):
+            steps.append(ResponseStep(name=f"step-{idx}", details={"details": to_dict(step_list)}))
         return RichResponse(text=response, steps=steps)
     
         # resp = await role.aask(inputs, GenericResponse)
