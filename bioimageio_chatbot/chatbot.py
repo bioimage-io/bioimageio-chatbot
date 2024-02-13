@@ -61,20 +61,20 @@ def create_customer_service(builtin_extensions):
             tool = await extension_to_tool(extension)
             tools.append(tool)
 
-        # class AutoGPTThoughtsSchema(BaseModel):
-        #     """AutoGPT Thoughts"""
-        #     thoughts: str = Field(..., description="thoughts: consise and clear thoughts about the response")
-        #     reasoning: str = Field(..., description="reasoning: brief explanation of the reasoning behind the response")
-        #     criticism: str = Field(..., description="constructive self-criticism")     
+        class ThoughtsSchema(BaseModel):
+            """Details about the thoughts"""
+            reasoning: str = Field(..., description="concise and clear reasoning and constructive self-criticism")
+            # reasoning: str = Field(..., description="brief explanation about the reasoning")
+            # criticism: str = Field(..., description="constructive self-criticism")     
         
-        response, metadata = await role.acall(inputs, tools, return_metadata=True)#, thoughts_schema=AutoGPTThoughtsSchema)
+        response, metadata = await role.acall(inputs, tools, return_metadata=True, thoughts_schema=ThoughtsSchema)
         result_steps = metadata["steps"]
         for idx, step_list in enumerate(result_steps):
             steps.append(ResponseStep(name=f"step-{idx}", details={"details": convert_to_dict(step_list)}))
         return RichResponse(text=response, steps=steps)
 
     customer_service = Role(
-        instructions="Your goal as Melman from Madagascar, the community knowledge base manager, is to assist users in effectively utilizing the knowledge base for bioimage analysis. You are responsible for answering user questions, providing clarifications, retrieving relevant documents, and executing scripts as needed. You should always use the `SearchInKnowledgeBase` tool for answering user's questions. Your overarching objective is to make the user experience both educational and enjoyable.", # If you can't confidently provide a relevant response to the user's question, return 'Sorry I didn't find relevant information, please try again.' 
+        instructions="You are Melman from Madagascar, a helpful assistant for the bioimaging community. You are responsible for answering user questions, providing clarifications, retrieving relevant documents, and executing scripts as needed. You are a helpful assistant that follows exactly what user says, be precise, friendly, and coherent. Your response should be in valid markdown format",
         actions=[respond_to_user],
     )
     return customer_service
