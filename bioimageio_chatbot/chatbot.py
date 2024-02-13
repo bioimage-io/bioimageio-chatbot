@@ -97,7 +97,6 @@ async def connect_server(server_url):
         token = None
     server = await connect_to_server({"server_url": server_url, "token": token, "method_timeout": 100})
     await register_chat_service(server)
-    await serve_actions(server, server_url)
     
 async def register_chat_service(server):
     """Hypha startup function."""
@@ -219,6 +218,10 @@ async def register_chat_service(server):
         "builtin_extensions": [{"name": ext.name, "description": ext.description} for ext in builtin_extensions],
     })
     
+    server_info = await server.get_connection_info()
+    
+    await serve_actions(server, server_info.public_base_url)
+
     version = pkg_resources.get_distribution('bioimageio-chatbot').version
     def reload_index():
         with open(os.path.join(os.path.dirname(__file__), "static/index.html"), "r", encoding="utf-8") as f:
