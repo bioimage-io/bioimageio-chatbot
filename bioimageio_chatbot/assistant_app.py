@@ -16,16 +16,12 @@ import json
 import datetime
 import secrets
 import aiofiles
-import traceback
 from imjoy_rpc.hypha import login, connect_to_server
 
 from pydantic import BaseModel, Field
-from schema_agents.schema import Message
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 import pkg_resources
-from bioimageio_chatbot.jsonschema_pydantic import json_schema_to_pydantic_model
 from bioimageio_chatbot.chatbot_extensions import get_builtin_extensions
-from bioimageio_chatbot.utils import extract_schemas, ChatbotExtension
 import logging
 
 logger = logging.getLogger('bioimageio-chatbot')
