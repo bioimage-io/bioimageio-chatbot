@@ -61,14 +61,13 @@ def create_customer_service(builtin_extensions):
             tool = await extension_to_tool(extension)
             tools.append(tool)
 
-
         # class AutoGPTThoughtsSchema(BaseModel):
         #     """AutoGPT Thoughts"""
-        #     thoughts: str = Field(..., description="thoughts")
-        #     reasoning: str = Field(..., description="reasoning")
-        #     criticism: str = Field(..., description="constructive self-criticism")
-            
-        response, metadata = await role.acall(inputs, tools, return_metadata=True) # , thoughts_schema=AutoGPTThoughtsSchema)
+        #     thoughts: str = Field(..., description="thoughts: consise and clear thoughts about the response")
+        #     reasoning: str = Field(..., description="reasoning: brief explanation of the reasoning behind the response")
+        #     criticism: str = Field(..., description="constructive self-criticism")     
+        
+        response, metadata = await role.acall(inputs, tools, return_metadata=True)#, thoughts_schema=AutoGPTThoughtsSchema)
         result_steps = metadata["steps"]
         for idx, step_list in enumerate(result_steps):
             steps.append(ResponseStep(name=f"step-{idx}", details={"details": convert_to_dict(step_list)}))
