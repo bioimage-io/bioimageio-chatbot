@@ -68,7 +68,7 @@ def create_customer_service(builtin_extensions):
             # reasoning: str = Field(..., description="brief explanation about the reasoning")
             # criticism: str = Field(..., description="constructive self-criticism")     
         
-        response, metadata = await role.acall(inputs, tools, return_metadata=True, thoughts_schema=ThoughtsSchema)
+        response, metadata = await role.acall(inputs, tools, return_metadata=True, thoughts_schema=ThoughtsSchema, max_loop_count=10)
         result_steps = metadata["steps"]
         for idx, step_list in enumerate(result_steps):
             steps.append(ResponseStep(name=f"step-{idx}", details={"details": convert_to_dict(step_list)}))

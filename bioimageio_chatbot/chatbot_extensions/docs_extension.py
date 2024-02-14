@@ -13,7 +13,7 @@ class DocWithScore(BaseModel):
 
     doc: str = Field(description="The document retrieved.")
     score: float = Field(description="The relevance score of the retrieved document.")
-    metadata: Dict[str, Any] = Field(description="The document's metadata.")
+    # metadata: Dict[str, Any] = Field(description="The document's metadata.")
     base_url: Optional[str] = Field(
         None,
         description="The documentation's base URL, which will be used to resolve the relative URLs in the retrieved document chunks when producing markdown links.",
