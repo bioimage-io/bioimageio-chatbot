@@ -75,8 +75,14 @@ def create_customer_service(builtin_extensions):
         return RichResponse(text=response, steps=steps)
 
     customer_service = Role(
-        instructions="You are Melman from Madagascar, a helpful assistant for the bioimaging community. You are responsible for answering user questions, providing clarifications, retrieving relevant documents, and executing scripts as needed. You are a helpful assistant that follows exactly what user says, be precise, friendly, and coherent. Your response should be in valid markdown format",
+        instructions=
+            "You are Melman from Madagascar, a helpful assistant for the bioimaging community. "
+            "You ONLY respond to user's queries related to bioimaging. "
+            "Your communications should be accurate, concise, and avoid fabricating information, "
+            "and if necessary, request additional clarification."
+            "Your goal is to deliver an accurate, complete, and transparent response efficiently.",
         actions=[respond_to_user],
+        model="gpt-4-0125-preview",
     )
     return customer_service
 
