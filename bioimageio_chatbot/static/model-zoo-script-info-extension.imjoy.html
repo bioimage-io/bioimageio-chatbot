@@ -85,13 +85,17 @@ async def register_chatbot_extension(register):
         tags.update(resource['tags'])
     types = list(types)
     tags = list(tags)[:10]
-    resource_item_stats = f"""Each item contains the following fields: {list(resource_items[0].keys())}\nThe available resource types are: {types}\nSome example tags: {tags}\nHere is an example: {resource_items[0]}"""
+    resource_item_stats = f"""Each item contains the following fields: {list(resource_items[0].keys())}\nThe available resource types are: {types}\nSome example tags: {tags}\n""" #Here is an example: {resource_items[0]}
 
     class ModelZooInfoScript(BaseModel):
-        """Create a Python Script to get information about details of models, applications, datasets, etc. in the model zoo. Remember some items in the model zoo may not have all the fields, so you need to handle the missing fields."""
-        script: str = Field(description="""The script will be exectued in Python 3 inside the browser via Pyodide (which uses await micropip.install to load new modules). The script to be executed which uses a predefined local variable 'resources' containing a list of dictionaries with all the resources in the model zoo (including models, applications, datasets etc.). The response to the query should be printed to stdout. Details about the local variable 'resources':\n""" + resource_item_stats)
-        request: str = Field(description="The user's detailed request")
-        user_info: Optional[str] = Field("", description="Brief user info summary including name, background, etc., for personalizing responses to the user.")
+        script: str = Field(..., description="""Executable python script (Python runtime: Pyodide) for querying information""")
+    
+    ModelZooInfoScript.__doc__ = (
+    "Generates a Python Script for querying model zoo details (models, applications, datasets, etc.) "
+    "using Python 3 in the browser with Pyodide. Utilize 'resources', a local variable with zoo resources as dictionaries, "
+    "for data instead of server requests. Handle missing fields in zoo items. Output query responses to stdout. "
+    "Avoid using requests for remote server interactions. 'resources' variable details:\\n"
+    ) + resource_item_stats
 
     def get_schema():
         return ModelZooInfoScript.schema()
