@@ -64,7 +64,7 @@ async def run_extension(docs_store_dict, channel_id, req):
         
     docs_with_score = [
         DocWithScore(
-            doc=doc.page_content, score=score, metadata=doc.metadata, base_url=base_url
+            doc=doc.page_content, score=round(score, 2), metadata=doc.metadata, base_url=base_url
         )
         for results_with_scores in channel_results
         for doc, score in results_with_scores
