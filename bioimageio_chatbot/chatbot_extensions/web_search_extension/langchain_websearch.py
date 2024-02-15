@@ -44,7 +44,7 @@ class LangchainCompressor:
         # Processing results and exceptions
         for result, url in zip(results, url_list):
             if isinstance(result, Exception):
-                print(f'An exception occurred for {url}: {result}')
+                print(f'LLM_Web_search | An exception occurred for {url}: {result}')
             else:
                 html_url_tuples.append((result, url))
 
