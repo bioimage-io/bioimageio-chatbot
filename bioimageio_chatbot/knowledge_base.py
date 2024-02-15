@@ -3,9 +3,9 @@ import requests
 import zipfile
 import shutil
 from langchain.text_splitter import CharacterTextSplitter, RecursiveCharacterTextSplitter
-from langchain.vectorstores import FAISS
-from langchain.document_loaders import TextLoader, PyPDFLoader
-from langchain.embeddings.openai import OpenAIEmbeddings
+from langchain_community.vectorstores import FAISS
+from langchain_community.document_loaders import TextLoader, PyPDFLoader
+from langchain_openai import OpenAIEmbeddings
 from langchain.docstore.document import Document
 import json
 import pickle

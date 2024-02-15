@@ -1,7 +1,8 @@
 import os
+import asyncio
 from functools import partial
 from pydantic import BaseModel, Field
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 from bioimageio_chatbot.knowledge_base import load_knowledge_base
 from bioimageio_chatbot.utils import get_manifest
 from bioimageio_chatbot.utils import ChatbotExtension
@@ -12,65 +13,77 @@ class DocWithScore(BaseModel):
 
     doc: str = Field(description="The document retrieved.")
     score: float = Field(description="The relevance score of the retrieved document.")
-    metadata: Dict[str, Any] = Field(description="The document's metadata.")
+    # metadata: Dict[str, Any] = Field(description="The document's metadata.")
     base_url: Optional[str] = Field(
         None,
         description="The documentation's base URL, which will be used to resolve the relative URLs in the retrieved document chunks when producing markdown links.",
     )
 
+# async def get_schema(channels):
+#     # create prompt for the list (markdown) of channels and its description
+#     channel_info = "\n".join(
+#         [
+#             f"- {channel['name']}: {channel['description']}"
+#             for channel in channels
+#         ]
+#     )
+#     DocumentRetrievalInput.__doc__ = f"""Searching knowledge base for relevant documents. The available documentations are:\n{channel_info}"""
+#     return DocumentRetrievalInput.schema()
 
-class DocumentSearchInput(BaseModel):
-    """Results of a document retrieval process from a documentation base."""
-    user_question: str = Field(description="The user's original question.") 
-    relevant_context: List[DocWithScore] = Field(
-        description="Chunks of context retrieved from the documentation that are relevant to the user's original question."
-    )
-    user_info: Optional[str] = Field(
-        "", description="The user's info for personalizing the response."
-    )
-    format: Optional[str] = Field(None, description="The format of the document.")
-
-
-async def get_schema(channel_info):
+async def get_schema(collection):
     class DocumentRetrievalInput(BaseModel):
-        """Searching knowledge base (name: {name}, description: {description})."""
-        request: str = Field(description="The user's detailed request")
+        """Searching knowledge base for relevant documents."""
         query: str = Field(
-            description="The query used to retrieve documents related to the user's request. Take preliminary_response as reference to generate query if needed."
+            description="The query used to retrieve documents related to the user's request. It should be a sentence which will be used to match descriptions using the OpenAI text embedding to match document chunks in a vector database."
         )
-        user_info: Optional[str] = Field(
-            "",
-            description="Brief user info summary including name, background, etc., for personalizing responses to the user.",
+        top_k: int = Field(
+            3,
+            description="The maximum number of search results to return. Should use a small number to avoid overwhelming the user.",
         )
 
-    DocumentRetrievalInput.__name__ = channel_info['id'].replace(".", "_").replace("-", "_")
-    DocumentRetrievalInput.__doc__ = DocumentRetrievalInput.__doc__.format(name=channel_info['name'], description=channel_info['description'])
+    channel_id = collection["id"]
+    DocumentRetrievalInput.__name__ = "Search" + title_case(channel_id)
+    DocumentRetrievalInput.__doc__ = f"""Searching documentation for {channel_id}: {collection['description']}"""
     return DocumentRetrievalInput.schema()
-
 
 async def run_extension(docs_store_dict, channel_id, req):
     collections = get_manifest()["collections"]
+    channel_results = []
+    # channel_urls = []
+    # limit top_k from 1 to 15
+    req.top_k = max(1, min(req.top_k, 15))
     docs_store = docs_store_dict[channel_id]
     collection_info_dict = {collection["id"]: collection for collection in collections}
-
     collection_info = collection_info_dict[channel_id]
     base_url = collection_info.get("base_url")
     print(f"Retrieving documents from database {channel_id} with query: {req.query}")
-    results_with_scores = await docs_store.asimilarity_search_with_relevance_scores(
-        req.query, k=3
-    )
+    channel_results.append(await docs_store.asimilarity_search_with_relevance_scores(
+        req.query, k=req.top_k
+    ))
+
+        
     docs_with_score = [
         DocWithScore(
-            doc=doc.page_content, score=score, metadata=doc.metadata, base_url=base_url
+            doc=doc.page_content, score=round(score, 2), metadata=doc.metadata, base_url=base_url
         )
+        for results_with_scores in channel_results
         for doc, score in results_with_scores
     ]
-    print(
-        f"Retrieved documents:\n{docs_with_score[0].doc[:20] + '...'} (score: {docs_with_score[0].score})\n{docs_with_score[1].doc[:20] + '...'} (score: {docs_with_score[1].score})\n{docs_with_score[2].doc[:20] + '...'} (score: {docs_with_score[2].score})"
-    )
+    # sort by relevance score
+    docs_with_score = sorted(docs_with_score, key=lambda x: x.score, reverse=True)[:req.top_k]
+    
+    if len(docs_with_score) > 2:
+        print(
+            f"Retrieved documents:\n{docs_with_score[0].doc[:20] + '...'} (score: {docs_with_score[0].score})\n{docs_with_score[1].doc[:20] + '...'} (score: {docs_with_score[1].score})\n{docs_with_score[2].doc[:20] + '...'} (score: {docs_with_score[2].score})"
+        )
+    else:
+        print(f"Retrieved documents:\n{docs_with_score}")
     return docs_with_score
 
 
+def title_case(s):
+    return s.replace(".", " ").replace("-", " ").title().replace(" ", "")
+    
 def get_extensions():
     collections = get_manifest()["collections"]
     knowledge_base_path = os.environ.get("BIOIMAGEIO_KNOWLEDGE_BASE_PATH", "./bioimageio-knowledge-base")
@@ -85,8 +98,8 @@ def get_extensions():
     docs_store_dict = load_knowledge_base(knowledge_base_path)
     return [
         ChatbotExtension(
-            name=collection["id"]+"(docs)",
-            description=collection["description"],
+            name="SearchDocs"+title_case(collection["id"]),
+            description="Documentation for "+collection["id"] + "\n" + collection["description"],
             get_schema=partial(get_schema, collection),
             execute=partial(run_extension, docs_store_dict, collection["id"]),
         )
