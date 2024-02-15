@@ -4,7 +4,7 @@
 
 <config lang="json">
 {
-    "name": "ModelZooScriptInfo",
+    "name": "SearchBioImageModelZoo",
     "type": "web-python",
     "version": "0.1.0",
     "description": "BioImage.IO Chatbot Extension for getting information about models, applications, datasets, etc. in the model zoo.",
@@ -38,7 +38,7 @@ class ResourceType(str):
     APPLICATION = "application"
 
 class ModelZooSearchInput(BaseModel):
-    """Search resource items such as models, applications, datasets, etc. in the model zoo and return detailed information."""
+    """Search the BioImage Model Zoo (bioimage.io) resource items such as models, applications, datasets, etc. in the model zoo and return detailed information."""
     keywords: List[str] = Field(..., description="List of keywords to search for in the model zoo.")
     top_k: int = Field(3, description="The maximum number of search results to return. Default is 3. Please be aware each item may contain a large amount of data.")
     type: Optional[ResourceType] = Field(None, description="The type of resource to search for. Options include 'model', 'dataset', 'application'.")
@@ -126,8 +126,8 @@ async def register_chatbot_extension(register):
         script: str = Field(..., description="""Executable python script (Python runtime: Pyodide) for querying information""")
     
     ModelZooInfoScript.__doc__ = (
-    "Generates a Python Script for querying model zoo details (models, applications, datasets, etc.) "
-    "using Python 3 in the browser with Pyodide. Utilize 'resources', a local variable with zoo resources as dictionaries, "
+    "Querying statistical details about models, applications, datasets in the BioImage Model Zoo (bioimage.io) by generating and executing "
+    "Python 3 scripts in the browser with Pyodide. Utilize 'resources', a local variable with zoo resources as dictionaries, "
     "for data instead of server requests. Handle missing fields in zoo items. Output query responses to stdout. "
     "Avoid using requests for remote server interactions. 'resources' variable details:\\n"
     ) + resource_item_stats
