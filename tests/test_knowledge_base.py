@@ -1,5 +1,5 @@
-from langchain.vectorstores import FAISS
-from langchain.embeddings.openai import OpenAIEmbeddings
+from langchain_community.vectorstores import FAISS
+from langchain_openai import OpenAIEmbeddings
 
 def test_knowledge_base():
     """Test the knowledge base"""

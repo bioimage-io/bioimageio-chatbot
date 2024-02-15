@@ -3,20 +3,24 @@ requires = ["setuptools", "wheel"]
 
 [project]
 name = "bioimageio-chatbot"
-version = "0.1.51"
+version = "0.1.53"
 readme = "README.md"
 description = "Your Personal Assistant in BioImage Analysis."
 dependencies = [
-  "schema-agents>=0.1.24",
+  "schema-agents>=0.1.35",
   "imjoy-rpc",
   "requests",
   "pypdf",
   "hypha",
   "tqdm",
   "aiofiles",
-  "langchain>=0.0.335",
+  "langchain>=0.1.6",
   "beautifulsoup4",
   "pandas",
+  "duckduckgo-search<=4.2.0",
+  "rank-bm25",
+  "langchain-openai",
+  "langchain-community",
 ]
 
 [tool.setuptools]

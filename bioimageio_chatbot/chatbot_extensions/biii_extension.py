@@ -114,16 +114,10 @@ def search_biii_with_links(
             return df
 
 
-class SearchOnBiii(BaseModel):
+class SearchBiii(BaseModel):
     """Find bioimage analysis tools on BioImage Informatics Index (biii.eu). It contains most basic information about image analysis tools."""
     keywords: List[str] = Field(
         description="A list of search keywords, no space allowed in each keyword."
-    )
-    request: str = Field(
-        description="Details concerning the user's request that triggered the search on biii.eu."
-    )
-    user_info: Optional[str] = Field(
-        "", description="The user's info for personalizing response."
     )
     top_k: int = Field(
         10,
@@ -134,11 +128,6 @@ class SearchOnBiii(BaseModel):
 class BiiiSearchResult(BaseModel):
     """Search results from biii.eu"""
     results: List[BiiiRow] = Field(description="Search results from biii.eu")
-    request: str = Field(description="The user's detailed request")
-    user_info: Optional[str] = Field(
-        "",
-        description="Brief user info summary including name, background, etc., for personalizing responses to the user.",
-    )
     base_url: str = Field(
         description="The based URL of the search results, e.g. ImageJ (/imagej) will become <base_url>/imagej"
     )
@@ -152,7 +141,9 @@ class BiiiResponse(BaseModel):
     )
 
 
-async def run_extension(req: SearchOnBiii):
+async def run_extension(req: SearchBiii):
+    # limit top_k from 1 to 15
+    req.top_k = max(1, min(req.top_k, 15))
     print(f"Searching biii.eu with keywords: {req.keywords}, top_k: {req.top_k}")
     loop = asyncio.get_running_loop()
     # steps.append(ResponseStep(name="Search on biii.eu", details=req.dict()))
@@ -162,18 +153,16 @@ async def run_extension(req: SearchOnBiii):
     if results:
         results = BiiiSearchResult(
             results=results[: req.top_k],
-            request=req.request,
-            user_info=req.user_info,
             base_url="https://biii.eu",
         )
         return results
     else:
-        raise Exception(f"Sorry I didn't find relevant information in biii.eu about {req.keywords}")
+        return f"Sorry I didn't find relevant information in biii.eu about {req.keywords}"
 
 def get_extensions():
     return [
         ChatbotExtension(
-            name="biii.eu",
+            name="SearchInBiii",
             description="Search software tools on BioImage Informatics Index (biii.eu) is a platform for sharing bioimage analysis software and tools.",
             execute=run_extension,
         )
@@ -181,7 +170,7 @@ def get_extensions():
 
 
 if __name__ == "__main__":
-    results = search_biii_with_links(["nuclei"])
+    results = search_biii_with_links(["image segmentation"])
     # Index(['Name', 'Relevance', 'Logo', 'Supported Image Dimension', 'requires',
     #   'Content type', 'Excerpt'],
     #  dtype='object')

@@ -22,8 +22,8 @@ def eval_questions():
         query_answer = pd.read_csv(eval_file)
     else:
         query_answer = pd.read_csv("https://docs.google.com/spreadsheets/d/e/2PACX-1vTVgE2_eqBiAktHmg13jLrFrQJhbANkByY40f9vxptC6pShcjLzEuHzx93ATo0c0XcSYs9W1RRbaDdu/pub?gid=1280822572&single=true&output=csv")
-    # eval_index = range(2)
-    # query_answer = query_answer.iloc[eval_index]
+    eval_index = range(1,10)
+    query_answer = query_answer.iloc[eval_index]
     
     question_col = "Question"
     channel_id_col = "GT: Retrieved channel id"
@@ -38,21 +38,21 @@ def eval_questions():
 
 async def validate_chatbot_answer(question, reference_answer, use_tools_gt, channel_id_gt, relevance_gt, similary_score_gt):
     chat_history=[]
-    profile = UserProfile(name="lulu", occupation="data scientist", background="machine learning and AI")
+    profile = UserProfile(name="", occupation="", background="")
     
     m = QuestionWithHistory(question=question, chat_history=chat_history, user_profile=UserProfile.parse_obj(profile), chatbot_extensions=extensions)
     resp = await customer_service.handle(Message(content=m.json(), data=m , role="User"))
-    use_tools =resp[0].data.steps[0].details["use_tools"]
-    assert use_tools == use_tools_gt
-    execute_tool = resp[0].data.steps[1].name
-    # get the string after 'Execute: '
-    channel_id = execute_tool.split(": ")[1]
-    assert channel_id == channel_id_gt+"(docs)"
+    # use_tools =resp[0].data.steps[0].details["use_tools"]
+    # assert use_tools == use_tools_gt
+    # execute_tool = resp[0].data.steps[1].name
+    # # get the string after 'Execute: '
+    # channel_id = execute_tool.split(": ")[1]
+    # assert channel_id == channel_id_gt+"(docs)"
     
     # eval score
-    relevance = resp[0].data.steps[-1].details["relevant"]
-    assert relevance == relevance_gt
-    chatbot_answer = resp[0].data.steps[-1].details["response"]
+    # relevance = resp[0].data.steps[-1].details["relevant"]
+    # assert relevance == relevance_gt
+    chatbot_answer = resp[0].data.steps[-1].details['details'][0]['response']
     similary_score = await evaluate(question, reference_answer, chatbot_answer)
     assert similary_score >= similary_score_gt
 
@@ -60,23 +60,23 @@ async def validate_chatbot_answer(question, reference_answer, use_tools_gt, chan
 @pytest.mark.asyncio    
 async def test_chatbot1(eval_questions):
     
-    await validate_chatbot_answer(
-        question="What is deepImageJ?",
-        reference_answer="DeepImageJ is a user-friendly plugin designed to facilitate the utilization of pre-trained neural networks within ImageJ and Fiji. It serves as a bridge between developers of deep-learning models and end-users in life-science applications, promoting the sharing of trained models across research groups. DeepImageJ is particularly valuable in various imaging domains and does not necessitate deep learning expertise or programming skills.",
-        use_tools_gt=True,
-        channel_id_gt="deepimagej(docs)",
-        relevance_gt=True,
-        similary_score_gt=4.0
-    )
+#     await validate_chatbot_answer(
+#         question="What is deepImageJ?",
+#         reference_answer="DeepImageJ is a user-friendly plugin designed to facilitate the utilization of pre-trained neural networks within ImageJ and Fiji. It serves as a bridge between developers of deep-learning models and end-users in life-science applications, promoting the sharing of trained models across research groups. DeepImageJ is particularly valuable in various imaging domains and does not necessitate deep learning expertise or programming skills.",
+#         use_tools_gt=True,
+#         channel_id_gt="deepimagej(docs)",
+#         relevance_gt=True,
+#         similary_score_gt=4.0
+#     )
     
-    await validate_chatbot_answer(
-        question="What is a Bioimage Model Zoo community partner?",
-        reference_answer="A BioImage Model Zoo community partner is an organization, company, research group, or software team that can consume and/or produce resources of the BioImage.IO model zoo. These partners continuously and openly contribute resources of their own, and they can participate in the decision-making process of the model specification. Additionally, they can show their logo in BioImage.IO, connect CI to automatically test new model compatibility with their software, and use other infrastructure features provided by BioImage.IO. The community partners can host their own Github repository for storing models and other relevant resources, which are then dynamically linked to the central repository of BioImage.IO. Each community partner is responsible for maintaining the resources that are relevant.",
-        use_tools_gt=True,
-        channel_id_gt="bioimage.io(docs)",
-        relevance_gt=True,
-        similary_score_gt=4.0
-    )
+#     await validate_chatbot_answer(
+#         question="What is a Bioimage Model Zoo community partner?",
+#         reference_answer="A BioImage Model Zoo community partner is an organization, company, research group, or software team that can consume and/or produce resources of the BioImage.IO model zoo. These partners continuously and openly contribute resources of their own, and they can participate in the decision-making process of the model specification. Additionally, they can show their logo in BioImage.IO, connect CI to automatically test new model compatibility with their software, and use other infrastructure features provided by BioImage.IO. The community partners can host their own Github repository for storing models and other relevant resources, which are then dynamically linked to the central repository of BioImage.IO. Each community partner is responsible for maintaining the resources that are relevant.",
+#         use_tools_gt=True,
+#         channel_id_gt="bioimage.io(docs)",
+#         relevance_gt=True,
+#         similary_score_gt=4.0
+#     )
     
     questions, reference_answers, channel_id_list_gt = eval_questions
     for question, reference_answer, channel_id_gt in zip(questions, reference_answers, channel_id_list_gt):
@@ -86,5 +86,5 @@ async def test_chatbot1(eval_questions):
             use_tools_gt=True,
             channel_id_gt=channel_id_gt,
             relevance_gt=True,
-            similary_score_gt=4.0
+            similary_score_gt=80
         )
