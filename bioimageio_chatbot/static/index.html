@@ -20,6 +20,10 @@
     }
 
     .form-label {
+      font-size: 11px;
+      max-height: 100px;
+      overflow: auto;
+      margin-left: 35px;
       color: #808080b0;
     }
 
@@ -287,8 +291,8 @@
         <div class="card-body">
           <div class="message-holder"></div>
           <div class="form-outline">
-            <label class="form-label" for="textAreaExample" id="status-text">Ready to chat! Type your message and press
-              enter!</label>
+            <pre class="form-label" for="textAreaExample" id="status-text">Ready to chat! Type your message and press
+              enter!</pre>
             <div style="position: relative; display: flex; align-items: center; gap: 10px;">
               <label for="fileUpload" style="cursor: pointer; flex-shrink: 0;">
                 <i class="fas fa-paperclip" style="font-size: 1.2rem;" id="paperclipIcon"></i>
@@ -563,7 +567,7 @@
       await app.loadPlugin("https://raw.githubusercontent.com/bioimage-io/bioimageio-chatbot/main/bioimageio_chatbot/static/model-zoo-script-info-extension.imjoy.html");
       
       /*  app.addMenuItem({
-        label: "Enable ModelZooScript",
+        label: "Enable SearchBioImageModelZoo",
         async callback() {
           await app.loadPlugin("https://raw.githubusercontent.com/bioimage-io/bioimageio-chatbot/main/bioimageio_chatbot/static/model-zoo-script-info-extension.imjoy.html");
         },
