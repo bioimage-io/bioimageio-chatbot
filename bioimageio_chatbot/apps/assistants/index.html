@@ -118,7 +118,7 @@
           await api.createWindow({src: `${origin}/${workspace}/apps/bioimageio-chatbot-client/chat`, w:25, h:20, config: {assistant_name: "Melman"}, name: "BioImageIO Chatbot"})
         },
       });
-      await app.loadPlugin("https://raw.githubusercontent.com/bioimage-io/bioimageio-chatbot/main/bioimageio_chatbot/static/bioimage-model-zoo-extension.imjoy.html");
+
       await api.createWindow({src: `${origin}/${workspace}/apps/bioimageio-chatbot-client/chat`, w:25, h:20, config: {assistant_name: "Melman"}, name: "BioImageIO Chatbot"})
       app.addMenuItem({
         label: "🦒 BioImage.IO Analyst",
@@ -135,6 +135,7 @@
         },
       });
 
+      await app.loadPlugin("https://raw.githubusercontent.com/bioimage-io/bioimageio-chatbot/main/bioimageio_chatbot/static/bioimage-model-zoo-extension.imjoy.html");
       
       /*  app.addMenuItem({
         label: "Enable SearchBioImageModelZoo",
