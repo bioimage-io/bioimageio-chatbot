@@ -2,22 +2,7 @@ import httpx
 from bs4 import BeautifulSoup
 from langchain.schema import Document
 
-from .langchain_websearch import docs_to_pretty_str, LangchainCompressor
-
-
-def dict_list_to_pretty_str(data: list[dict]) -> str:
-    ret_str = ""
-    if isinstance(data, dict):
-        data = [data]
-    if isinstance(data, list):
-        for i, d in enumerate(data):
-            ret_str += f"Result {i+1}\n"
-            ret_str += f"Title: {d['title']}\n"
-            ret_str += f"{d['body']}\n"
-            ret_str += f"Source URL: {d['href']}\n"
-        return ret_str
-    else:
-        raise ValueError("Input must be dict or list[dict]")
+from .langchain_websearch import LangchainCompressor
 
 
 async def search_duckduckgo(query: str, langchain_compressor: LangchainCompressor,
@@ -54,8 +39,16 @@ async def search_duckduckgo(query: str, langchain_compressor: LangchainCompresso
     if not documents:    # Fall back to old simple search rather than returning nothing
         print("LLM_Web_search | Could not find any page content "
               "similar enough to be extracted, using basic search fallback...")
-        return dict_list_to_pretty_str(results[:max_results])
-    return docs_to_pretty_str(documents[:max_results])
+        data = results[:max_results]
+        docs = []
+        for d in data:
+            docs.append({"title": d['title'], "body": d['body'], "href": d['href']})
+        return docs
+    
+    docs = []
+    for doc in documents[:max_results]:
+        docs.append({"content": doc.page_content, "url": doc.metadata["source"]})
+    return docs
 
 
 async def get_webpage_content(url: str) -> str:
