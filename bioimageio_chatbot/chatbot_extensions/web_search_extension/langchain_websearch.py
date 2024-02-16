@@ -89,14 +89,6 @@ class LangchainCompressor:
         return compressed_docs[:num_results]
 
 
-def docs_to_pretty_str(docs) -> str:
-    ret_str = ""
-    for i, doc in enumerate(docs):
-        ret_str += f"Result {i+1}:\n"
-        ret_str += f"{doc.page_content}\n"
-        ret_str += f"Source URL: {doc.metadata['source']}\n\n"
-    return ret_str
-
 async def download_html(url: str) -> bytes:
     headers = {
         "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:120.0) Gecko/20100101 Firefox/120.0",

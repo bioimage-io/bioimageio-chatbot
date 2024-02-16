@@ -13,22 +13,7 @@ class DocWithScore(BaseModel):
 
     doc: str = Field(description="The document retrieved.")
     score: float = Field(description="The relevance score of the retrieved document.")
-    # metadata: Dict[str, Any] = Field(description="The document's metadata.")
-    base_url: Optional[str] = Field(
-        None,
-        description="The documentation's base URL, which will be used to resolve the relative URLs in the retrieved document chunks when producing markdown links.",
-    )
 
-# async def get_schema(channels):
-#     # create prompt for the list (markdown) of channels and its description
-#     channel_info = "\n".join(
-#         [
-#             f"- {channel['name']}: {channel['description']}"
-#             for channel in channels
-#         ]
-#     )
-#     DocumentRetrievalInput.__doc__ = f"""Searching knowledge base for relevant documents. The available documentations are:\n{channel_info}"""
-#     return DocumentRetrievalInput.schema()
 
 async def get_schema(collection):
     class DocumentRetrievalInput(BaseModel):
@@ -42,20 +27,22 @@ async def get_schema(collection):
         )
 
     channel_id = collection["id"]
+    base_url = collection.get("base_url")
+    if base_url:
+        base_url_prompt = f" The documentation is available at {base_url}."
+    else:
+        base_url_prompt = ""
     DocumentRetrievalInput.__name__ = "Search" + title_case(channel_id)
-    DocumentRetrievalInput.__doc__ = f"""Searching documentation for {channel_id}: {collection['description']}"""
+    DocumentRetrievalInput.__doc__ = f"""Searching documentation for {channel_id}: {collection['description']}.{base_url_prompt}"""
     return DocumentRetrievalInput.schema()
 
 async def run_extension(docs_store_dict, channel_id, req):
-    collections = get_manifest()["collections"]
     channel_results = []
     # channel_urls = []
     # limit top_k from 1 to 15
     req.top_k = max(1, min(req.top_k, 15))
     docs_store = docs_store_dict[channel_id]
-    collection_info_dict = {collection["id"]: collection for collection in collections}
-    collection_info = collection_info_dict[channel_id]
-    base_url = collection_info.get("base_url")
+
     print(f"Retrieving documents from database {channel_id} with query: {req.query}")
     channel_results.append(await docs_store.asimilarity_search_with_relevance_scores(
         req.query, k=req.top_k
@@ -64,7 +51,7 @@ async def run_extension(docs_store_dict, channel_id, req):
         
     docs_with_score = [
         DocWithScore(
-            doc=doc.page_content, score=round(score, 2), metadata=doc.metadata, base_url=base_url
+            doc=doc.page_content, score=round(score, 2), metadata=doc.metadata #, base_url=base_url
         )
         for results_with_scores in channel_results
         for doc, score in results_with_scores
