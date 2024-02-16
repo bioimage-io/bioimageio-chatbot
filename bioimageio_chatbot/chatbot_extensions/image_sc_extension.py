@@ -116,7 +116,10 @@ class DiscourseClient:
 def get_extensions():
     username = os.environ.get("DISCOURSE_USERNAME")
     api_key = os.environ.get("DISCOURSE_API_KEY")
-    assert username and api_key, "Please set DISCOURSE_USERNAME and DISCOURSE_API_KEY environment variables."
+    if not username or not api_key:
+        print("WARNING: Image.sc Forum extensions require DISCOURSE_USERNAME and DISCOURSE_API_KEY environment variables to be set, disabling it for now.")
+        return []
+
     discourse_client = DiscourseClient(base_url="https://forum.image.sc/", username=username, api_key=api_key)
     return [
         ChatbotExtension(
