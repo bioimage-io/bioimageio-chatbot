@@ -107,18 +107,23 @@
         },
       });
 
+      // extract workspace from url like: `3KzFr88Q2sh4g88VcTytwM` from https://ai.imjoy.io/3KzFr88Q2sh4g88VcTytwM/apps/bioimageio-chatbot-client/index
+      let workspace = url.pathname.split('/')[1]
+      if(workspace === "assistants"){
+        workspace = "public"
+      }
       app.addMenuItem({
         label: "🦒 BioImage.IO Chatbot",
         async callback() {
-          await api.createWindow({src: `${origin}/public/apps/bioimageio-chatbot-client/index`, w:25, h:20, config: {assistant_name: "Melman"}, name: "BioImageIO Chatbot"})
+          await api.createWindow({src: `${origin}/${workspace}/apps/bioimageio-chatbot-client/chat`, w:25, h:20, config: {assistant_name: "Melman"}, name: "BioImageIO Chatbot"})
         },
       });
 
-      await api.createWindow({src: `${origin}/public/apps/bioimageio-chatbot-client/index`, w:25, h:20, config: {assistant_name: "Melman"}, name: "BioImageIO Chatbot"})
+      await api.createWindow({src: `${origin}/${workspace}/apps/bioimageio-chatbot-client/chat`, w:25, h:20, config: {assistant_name: "Melman"}, name: "BioImageIO Chatbot"})
       app.addMenuItem({
         label: "🦒 BioImage.IO Analyst",
         async callback() {
-          await api.createWindow({src: `${origin}/public/apps/bioimageio-chatbot-client/index?assistant=analyst`, w:25, h:20, config: {assistant_name: "Kowalski"}, name: "BioImageIO Analyst"})
+          await api.createWindow({src: `${origin}/${workspace}/apps/bioimageio-chatbot-client/chat?assistant=analyst`, w:25, h:20, config: {assistant_name: "Kowalski"}, name: "BioImageIO Analyst"})
         },
       });
       app.addMenuItem({

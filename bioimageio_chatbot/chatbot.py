@@ -259,21 +259,31 @@ async def register_chat_service(server):
     version = pkg_resources.get_distribution('bioimageio-chatbot').version
     def reload_index():
         with open(os.path.join(os.path.dirname(__file__), "static/index.html"), "r", encoding="utf-8") as f:
-            index_html = f.read()
-        index_html = index_html.replace("https://ai.imjoy.io", server.config['public_base_url'] or f"http://127.0.0.1:{server.config['port']}")
-        index_html = index_html.replace('"bioimageio-chatbot"', f'"{hypha_service_info["id"]}"')
-        index_html = index_html.replace('v0.1.0', f'v{version}')
-        index_html = index_html.replace("LOGIN_REQUIRED", "true" if login_required else "false")
-        return index_html
+            chat_html = f.read()
+        chat_html = chat_html.replace("https://ai.imjoy.io", server.config['public_base_url'] or f"http://127.0.0.1:{server.config['port']}")
+        chat_html = chat_html.replace('"bioimageio-chatbot"', f'"{hypha_service_info["id"]}"')
+        chat_html = chat_html.replace('v0.1.0', f'v{version}')
+        chat_html = chat_html.replace("LOGIN_REQUIRED", "true" if login_required else "false")
+        return chat_html
     
-    index_html = reload_index()
+    chat_html = reload_index()
+    async def chat(event, context=None):
+        return {
+            "status": 200,
+            "headers": {'Content-Type': 'text/html'},
+            "body": reload_index() if debug else chat_html,
+        }
+    
+    with open(os.path.join(os.path.dirname(__file__), "apps/assistants/index.html"), "r", encoding="utf-8") as f:
+        assistants_html = f.read()
+
     async def index(event, context=None):
         return {
             "status": 200,
             "headers": {'Content-Type': 'text/html'},
-            "body": reload_index() if debug else index_html,
+            "body": assistants_html,
         }
-    
+
     await server.register_service({
         "id": "bioimageio-chatbot-client",
         "type": "functions",
@@ -281,12 +291,12 @@ async def register_chat_service(server):
             "visibility": "public",
             "require_context": False
         },
-        "index": index,
+        "chat": chat,
+        "index": index
     })
     server_url = server.config['public_base_url']
 
-    user_url = f"{server_url}/{server.config['workspace']}/apps/bioimageio-chatbot-client/index"
-    print(f"The BioImage.IO Chatbot is available at: {user_url}")
+    print(f"\nThe BioImage.IO Assistants are available at: {server_url}/{server.config['workspace']}/apps/bioimageio-chatbot-client/index")
     
 if __name__ == "__main__":
     server_url = """https://ai.imjoy.io"""
