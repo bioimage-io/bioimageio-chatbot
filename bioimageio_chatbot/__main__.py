@@ -8,6 +8,8 @@ from bioimageio_chatbot.knowledge_base import load_knowledge_base
 def start_server(args):
     if args.login_required:
         os.environ["BIOIMAGEIO_LOGIN_REQUIRED"] = "true"
+    # get current file path so we can get the path of apps under the same directory
+    current_dir = os.path.dirname(os.path.realpath(__file__))
     command = [
         sys.executable,
         "-m",
@@ -15,7 +17,7 @@ def start_server(args):
         f"--host={args.host}",
         f"--port={args.port}",
         f"--public-base-url={args.public_base_url}",
-        "--static-mounts=/assistants:./bioimageio_chatbot/apps/assistants/",
+        f"--static-mounts=/assistants:{current_dir}/apps/assistants/",
         "--startup-functions=bioimageio_chatbot.chatbot:register_chat_service"
     ]
     subprocess.run(command)
