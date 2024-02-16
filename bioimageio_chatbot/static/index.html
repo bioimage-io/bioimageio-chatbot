@@ -626,8 +626,12 @@
           })
           const svc = await server.getService(service_id || "bioimageio-chatbot")
           await svc.ping()
-          const builtinExtensions = svc.builtin_extensions;
-          
+          const assistants = svc.assistants;
+          const assistant = assistants[assistantName];
+          if (!assistant) {
+            throw new Error(`Assistant ${assistantName} not found`);
+          }
+          const builtinExtensions = assistant.extensions;
           // clear extension except registered from ImJoy
           extensions = [];
           for(let ext of registeredExtensions){
