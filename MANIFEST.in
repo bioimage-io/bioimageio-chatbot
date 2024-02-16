@@ -1,2 +1,2 @@
 include bioimageio_chatbot/static/*
-include bioimageio_chatbot/apps/*
+recursive-include bioimageio_chatbot/apps *
