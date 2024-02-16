@@ -119,18 +119,18 @@ async def register_chatbot_extension(register):
         types.add(resource['type'])
         tags.update(resource['tags'])
     types = list(types)
-    tags = list(tags)[:10]
-    resource_item_stats = f"""Each item contains the following fields: {list(resource_items[0].keys())}\nThe available resource types are: {types}\nSome example tags: {tags}\n""" #Here is an example: {resource_items[0]}
+    tags = list(tags)[:5]
+    resource_item_stats = f"""- keys: {list(resource_items[0].keys())}\n- resource types: {types}\n- Exampletags: {tags}\n""" #Here is an example: {resource_items[0]}
 
     class ModelZooInfoScript(BaseModel):
         script: str = Field(..., description="""Executable python script (Python runtime: Pyodide) for querying information""")
     
     ModelZooInfoScript.__doc__ = (
-    "Querying statistical details about models, applications, datasets in the BioImage Model Zoo (bioimage.io) by generating and executing "
-    "Python 3 scripts in the browser with Pyodide. Utilize 'resources', a local variable with zoo resources as dictionaries, "
-    "for data instead of server requests. Handle missing fields in zoo items. Output query responses to stdout. "
-    "Remember to filter out resource items based on the 'type' key."
-    "Avoid using requests for remote server interactions. 'resources' variable details:\\n"
+    "Use Pyodide in the browser to execute Python3 scripts for querying model statistics, "
+    "applications, and datasets in the BioImage Model Zoo (bioimage.io). "
+    "Access data through the 'resources' local variable, containing zoo resources as dictionaries. "
+    "Handle any missing fields in zoo items, and ensure outputs are directed to stdout. "
+    "Filter resources by the 'type' key without making remote server requests. 'resources' variable details:\n"
     ) + resource_item_stats
 
     def get_schema():
