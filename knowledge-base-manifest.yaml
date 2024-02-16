@@ -50,6 +50,13 @@ collections:
     description: A collection of algorithms for image processing.
     base_url: https://scikit-image.org/docs/stable/
     format: pdf
+  - name: Introduction to Bioimage Analysis
+    id: book-intro-to-bioimage-analysis
+    source: https://github.com/bioimagebook/bioimagebook.github.io/archive/refs/heads/main.zip
+    directory: chapters
+    description: "A book written by Pete Bankhead about introduction to bioimage analysis, including practical exercises and Jupyter Book content"
+    base_url: https://bioimagebook.github.io/
+    format: markdown
 
 additional_channels:
   - name: "biii.eu"
