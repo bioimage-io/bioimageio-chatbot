@@ -9,7 +9,7 @@ def start_server(args):
     if args.login_required:
         os.environ["BIOIMAGEIO_LOGIN_REQUIRED"] = "true"
     # get current file path so we can get the path of apps under the same directory
-    current_dir = os.path.dirname(os.path.realpath(__file__))
+    current_dir = os.path.dirname(os.path.abspath(__file__))
     command = [
         sys.executable,
         "-m",
