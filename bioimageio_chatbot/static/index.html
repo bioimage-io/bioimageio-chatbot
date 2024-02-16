@@ -511,214 +511,42 @@
 
       extension.execute = async function(config){
         config = decodeData(config)
-        const result = await _execute(config)
-        debugger
+        const result = await _execute(config)        
         return encodeData(result)
       }
 
       extensions.push(extension);
+      // remove duplicates
+      extensions = extensions.filter((v,i,a)=>a.findIndex(t=>(t.name === v.name))===i)
       registeredExtensions.push(extension);
       updateDropdownOptions(extensions);
     }
 
-    async function setupImJoyApp(imjoy_api){
-      const app = await loadImJoyBasicApp({
-        name: 'BioImage.IO Chatbot',
-        process_url_query: true,
-        show_window_title: false,
-        show_progress_bar: true,
-        show_empty_window: true,
-        menu_style: { position: "absolute", right: 0, top: "2px" },
-        window_style: {width: '100%', height: '100%'},
-        main_container: null,
-        menu_container: "menu-container",
-        window_manager_container: "window-container",
-        expose_api: true,
-        imjoy_api: {
-          async registerChatbotExtension(plugin, config){
-            return await _registerExtension(config)
-          }
-        }
-      })
-      // if you want to let users to load new plugins, add a menu item
-      app.addMenuItem({
-          label: "➕ Load Plugin",
-          callback() {
-          const uri = prompt(
-              `Please type a ImJoy plugin URL`,
-              "https://github.com/imjoy-team/imjoy-plugins/blob/master/repository/ImageAnnotator.imjoy.html"
-          );
-          if (uri) app.loadPlugin(uri);
-          },
-      });
-
-      
-      app.addMenuItem({
-        label: "🧩 ImJoy Fiddle",
-        async callback() {
-          const plugin = await app.loadPlugin("https://if.imjoy.io")
-          await app.runPlugin(plugin)
-          app.removeMenuItem("🧩 ImJoy Fiddle")
-        },
-      });
-
-      const api = app.imjoy.api
-
-      await app.loadPlugin("https://raw.githubusercontent.com/bioimage-io/bioimageio-chatbot/main/bioimageio_chatbot/static/bioimage-model-zoo-extension.imjoy.html");
-      
-      /*  app.addMenuItem({
-        label: "Enable SearchBioImageModelZoo",
-        async callback() {
-          await app.loadPlugin("https://raw.githubusercontent.com/bioimage-io/bioimageio-chatbot/main/bioimageio_chatbot/static/bioimage-model-zoo-extension.imjoy.html");
-        },
-      });
-
-      app.addMenuItem({
-        label: "Enable PythonConsole",
-        async callback() {
-          const uri = prompt(
-              `Please type a ImJoy plugin URL`,
-              "https://nanguage.github.io/web-python-console/chatbot-extension.imjoy.html"
-          );
-          if (uri) app.loadPlugin(uri);
-        },
-      });
-
-      app.addMenuItem({
-        label: "Enable BioengineWebClient",
-        async callback() {
-          const uri = prompt(
-              `Please type a ImJoy plugin URL`,
-              "https://bioimage-io.github.io/bioengine-web-client/chatbot-extension.imjoy.html"
-          );
-          if (uri) app.loadPlugin(uri);
-        },
-      });
-      
-      app.addMenuItem({
-        label: "Enable ImageJMacro",
-        async callback() {
-          await api.createWindow({src: "https://ij.imjoy.io", name: "ImageJ.JS"})
-
-          await api.registerChatbotExtension({
-            _rintf: true,
-            name: "getImage",
-            description: "Get an image from the current window",
-            async get_schema() {
-              return {
-                type: "object",
-                title: "getImage",
-                description: "Get an image from the current window",
-                properties: {
-                },
-              };
-            },
-            async execute(config) {
-              let ij = await api.getWindow("ImageJ.JS")
-              if(!ij){
-                ij = await api.createWindow({src: "https://ij.imjoy.io", name: "ImageJ.JS"})
-              }
-              const image = await ij.getImage();
-              return image;
-            },
-          })
-    
-          await api.registerChatbotExtension({
-            _rintf: true,
-            name: "showImage",
-            description: "Show an image in the current window",
-            async get_schema() {
-              return {
-                type: "object",
-                title: "showImage",
-                description: "Show an image in the current window, the input should be an image.",
-                properties: {
-                  image: {
-                    type: "object",
-                    title: "image",
-                    description: "The image to show.",
-                    properties: {
-                      rtype: {
-                        type: "string"
-                      },
-                      reference_id: {
-                        type: "string",
-                        description: "The reference id of the image",
-                      },
-                    },
-                    required: ["rtype", "reference_id"],
-                  },
-                },
-                required: ["image"],
-                allow_additional_properties: false,
-              };
-            },
-            async execute(config) {
-              let ij = await api.getWindow("ImageJ.JS")
-              if(!ij){
-                ij = await api.createWindow({src: "https://ij.imjoy.io", name: "ImageJ.JS"})
-              }
-              const image = config["image"];
-              await ij.viewImage(image);
-              return "Done"
-            },
-          })
-          await api.registerChatbotExtension({
-            _rintf: true,
-            name: "runImageJMacro",
-            description: "Run a macro in ImageJ.JS",
-            async get_schema(){
-              return {
-                "type": "object",
-                "title": "RunImageJMacro",
-                "description": "Run a macro in ImageJ.JS",
-                "properties": {
-                  "macro": {
-                    "type": "string",
-                    "description": "The macro to run"
-                  },
-                  "args": {
-                    "type": "object",
-                    "description": "Arguments for the macro"
-                  }
-                }
-              }
-            },
-            async execute(config){
-              let ij = await api.getWindow("ImageJ.JS")
-              if(!ij){
-                ij = await api.createWindow({src: "https://ij.imjoy.io", name: "ImageJ.JS"})
-              }
-              try{
-                const result = await ij.runMacro(config['macro'], config['args'])
-                return result
-              }
-              catch(e){
-                console.error(e)
-                return e.toString()
-              }
-            }
-          })
-          await api.showMessage("ImageJMacro extension is enabled")
-        },
-      });  */
-      return app;
-    }
-
     $(document).ready(async function () {
-      if(window.self !== window.top){
-        const imjoyRPC = await loadImJoyRPC()
-        const api = await imjoyRPC.setupRPC({name: 'BioImage.IO Chatbot'});
-        api.export({setup(){}, registerExtension: _registerExtension});
-      }
-      else{
-        await setupImJoyApp();
-      }
-
       let svc;
       let token = null;
       const spinner = `<div class="spinner"></div>`; // Spinner HTML
-      const shortIntroMessage = "Hi there! I'm Melman, how can I assist you today?";
+  
+      let assistantName = "Melman"
+      let shortIntroMessage = `Hi there! I'm ${assistantName}, how can I assist you today?`;
+      if(window.self !== window.top){
+        const imjoyRPC = await loadImJoyRPC()
+        const api = await imjoyRPC.setupRPC({name: 'BioImage.IO Chatbot'});
+        await api.export({setup(){}, async run(ctx){
+          assistantName = ctx.config && ctx.config.assistant_name || "Melman"
+          if(api.getChatbotExtensions){
+            const extensions = await api.getChatbotExtensions(_registerExtension) // object with name: extension
+            for(let ext of Object.values(extensions)){
+              _registerExtension(ext)
+              console.log(`Registered extension: ${ext.name} (${ext.description}) for assistant ${assistantName}`)
+            }
+          }
+          shortIntroMessage = `Hi there! I'm ${assistantName}, how can I assist you today?`;
+        }, registerExtension: _registerExtension});
+      }
+
+      
+      
 
       // Function to show the login screen
       function showLoginScreen() {
@@ -754,10 +582,8 @@
             "server_url": server_url || "https://ai.imjoy.io",
             "login_callback": login_callback,
           });
-
           // If the login is successful, proceed to initialize the service
           svc = await initializeService();
-
           // Show the app interface
           showAppInterface();
         } catch (e) {
@@ -777,6 +603,7 @@
       }
       else {
         svc = await initializeService();
+
         showAppInterface();
       }
       // Manually toggle the collapse for profile options
@@ -799,8 +626,12 @@
           })
           const svc = await server.getService(service_id || "bioimageio-chatbot")
           await svc.ping()
-          const builtinExtensions = svc.builtin_extensions;
-          
+          const assistants = svc.assistants;
+          const assistant = assistants[assistantName];
+          if (!assistant) {
+            throw new Error(`Assistant ${assistantName} not found`);
+          }
+          const builtinExtensions = assistant.extensions;
           // clear extension except registered from ImJoy
           extensions = [];
           for(let ext of registeredExtensions){
@@ -986,10 +817,9 @@
             $('#progress-message-content').html(marked(accumulatedArgs, { renderer: renderer }));
           }
         }
-
         try {
           // Call the chat function with text and image data
-          response = await svc.chat(textMessage, chat_history, user_profile, statusCallback, sessionId, getSelectedExtensions());
+          response = await svc.chat(textMessage, chat_history, user_profile, statusCallback, sessionId, getSelectedExtensions(), assistantName);
           // const regex = /!\[.*?\]\(data:.+?\)/g;
           // const replacementText = '`image placeholder`';
           // responseWithoutImage = response.replace(regex, replacementText);
