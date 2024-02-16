@@ -31,6 +31,7 @@ class QuestionWithHistory(BaseModel):
     chat_history: Optional[List[Dict[str, str]]] = Field(None, description="The chat history.")
     user_profile: Optional[UserProfile] = Field(None, description="The user's profile. You should use this to personalize the response based on the user's background and occupation.")
     chatbot_extensions: Optional[List[Dict[str, Any]]] = Field(None, description="Chatbot extensions.")
+    context: Optional[Dict[str, Any]] = Field(None, description="The context of request.")
 
 class ResponseStep(BaseModel):
     """Response step"""
@@ -43,10 +44,10 @@ class RichResponse(BaseModel):
     steps: List[ResponseStep] = Field(description="Intermediate steps")
 
 
-def create_customer_service(builtin_extensions):
+def create_assistants(builtin_extensions):
     # debug = os.environ.get("BIOIMAGEIO_DEBUG") == "true"
 
-    async def respond_to_user(question_with_history: QuestionWithHistory = None, role: Role = None) -> str:
+    async def respond_to_user(question_with_history: QuestionWithHistory = None, role: Role = None) -> RichResponse:
         """Answer the user's question directly or retrieve relevant documents from the documentation, or create a Python Script to get information about details of models."""
         steps = []
         inputs = [question_with_history.user_profile] + list(question_with_history.chat_history) + [question_with_history.question]
@@ -74,7 +75,7 @@ def create_customer_service(builtin_extensions):
             steps.append(ResponseStep(name=f"step-{idx}", details={"details": convert_to_dict(step_list)}))
         return RichResponse(text=response, steps=steps)
 
-    customer_service = Role(
+    melman = Role(
         instructions=
             "You are Melman from Madagascar, a helpful assistant for the bioimaging community. "
             "You ONLY respond to user's queries related to bioimaging. "
@@ -84,7 +85,30 @@ def create_customer_service(builtin_extensions):
         actions=[respond_to_user],
         model="gpt-4-0125-preview",
     )
-    return customer_service
+    event_bus = melman.get_event_bus()
+    event_bus.register_default_events()
+    
+    async def respond_to_user(question_with_history: QuestionWithHistory = None, role: Role = None) -> RichResponse:
+        """Answer the user's question."""
+        inputs = [question_with_history.user_profile] + list(question_with_history.chat_history) + [question_with_history.question]
+        response = await role.aask(inputs)
+        return RichResponse(
+            text=response,
+            steps=[]
+        )
+
+    kowalski = Role(
+        instructions=
+            "You are Kowalski from Madagascar, you serve the bioimaging community as an image analysis expert."
+            "You ONLY respond to user's queries related to bioimage analysis."
+            "Your communications should be accurate, concise, logical and avoid fabricating information, "
+            "and if necessary, request additional clarification."
+            "Your goal is to guide users to use image analysis tools, provide code and scripts, "
+            "answer any question related to running software tools and programming for image analysis.",
+        actions=[respond_to_user],
+        model="gpt-4-0125-preview",
+    )
+    return {"Melman": melman, "Kowalski": kowalski}
 
 async def save_chat_history(chat_log_full_path, chat_his_dict):    
     # Serialize the chat history to a json string
@@ -115,9 +139,7 @@ async def register_chat_service(server):
         print(f"The chat session folder is not found at {chat_logs_path}, will create one now.")
         os.makedirs(chat_logs_path, exist_ok=True)
     
-    customer_service = create_customer_service(builtin_extensions)
-    event_bus = customer_service.get_event_bus()
-    event_bus.register_default_events()
+    assistants = create_assistants(builtin_extensions)
         
     def load_authorized_emails():
         if login_required:
@@ -158,10 +180,10 @@ async def register_chat_service(server):
         chat_log_full_path = os.path.join(chat_logs_path, filename)
         await save_chat_history(chat_log_full_path, chat_his_dict)
         print(f"User report saved to {filename}")
-        
-    async def chat(text, chat_history, user_profile=None, status_callback=None, session_id=None, extensions=None, context=None):
-        if login_required and context and context.get("user"):
-            assert check_permission(context.get("user")), "You don't have permission to use the chatbot, please sign up and wait for approval"
+    
+    async def talk_to_assistant(assistant_name, session_id, user_message: QuestionWithHistory, status_callback):
+        assert assistant_name in assistants, f"Assistant {assistant_name} is not found."
+        assistant = assistants[assistant_name]
         session_id = session_id or secrets.token_hex(8)
         # Listen to the `stream` event
         async def stream_callback(message):
@@ -169,11 +191,10 @@ async def register_chat_service(server):
                 if message.session.id == session_id:
                     await status_callback(message.dict())
 
+        event_bus = assistant.get_event_bus()
         event_bus.on("stream", stream_callback)
-
-        m = QuestionWithHistory(question=text, chat_history=chat_history, user_profile=UserProfile.parse_obj(user_profile), chatbot_extensions=extensions)
         try:
-            response = await customer_service.handle(Message(content="", data=m , role="User", session_id=session_id))
+            response = await assistant.handle(Message(content="", data=user_message , role="User", session_id=session_id))
         except Exception as e:
             event_bus.off("stream", stream_callback)
             raise e
@@ -181,21 +202,28 @@ async def register_chat_service(server):
         event_bus.off("stream", stream_callback)
         # get the content of the last response
         response = response[-1].data # type: RichResponse
-        print(f"\nUser: {text}\nChatbot: {response.text}")
+        print(f"\nUser: {user_message.question}\nAssistant({assistant_name}): {response.text}")
 
         if session_id:
-            chat_history.append({ 'role': 'user', 'content': text })
-            chat_history.append({ 'role': 'assistant', 'content': response.text })
+            user_message.chat_history.append({ 'role': 'user', 'content': user_message.question })
+            user_message.chat_history.append({ 'role': 'assistant', 'content': response.text })
             version = pkg_resources.get_distribution('bioimageio-chatbot').version
-            chat_his_dict = {'conversations':chat_history, 
+            chat_his_dict = {'conversations': user_message.chat_history, 
                      'timestamp': str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), 
-                     'user': context.get('user'),
+                     'user': user_message.context.get('user'),
+                     'assistant_name': assistant_name,
                      'version': version}
             filename = f"chatlogs-{session_id}.json"
             chat_log_full_path = os.path.join(chat_logs_path, filename)
             await save_chat_history(chat_log_full_path, chat_his_dict)
             print(f"Chat history saved to {filename}")
         return response.dict()
+
+    async def chat(text, chat_history, user_profile=None, status_callback=None, session_id=None, extensions=None, assistant_name="Melman", context=None):
+        if login_required and context and context.get("user"):
+            assert check_permission(context.get("user")), "You don't have permission to use the chatbot, please sign up and wait for approval"
+        m = QuestionWithHistory(question=text, chat_history=chat_history, user_profile=UserProfile.parse_obj(user_profile), chatbot_extensions=extensions, context=context)
+        return await talk_to_assistant(assistant_name, session_id, m, status_callback)
 
     async def ping(context=None):
         if login_required and context and context.get("user"):
