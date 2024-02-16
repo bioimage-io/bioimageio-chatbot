@@ -7,7 +7,7 @@
     "name": "SearchBioImageModelZoo",
     "type": "web-python",
     "version": "0.1.0",
-    "description": "BioImage.IO Chatbot Extension for getting information about models, applications, datasets, etc. in the model zoo.",
+    "description": "BioImage.IO Chatbot Extension for getting information about models, applications, datasets, etc. in the BioImage Model Zoo.",
     "tags": [],
     "ui": "",
     "cover": "",
@@ -171,13 +171,13 @@ class ImJoyPlugin():
         if api.registerChatbotExtension:
             # Loading inside the chatbot
             await register_chatbot_extension(api.registerChatbotExtension)
-            await api.showMessage("ModelZooInfoScript Chatbot Extension registered")
+            await api.showMessage("BioImage Model Zoo Chatbot Extension registered")
         else:
             # Use together with the chatbot
             chatbot = await api.getWindow("BioImage.IO Chatbot")
             if chatbot:
                 await register_chatbot_extension(chatbot.registerExtension)
-                await api.showMessage("ModelZooInfoScript Chatbot Extension registered")
+                await api.showMessage("BioImage Model Zoo Chatbot Extension registered")
 
         await api.log('initialized')
 
