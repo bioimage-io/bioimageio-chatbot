@@ -129,6 +129,7 @@ async def register_chatbot_extension(register):
     "Querying statistical details about models, applications, datasets in the BioImage Model Zoo (bioimage.io) by generating and executing "
     "Python 3 scripts in the browser with Pyodide. Utilize 'resources', a local variable with zoo resources as dictionaries, "
     "for data instead of server requests. Handle missing fields in zoo items. Output query responses to stdout. "
+    "Remember to filter out resource items based on the 'type' key."
     "Avoid using requests for remote server interactions. 'resources' variable details:\\n"
     ) + resource_item_stats
 
