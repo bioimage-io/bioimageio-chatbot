@@ -1,40 +1,23 @@
-import json
 import httpx
 import os
 import os
 import urllib.parse
 import asyncio
-from enum import Enum
+import html2text
 from pydantic import BaseModel, Field
 from bioimageio_chatbot.utils import ChatbotExtension
 from typing import List, Dict, Any, Optional
-
-class OrderEnum(str, Enum):
-    latest = "latest"
-    likes = "likes"
-    views = "views"
-    latest_topic = "latest_topic"
-
-class StatusEnum(str, Enum):
-    solved = "solved"
-    unsolved = "unsolved"
-    open = "open"
-    closed = "closed"
-
-class ReadType(str, Enum):
-    latest = "post"
-    likes = "topic"
 
 class SearchParameters(BaseModel):
     """Parameters for searching the Image.sc Forum."""
     query: str = Field(..., description="The search query string.")
     top_k: int = Field(..., gt=0, description="Maximum number of search results to return.")
-    order: Optional[OrderEnum] = Field(OrderEnum.latest, description="Order of the search results.")
-    status: Optional[StatusEnum] = Field(StatusEnum.solved, description="The status filter for the search results.")
+    order: Optional[str] = Field("latest", description="Order of the search results, options: latest, likes, views, latest_topic.")
+    status: Optional[str] = Field(None, description="The status filter for the search results, options: solved, unsolved, open, closed.")
 
 class ReadPostsParameters(BaseModel):
     """Parameters for reading posts or topics from the Image.sc Forum."""
-    type: ReadType = Field(..., description="post or topic")
+    type: str = Field(..., description="type: `post` or `topic`")
     id: int = Field(..., description="topic id")
 
 class DiscourseClient:
@@ -49,8 +32,9 @@ class DiscourseClient:
         query_components = [
             f"q={urllib.parse.quote(query)}",
             f"order:{order}",
-            f"status:{status}"
         ]
+        if status:
+            query_components.append(f"status:{status}")
         return " ".join(query_components)
 
     def _get_headers(self) -> Dict[str, str]:
@@ -77,13 +61,13 @@ class DiscourseClient:
         cleaned_results["topics"] = cleaned_results["topics"][:top_k]
         return cleaned_results
 
-    async def search_image_sc(self, params: SearchParameters) -> Dict[str, Any]:
+    async def search_image_sc(self, req: SearchParameters) -> Dict[str, Any]:
         """Search the Image.sc Forum(a forum for scientific image software) for posts and topics."""
         # Prepare headers for authentication
         headers = self._get_headers()
 
         # Build the query string
-        query_string = self._build_query_string(params.query, params.order, params.status)
+        query_string = self._build_query_string(req.query, req.order, req.status)
         
         # Construct the full URL
         url = f"{self._base_url}/search.json?{query_string}"
@@ -94,16 +78,16 @@ class DiscourseClient:
 
         # Check if the request was successful
         if response.status_code == 200:
-            return self._cleanup_search_results(response.json(), params.top_k)  # Return the JSON response
+            return self._cleanup_search_results(response.json(), req.top_k)  # Return the JSON response
         else:
             response.raise_for_status()  # Raise an error for bad responses
 
-    async def read_image_sc_posts(self, param: ReadPostsParameters) -> List[str]:
+    async def read_image_sc_posts(self, req: ReadPostsParameters) -> List[str]:
         """Read a single or all the posts in a topic from the Image.sc Forum (a discussion forum for scientific image software)."""
-        if param.type == "post":
-            return await self.get_post_content(param.id)
-        elif param.type == "topic":
-            return await self.get_topic_content(param.id)
+        if req.type == "post":
+            return await self.get_post_content(req.id)
+        elif req.type == "topic":
+            return await self.get_topic_content(req.id)
     
     async def get_topic_content(self, topic_id: int) -> Dict[str, Any]:
         url = f"{self._base_url}/t/{topic_id}.json"
@@ -115,7 +99,10 @@ class DiscourseClient:
 
         post_ids = [post['id'] for post in topic_data['post_stream']['posts']]
         messages = await asyncio.gather(*[self.get_post_content(post_id) for post_id in post_ids])
-        return {"posts": [f"{msg['username']}: {msg['content']}" for msg in messages], "url": f"{self._base_url}/t/{topic_data['slug']}"}
+        posts = []
+        for msg in messages:
+            posts.append(f"{msg['username']}: {html2text.html2text(msg['content'])}")
+        return {"posts": posts, "url": f"{self._base_url}/t/{topic_data['slug']}"}
 
     async def get_post_content(self, post_id: int) -> str:
         url = f"{self._base_url}/posts/{post_id}.json"

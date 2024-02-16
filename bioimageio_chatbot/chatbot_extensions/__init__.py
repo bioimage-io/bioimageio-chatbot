@@ -36,6 +36,7 @@ async def extension_to_tool(extension: ChatbotExtension):
 
     assert extension.schema_class, f"Extension {extension.name} has no valid schema class."
 
+    # NOTE: Right now, the first arguments has to be req
     async def execute(req: extension.schema_class):
         print("Executing extension:", extension.name, req)
         # req = extension.schema_class.parse_obj(req)
