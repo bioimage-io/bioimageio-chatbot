@@ -11,3 +11,4 @@ pandas
 duckduckgo-search==4.2.0
 langchain-openai==0.0.5
 rank-bm25==0.2.2
+html2text==2020.1.16

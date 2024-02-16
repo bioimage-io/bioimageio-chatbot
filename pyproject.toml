@@ -21,6 +21,7 @@ dependencies = [
   "rank-bm25",
   "langchain-openai",
   "langchain-community",
+  "html2text",
 ]
 
 [tool.setuptools]
