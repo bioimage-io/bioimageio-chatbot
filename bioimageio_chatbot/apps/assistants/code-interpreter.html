@@ -116,6 +116,7 @@
         <div id="app">
             <h3>Code Interpreter</h3>
             <button onclick="onMountFiles()">Load Files</button>
+            <button onclick="runScript('\n', false)">+ Code Block</button>
         </div>
     </div>
     <script>
@@ -234,6 +235,9 @@
                     this.editorContainer.style.display = "none"
                     this.button.classList.add("hide")
                 }
+                else{
+                    this.editorContainer.style.display = "block"
+                    this.button.classList.remove("hide")}
                 return result
             }
         }
@@ -245,6 +249,7 @@
             if (!worker) {
                 worker = await createWorker()
             }
+            hideEditor = hideEditor || false
             const appContainer = document.getElementById('app')
             const container = document.createElement("div")
             container.classList.add("runnable")
@@ -319,7 +324,7 @@
                 async execute(config) {
                     const code = config["code"];
                     console.log("CodeInterpreter running code:", code)
-                    const result = await runScript(code)
+                    const result = await runScript(code, false)
                     console.log("CodeInterpreter result:", result)
                     return result;
                 },
@@ -348,7 +353,7 @@
                 console.log("CodeInterpreter is ready.")
             }
             else {
-                await runScript("import sys\nprint(sys.version)\n")
+                await runScript("import sys\nprint(sys.version)\n", false)
                 console.log("CodeInterpreter is running in the main window.")
             }
         })
