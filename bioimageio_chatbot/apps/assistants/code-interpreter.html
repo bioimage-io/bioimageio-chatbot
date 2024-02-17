@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Code Interpreter</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ace.js"></script>
+    <script src="https://lib.imjoy.io/imjoy-loader.js"></script>
+    <style>
+        body {
+            margin: 10;
+            font-family: Merriweather, Helvetica, Arial, sans-serif;
+            font-size: 16px;
+        }
+
+        .runnable .ace_editor {
+            border-bottom: 1px solid #ddd;
+            font-size: 16px;
+        }
+
+        .runnable {
+            border: 1px solid #ccc5c5;
+            border-radius: 5px;
+        }
+
+        .runnable .run {
+            background-color: green;
+            color: white;
+            border: none;
+            width: 100%;
+            height: 28px;
+            line-height: 16px;
+            vertical-align: middle;
+        }
+
+        .runnable .run:not(:disabled):hover {
+            opacity: 90%;
+        }
+
+        .runnable .run:active {
+            opacity: 110% !important;
+        }
+
+        .runnable .run::before {
+            content: "▶\00a0\00a0";
+            font-size: 10px;
+            line-height: 16px;
+            vertical-align: middle;
+        }
+
+        .runnable .run::after {
+            content: "Run";
+        }
+
+        .runnable .run.loading {
+            background-color: gray;
+        }
+
+        .runnable .run.loading::before {
+            content: "";
+        }
+
+        .runnable .run.loading::after {
+            content: "Loading...";
+        }
+
+        .runnable .run.hide {
+            display: none;
+        }
+
+        .runnable .run.running {
+            background-color: gray;
+        }
+
+        .runnable .run.running::before {
+            content: "";
+        }
+
+        .runnable .run.running::after {
+            content: "Running...";
+        }
+
+        .runnable .run.error {
+            background-color: #ba6565;
+        }
+
+        .runnable .run.error:after {
+            content: "Load failed. Try closing and re-opening this tab; some browsers do not garbage collect on refresh.";
+        }
+
+        .runnable .output:not(:empty) {
+            overflow: auto;
+            margin: 5px 41px 5px 41px;
+            font-size: 12px;
+            font-family: monospace;
+        }
+
+        .runnable .output pre {
+            margin: 0;
+            padding: 0;
+            display: inline;
+        }
+
+        .runnable .output img {
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <div>
+        <div id="app">
+            <h3>Code Interpreter</h3>
+            <button onclick="onMountFiles()">Load Files</button>
+        </div>
+    </div>
+    <script>
+
+        // Description: This file is used to run Python code in a separate thread using Web Worker.
+        // Code adapted from https://ijc8.me/2021/06/02/runnable-posts/
+
+        // Create Web Worker to run Python code in a separate thread.
+        async function createWorker() {
+            const scriptContent = document.getElementById('pyodide_worker.js').text;
+            let blob;
+            try {
+                blob = new Blob([scriptContent], { type: 'application/javascript' });
+            } catch (e) { // Backwards-compatibility
+                window.BlobBuilder = window.BlobBuilder || window.WebKitBlobBuilder || window.MozBlobBuilder;
+                blob = new BlobBuilder();
+                blob.append(scriptContent);
+                blob = blob.getBlob();
+            }
+            const worker = new Worker(URL.createObjectURL(blob));
+            // const pyodideWorker = new Worker(window.location.origin + '/assistants/pyodide_worker.js')
+            await new Promise((resolve) => worker.onmessage = resolve)
+            return worker
+        }
+
+        class CodeBox {
+            constructor(worker, container, code, hideEditor = true) {
+                this.hideEditor = hideEditor
+                this.worker = worker
+                const editorContainer = document.createElement("div")
+                editorContainer.textContent = container.textContent.trim()
+                container.textContent = ""
+                container.appendChild(editorContainer)
+                this.editorContainer = editorContainer
+                this.editor = ace.edit(editorContainer, {
+                    maxLines: 30,
+                });
+                this.editor.setTheme("ace/theme/chrome")
+                this.editor.session.setMode("ace/mode/python")
+                this.editor.commands.addCommand({
+                    name: "run",
+                    bindKey: { win: "Ctrl-Enter", mac: "Command-Enter" },
+                    exec: () => this.run(),
+                })
+
+                if (code) {
+                    this.editor.setValue(code)
+                }
+            
+                this.button = document.createElement("button")
+                this.button.classList.add("run")
+                this.button.classList.add("loading")
+                this.button.disabled = true
+                this.button.onclick = () => this.run()
+                container.appendChild(this.button)
+
+                this.output = document.createElement("div")
+                this.output.classList.add("output")
+                container.appendChild(this.output)
+            }
+
+            _executeScript(script) {
+                return new Promise((resolve, reject) => {
+                    this.worker.onerror = reject
+                    const handler = (e) => {
+                        if (e.data.output !== undefined) {
+                            const pre = document.createElement("pre")
+                            pre.textContent = e.data.output
+                            this.output.appendChild(pre)
+                            // scroll to the element
+                            setTimeout(() => pre.scrollIntoView({ behavior: "smooth", block: "end", inline: "start" }), 500)
+                        } else if (e.data.url !== undefined) {
+                            const el = document.createElement(e.data.type)
+                            el.src = e.data.url
+                            if (e.data.type === "audio") {
+                                el.controls = true
+                            }
+                            for (const [attr, value] of e.data.attrs ?? []) {
+                                el[attr] = value
+                            }
+                            this.output.appendChild(el)
+                            setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "end", inline: "start" }), 500)
+                        } else if(e.data.executionDone){
+                            this.worker.removeEventListener("message", handler)
+                            resolve(e.data.outputs)
+                        }
+                        else if(e.data.executionError){
+                            this.worker.removeEventListener("message", handler)
+                            reject(e.data.executionError)
+                        }
+                        else{
+                            console.error("unknow message", e.data)
+                        }
+                    }
+                    this.worker.addEventListener("message", handler)
+                    this.worker.postMessage({ source: script })
+                })
+            }
+
+            async run() {
+                // Don't change the button state unless the computation takes at least 30ms.
+                for (const button of document.querySelectorAll(".runnable .run")) {
+                    button.disabled = true
+                }
+                const timer = setTimeout(() => this.button.classList.add("running"), 30)
+                this.output.innerText = ""
+
+                const result = await this._executeScript(this.editor.getValue(), this.output)
+                
+                clearTimeout(timer)
+                this.button.classList.remove("running")
+                for (const button of document.querySelectorAll(".runnable .run")) {
+                    button.disabled = false
+                }
+                if(this.hideEditor){
+                    this.editorContainer.style.display = "none"
+                    this.button.classList.add("hide")
+                }
+                return result
+            }
+        }
+
+
+        let worker = null
+
+        async function runScript(code, hideEditor) {
+            if (!worker) {
+                worker = await createWorker()
+            }
+            const appContainer = document.getElementById('app')
+            const container = document.createElement("div")
+            container.classList.add("runnable")
+            appContainer.appendChild(container)
+
+            const codebox = new CodeBox(worker, container, code, hideEditor)
+            codebox.button.classList.remove("loading")
+            codebox.button.disabled = false
+            return await codebox.run()
+        }
+
+        async function mountNativeFs(mountPoint) {
+            if (!worker) {
+                worker = await createWorker()
+            }
+            const dirHandle = await showDirectoryPicker();
+            if ((await dirHandle.queryPermission({ mode: "readwrite" })) !== "granted") {
+                if (
+                    (await dirHandle.requestPermission({ mode: "readwrite" })) !== "granted"
+                ) {
+                    throw Error("Unable to read and write directory");
+                }
+            }
+            return await new Promise((resolve, reject) => {
+                const handler = (e) => {
+                    if (e.data.mounted) {
+                        worker.removeEventListener("message", handler)
+                        resolve(e.data.mounted)
+                    }
+                    else if (e.data.mountError) {
+                        worker.removeEventListener("message", handler)
+                        reject(e.data.mountError)
+                    }
+                }
+                worker.addEventListener("message", handler)
+                worker.postMessage({ mount: { mountPoint, dirHandle } })
+            })
+        }
+
+        async function onMountFiles() {
+            const mountPoint = "/drive"
+            try {
+                const mounted = await mountNativeFs(mountPoint)
+                console.log("Native FS mounted:", mounted)
+                runScript(`import os\nprint("Files mounted at ${mountPoint}")\nprint(os.listdir("${mountPoint}"))\n`, true)
+            } catch (e) {
+                console.error("Failed to mount native FS:", e)
+            }
+        }
+
+        async function setupExtension(api) {
+            await api.registerChatbotExtension({
+                _rintf: true,
+                name: "CodeInterpreter",
+                description: "Execute Python3 code in the browser with Pyodide, standard outputs, errors and stack trace will be returned as the result.",
+                async get_schema() {
+                    return {
+                        type: "object",
+                        title: "CodeInterpreter",
+                        description: "Execute Python3 code in the browser with Pyodide, standard outputs, errors and stack trace will be returned as the result.",
+                        properties: {
+                            code: {
+                                type: "string",
+                                title: "code",
+                                description: "The Python3 code to execute",
+                            }
+                        },
+                        required: ["code"],
+                        allow_additional_properties: false,
+                    };
+                },
+                async execute(config) {
+                    const code = config["code"];
+                    console.log("CodeInterpreter running code:", code)
+                    const result = await runScript(code)
+                    console.log("CodeInterpreter result:", result)
+                    return result;
+                },
+            })
+        }
+        // ready
+        document.addEventListener("DOMContentLoaded", async () => {
+            // check if it's inside an iframe
+            if (window.self !== window.top) {
+                const imjoyRPC = await loadImJoyRPC()
+                const api = await imjoyRPC.setupRPC({ name: 'CodeInterpreter' });
+                api.export({
+                    async setup() {
+                        if (api.registerChatbotExtension)
+                            setupExtension(api)
+                        // mountNativeFs('/drive')
+                    },
+                    runScript,
+                    mountNativeFs,
+                    async run(ctx) {
+                        const code = (ctx.data && ctx.data.code) || "import sys\nprint(sys.version)\n"
+                        const results = await runScript(code, true)
+                        console.log(results)
+                    }
+                })
+                console.log("CodeInterpreter is ready.")
+            }
+            else {
+                await runScript("import sys\nprint(sys.version)\n")
+                console.log("CodeInterpreter is running in the main window.")
+            }
+        })
+
+    </script>
+
+    <script id="pyodide_worker.js" type="javascript/worker">
+const indexURL = 'https://cdn.jsdelivr.net/pyodide/v0.25.0/full/'
+importScripts(`${indexURL}pyodide.js`);
+
+(async () => {
+    self.pyodide = await loadPyodide({ indexURL })
+    // NOTE: We intentionally avoid runPythonAsync here because we don't want this to pre-load extra modules like matplotlib.
+    self.pyodide.runPython(setupCode)
+    self.postMessage({loading: true})  // Inform the main thread that we finished loading.
+})()
+
+let outputs = []
+
+function write(output) {
+    self.postMessage({ output })
+    outputs.push(output)
+    return output.length
+}
+
+function show(type, url, attrs) {
+    const turl = url.length > 32 ? url.slice(0, 32) + "..." : url
+    outputs.push({type, url: turl, attrs: attrs?.toJs()})
+    self.postMessage({ type, url, attrs: attrs?.toJs() })
+}
+
+// Stand-in for `time.sleep`, which does not actually sleep.
+// To avoid a busy loop, instead import asyncio and await asyncio.sleep().
+function spin(seconds) {
+    const time = performance.now() + seconds * 1000
+    while (performance.now() < time);
+}
+
+// NOTE: eval(compile(source, "<string>", "exec", ast.PyCF_ALLOW_TOP_LEVEL_AWAIT))
+// returns a coroutine if `source` contains a top-level await, and None otherwise.
+
+const setupCode = `
+import array
+import ast
+import base64
+import contextlib
+import io
+import js
+import pyodide
+import sys
+import time
+import traceback
+import wave
+
+time.sleep = js.spin
+
+# For redirecting stdout and stderr later.
+class JSWriter(io.TextIOBase):
+    def write(self, s):
+        return js.write(s)
+
+def setup_matplotlib():
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+
+    def show():
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png')
+        img = 'data:image/png;base64,' + base64.b64encode(buf.getvalue()).decode('utf-8')
+        js.show("img", img)
+        plt.clf()
+
+    plt.show = show
+
+def show_image(image, **attrs):
+    from PIL import Image
+    if not isinstance(image, Image.Image):
+        image = Image.fromarray(image)
+    buf = io.BytesIO()
+    image.save(buf, format='png')
+    data = 'data:image/png;base64,' + base64.b64encode(buf.getvalue()).decode('utf-8')
+    js.show("img", data, attrs)
+
+def show_animation(frames, duration=100, format="apng", loop=0, **attrs):
+    from PIL import Image
+    buf = io.BytesIO()
+    img, *imgs = [frame if isinstance(frame, Image.Image) else Image.fromarray(frame) for frame in frames]
+    img.save(buf, format='png' if format == "apng" else format, save_all=True, append_images=imgs, duration=duration, loop=0)
+    img = f'data:image/{format};base64,' + base64.b64encode(buf.getvalue()).decode('utf-8')
+    js.show("img", img, attrs)
+
+def convert_audio(data):
+    try:
+        import numpy as np
+        is_numpy = isinstance(data, np.ndarray)
+    except ImportError:
+        is_numpy = False
+    if is_numpy:
+        if len(data.shape) == 1:
+            channels = 1
+        if len(data.shape) == 2:
+            channels = data.shape[0]
+            data = data.T.ravel()
+        else:
+            raise ValueError("Too many dimensions (expected 1 or 2).")
+        return ((data * (2**15 - 1)).astype("<h").tobytes(), channels)
+    else:
+        data = array.array('h', (int(x * (2**15 - 1)) for x in data))
+        if sys.byteorder == 'big':
+            data.byteswap()
+        return (data.tobytes(), 1)
+
+def show_audio(samples, rate):
+    bytes, channels = convert_audio(samples)
+    buf = io.BytesIO()
+    with wave.open(buf, mode='wb') as w:
+        w.setnchannels(channels)
+        w.setframerate(rate)
+        w.setsampwidth(2)
+        w.setcomptype('NONE', 'NONE')
+        w.writeframes(bytes)
+    audio = 'data:audio/wav;base64,' + base64.b64encode(buf.getvalue()).decode('utf-8')
+    js.show("audio", audio)
+
+# HACK: Prevent 'wave' import from failing because audioop is not included with pyodide.
+import types
+embed = types.ModuleType('embed')
+sys.modules['embed'] = embed
+embed.image = show_image
+embed.animation = show_animation
+embed.audio = show_audio
+
+async def run(source):
+    out = JSWriter()
+    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
+        try:
+            imports = pyodide.code.find_imports(source)
+            await js.pyodide.loadPackagesFromImports(source)
+            if "matplotlib" in imports or "skimage" in imports:
+                setup_matplotlib()
+            if "embed" in imports:
+                await js.pyodide.loadPackagesFromImports("import numpy, PIL")
+            code = compile(source, "<string>", "exec", ast.PyCF_ALLOW_TOP_LEVEL_AWAIT)
+            result = eval(code, {})
+            if result:
+                await result
+        except:
+            traceback.print_exc()
+`
+
+self.onmessage = async (event) => {
+    if(event.data.source){
+        try{
+            const { source } = event.data
+            self.pyodide.globals.set("source", source)
+            outputs = []
+            await self.pyodide.runPythonAsync("await run(source)")
+            self.postMessage({ executionDone: true, outputs })
+        }
+        catch(e){
+            self.postMessage({ executionError: e.message })
+        }
+    }
+    if(event.data.mount){
+        try{
+            const { mountPoint, dirHandle } = event.data.mount
+            const nativefs = await self.pyodide.mountNativeFS(mountPoint, dirHandle)
+            console.log("Native FS mounted:", nativefs)
+            self.postMessage({ mounted: mountPoint })
+        }
+        catch(e){
+            self.postMessage({ mountError: e.message })
+        }
+    }
+
+}
+</script>
+</body>
+
+</html>
