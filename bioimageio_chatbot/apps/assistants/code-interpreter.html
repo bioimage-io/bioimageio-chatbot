@@ -165,7 +165,7 @@
         <h3>Code Interpreter</h3>
         <div class="row align-items-center">
             <div class="col-auto">
-                <button class="btn btn-primary btn-sm me-2" onclick="runScript(null, '')"><i class="fas fa-code me-1"></i>Code Block</button>
+                <button class="btn btn-primary btn-sm me-2" onclick="runScript(null, '')"><i class="fas fa-plus me-1"></i>Code Block</button>
                 <button class="btn btn-primary btn-sm me-2" onclick="onMountFiles()"><i class="fas fa-folder-open me-1"></i>Load Files</button>
                 <button class="btn btn-primary btn-sm me-2" onclick="createWorker()"><i class="fas fa-plus me-1"></i>New Worker</button>
             </div>
@@ -247,6 +247,24 @@
             if (workers[id]) {
                 workers[id].terminate()
                 delete workers[id]
+                const selection = document.getElementById('worker-selection')
+                for (const option of selection.children) {
+                    if (option.value === id) {
+                        option.remove()
+                        break
+                    }
+                }
+                const workerContainers = document.getElementById('worker-containers')
+                const container = document.getElementById(`worker-container-${id}`)
+                container.remove()
+                if (currentWorker && currentWorker.id === id) {
+                    currentWorker = null
+                    // select the first worker
+                    if (selection.children.length > 0) {
+                        selection.value = selection.children[0].value
+                        showWorker(selection.children[0].value)
+                    }
+                }
             }
         }
         async function showWorker(id) {
@@ -426,9 +444,10 @@
             return await codebox.run()
         }
 
-        async function mountNativeFs(mountPoint) {
-            const worker = currentWorker || await getWorker()
-            const dirHandle = await showDirectoryPicker();
+        async function mountNativeFs(workerId, mountPoint, dirHandle) {
+            workerId = workerId || currentWorker?.id
+            const worker = await getWorker(workerId)
+            dirHandle = dirHandle || await showDirectoryPicker();
             if ((await dirHandle.queryPermission({ mode: "readwrite" })) !== "granted") {
                 if (
                     (await dirHandle.requestPermission({ mode: "readwrite" })) !== "granted"
@@ -455,7 +474,7 @@
         async function onMountFiles() {
             const mountPoint = "/drive"
             try {
-                const mounted = await mountNativeFs(mountPoint)
+                const mounted = await mountNativeFs(null, mountPoint)
                 console.log("Native FS mounted:", mounted)
                 runScript(null, `import os\nprint("Files mounted at ${mountPoint}")\nprint(os.listdir("${mountPoint}"))\n`)
             } catch (e) {
@@ -503,10 +522,29 @@
                     async setup() {
                         if (api.registerChatbotExtension)
                             setupExtension(api)
-                        // mountNativeFs('/drive')
+                    },
+                    async createWorker() {
+                        const worker = await createWorker()
+                        return {
+                            _rintf: true,
+                            id: worker.id,
+                            name: `Worker ${worker.id}`,
+                            async runScript(code, hideEditor) {
+                                return await runScript(worker.id, code, hideEditor)
+                            },
+                            async mount(mountPoint, dirHandle) {
+                                return await mountNativeFs(worker.id, mountPoint, dirHandle)
+                            },
+                            async close() {
+                                await closeWorker(worker.id)
+                            },
+                            async show() {
+                                await showWorker(worker.id)
+                            }
+                        }
                     },
                     runScript,
-                    mountNativeFs,
+                    mount: mountNativeFs,
                     async run(ctx) {
                         const code = (ctx.data && ctx.data.code) || "import sys\nprint(sys.version)\n"
                         const results = await runScript(ctx.data && ctx.data.worker_id, code, true)
