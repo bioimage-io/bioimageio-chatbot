@@ -8,11 +8,46 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ace.js"></script>
     <script src="https://lib.imjoy.io/imjoy-loader.js"></script>
+    <link href="https://www.unpkg.com/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Add the Font Awesome library -->
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css"
+      integrity="sha384-DyZ88mC6Up2uqS4h/KRgHuoeGwBcD4Ng9SiP4dIRy0EXTlnuz47vAwmeGwVChigm" crossorigin="anonymous" />
+    <link rel="icon" type="image/x-icon" href="https://bioimage.io/static/icons/favicon.ico">
     <style>
         body {
             margin: 10;
             font-family: Merriweather, Helvetica, Arial, sans-serif;
             font-size: 16px;
+        }
+        .show-editor-button {
+            background-color: #007bff00;
+            border: none;
+            color: #1a1616;
+            padding: 6px 5px;
+            font-size: 10px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.2s, transform 0.2s;
+            outline: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            position: relative;
+            left: 0px;
+            top: 0px;
+            float: left;
+        }
+
+        /* Hover state */
+        .show-editor-button:hover {
+            color: white;
+            background-color: #0056b3; /* A darker shade for hover state */
+            transform: scale(1.05); /* Slightly enlarges the button */
+        }
+
+        /* Active state (when the button is clicked) */
+        .show-editor-button:active {
+            color: white;
+            background-color: #004085; /* Even darker shade for active state */
+            transform: scale(0.95); /* Slightly reduces the button size, giving a feeling of being pressed */
         }
 
         .runnable .ace_editor {
@@ -21,18 +56,26 @@
         }
 
         .runnable {
+            margin-top: 5px;
+            min-height: 20px;
             border: 1px solid #ccc5c5;
             border-radius: 5px;
         }
 
         .runnable .run {
-            background-color: green;
-            color: white;
+            background-color: #d7e0ec9c;
+            color: black;
+            cursor: pointer;
             border: none;
             width: 100%;
             height: 28px;
             line-height: 16px;
             vertical-align: middle;
+        }
+
+        .runnable .run:hover {
+            background-color: #2c86fb;
+            color: white;
         }
 
         .runnable .run:not(:disabled):hover {
@@ -93,7 +136,7 @@
         .runnable .output:not(:empty) {
             overflow: auto;
             margin: 5px 41px 5px 41px;
-            font-size: 12px;
+            font-size: 14px;
             font-family: monospace;
         }
 
@@ -107,25 +150,57 @@
             display: block;
             margin-left: auto;
             margin-right: auto;
+            object-fit: contain;
+            width: 100%;
+        }
+
+        #worker-containers {
+            margin-top: 10px;
         }
     </style>
 </head>
 
 <body>
-    <div>
-        <div id="app">
-            <h3>Code Interpreter</h3>
-            <button onclick="onMountFiles()">Load Files</button>
-            <button onclick="runScript('\n', false)">+ Code Block</button>
+    <div class="container-md mt-1">
+        <h3>Code Interpreter</h3>
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <button class="btn btn-primary btn-sm me-2" onclick="runScript(null, '')"><i class="fas fa-code me-1"></i>Code Block</button>
+                <button class="btn btn-primary btn-sm me-2" onclick="onMountFiles()"><i class="fas fa-folder-open me-1"></i>Load Files</button>
+                <button class="btn btn-primary btn-sm me-2" onclick="createWorker()"><i class="fas fa-plus me-1"></i>New Worker</button>
+            </div>
+            <div class="col-auto ms-auto">
+                <select id="worker-selection" class="form-select form-select-sm" title="Worker Selection" onchange="showWorker(this.value)">
+                    <option value="">Select Worker</option>
+                    <!-- Options will be dynamically added here -->
+                </select>
+            </div>
+        </div>
+        <div id="spinner" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1050;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>                 
+        <div id="worker-containers">
+            <!-- Worker containers will be dynamically added here -->
         </div>
     </div>
+
     <script>
 
+        function showSpinner() {
+            document.getElementById('spinner').style.display = 'block';
+        }
+        
+        function hideSpinner() {
+            document.getElementById('spinner').style.display = 'none';
+        }        
         // Description: This file is used to run Python code in a separate thread using Web Worker.
         // Code adapted from https://ijc8.me/2021/06/02/runnable-posts/
-
+        const workers = {}
+        let currentWorker = null
         // Create Web Worker to run Python code in a separate thread.
-        async function createWorker() {
+        async function createWorker(id) {
             const scriptContent = document.getElementById('pyodide_worker.js').text;
             let blob;
             try {
@@ -138,14 +213,75 @@
             }
             const worker = new Worker(URL.createObjectURL(blob));
             // const pyodideWorker = new Worker(window.location.origin + '/assistants/pyodide_worker.js')
-            await new Promise((resolve) => worker.onmessage = resolve)
+            try{
+                showSpinner()
+                await new Promise((resolve) => worker.onmessage = resolve)
+            }
+            catch(e){
+                console.error(e)
+                throw e
+            }
+            finally{
+                hideSpinner()
+            }
+
+            id = id || Math.random().toString(36).substring(7)
+            workers[id] = worker
+            worker.id = id;
+            // add to the selection
+            const selection = document.getElementById('worker-selection')
+            const option = document.createElement('option')
+            option.value = id
+            option.text = `Worker ${id}`
+            selection.appendChild(option)
+            selection.value = id
+            // add a new container in worker-containers
+            const workerContainers = document.getElementById('worker-containers')
+            const container = document.createElement('div')
+            container.id = `worker-container-${id}`
+            workerContainers.appendChild(container)
+            showWorker(id)
             return worker
+        }
+        async function closeWorker(id) {
+            if (workers[id]) {
+                workers[id].terminate()
+                delete workers[id]
+            }
+        }
+        async function showWorker(id) {
+            if (id && workers[id]) {
+                // make the docker container visible
+                const workerContainers = document.getElementById('worker-containers')
+                for (const container of workerContainers.children) {
+                    container.style.display = "none"
+                }
+                const container = document.getElementById(`worker-container-${id}`)
+                container.style.display = "block"
+                currentWorker = workers[id]
+            }
+        }
+
+        async function getWorker(id) {
+            if (id && workers[id]) {
+                return workers[id]
+            }
+            else {
+                return await createWorker(id)
+            }
         }
 
         class CodeBox {
-            constructor(worker, container, code, hideEditor = true) {
+            constructor(workerId, code, hideEditor) {
+                if(!workerId){
+                    throw Error("workerId is required.")
+                }
+                this.workerId = workerId
                 this.hideEditor = hideEditor
-                this.worker = worker
+                const workerContainer = document.getElementById(`worker-container-${this.workerId}`)
+                const container = document.createElement("div")
+                container.classList.add("runnable")
+                workerContainer.appendChild(container)
                 const editorContainer = document.createElement("div")
                 editorContainer.textContent = container.textContent.trim()
                 container.textContent = ""
@@ -154,17 +290,19 @@
                 this.editor = ace.edit(editorContainer, {
                     maxLines: 30,
                 });
+                // change the font size
+                this.editor.setFontSize(14)
                 this.editor.setTheme("ace/theme/chrome")
                 this.editor.session.setMode("ace/mode/python")
                 this.editor.commands.addCommand({
                     name: "run",
-                    bindKey: { win: "Ctrl-Enter", mac: "Command-Enter" },
+                    bindKey: { win: "Shift-Enter", mac: "Shift-Enter" },
                     exec: () => this.run(),
                 })
 
-                if (code) {
+                if (code !== undefined) {
                     this.editor.setValue(code)
-                }
+                }             
             
                 this.button = document.createElement("button")
                 this.button.classList.add("run")
@@ -175,12 +313,44 @@
 
                 this.output = document.createElement("div")
                 this.output.classList.add("output")
+                // add a small + button floating on the left corner of the output element
+                // note, it should be added for every output element
+                // for revealing the hidden editor
+                const showEditorButton = document.createElement("button")
+                if (this.editorContainer.style.display === "none") {
+                    showEditorButton.textContent = "-"
+                }
+                else {
+                    showEditorButton.textContent = "+"
+                }
+                showEditorButton.classList.add("show-editor-button")
+                showEditorButton.onclick = () => {
+                    if (this.editorContainer.style.display === "none") {
+                        this.editorContainer.style.display = "block"
+                        this.button.classList.remove("hide")
+                        showEditorButton.textContent = "-"
+                    }
+                    else {
+                        this.editorContainer.style.display = "none"
+                        this.button.classList.add("hide")
+                        showEditorButton.textContent = "+"
+                    }
+                }
+                container.appendChild(showEditorButton)
                 container.appendChild(this.output)
             }
 
             _executeScript(script) {
-                return new Promise((resolve, reject) => {
-                    this.worker.onerror = reject
+                return new Promise(async (resolve, reject) => {
+                    let worker
+                    try{
+                        worker = await getWorker(this.workerId)
+                    }
+                    catch(e){
+                        reject(e)
+                        return
+                    }
+                    worker.onerror = reject
                     const handler = (e) => {
                         if (e.data.output !== undefined) {
                             const pre = document.createElement("pre")
@@ -200,25 +370,27 @@
                             this.output.appendChild(el)
                             setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "end", inline: "start" }), 500)
                         } else if(e.data.executionDone){
-                            this.worker.removeEventListener("message", handler)
+                            worker.removeEventListener("message", handler)
                             resolve(e.data.outputs)
                         }
                         else if(e.data.executionError){
-                            this.worker.removeEventListener("message", handler)
+                            worker.removeEventListener("message", handler)
                             reject(e.data.executionError)
                         }
                         else{
                             console.error("unknow message", e.data)
                         }
                     }
-                    this.worker.addEventListener("message", handler)
-                    this.worker.postMessage({ source: script })
+                    worker.addEventListener("message", handler)
+                    worker.postMessage({ source: script })
                 })
             }
 
             async run() {
+                if(!this.editor.getValue()) return;
+                const container = document.getElementById(`worker-container-${this.workerId}`)
                 // Don't change the button state unless the computation takes at least 30ms.
-                for (const button of document.querySelectorAll(".runnable .run")) {
+                for (const button of container.querySelectorAll(".runnable .run")) {
                     button.disabled = true
                 }
                 const timer = setTimeout(() => this.button.classList.add("running"), 30)
@@ -228,43 +400,34 @@
                 
                 clearTimeout(timer)
                 this.button.classList.remove("running")
-                for (const button of document.querySelectorAll(".runnable .run")) {
+                for (const button of container.querySelectorAll(".runnable .run")) {
                     button.disabled = false
                 }
-                if(this.hideEditor){
-                    this.editorContainer.style.display = "none"
-                    this.button.classList.add("hide")
+                if(this.hideEditor !== undefined){
+                    if(this.hideEditor){
+                        this.editorContainer.style.display = "none"
+                        this.button.classList.add("hide")
+                    }
+                    else{
+                        this.editorContainer.style.display = "block"
+                        this.button.classList.remove("hide")}
                 }
-                else{
-                    this.editorContainer.style.display = "block"
-                    this.button.classList.remove("hide")}
                 return result
             }
         }
 
-
-        let worker = null
-
-        async function runScript(code, hideEditor) {
-            if (!worker) {
-                worker = await createWorker()
-            }
+        async function runScript(workerId, code, hideEditor) {
+            workerId = workerId || currentWorker?.id
+            const worker = await getWorker(workerId)
             hideEditor = hideEditor || false
-            const appContainer = document.getElementById('app')
-            const container = document.createElement("div")
-            container.classList.add("runnable")
-            appContainer.appendChild(container)
-
-            const codebox = new CodeBox(worker, container, code, hideEditor)
+            const codebox = new CodeBox(worker.id, code, hideEditor)
             codebox.button.classList.remove("loading")
             codebox.button.disabled = false
             return await codebox.run()
         }
 
         async function mountNativeFs(mountPoint) {
-            if (!worker) {
-                worker = await createWorker()
-            }
+            const worker = currentWorker || await getWorker()
             const dirHandle = await showDirectoryPicker();
             if ((await dirHandle.queryPermission({ mode: "readwrite" })) !== "granted") {
                 if (
@@ -294,7 +457,7 @@
             try {
                 const mounted = await mountNativeFs(mountPoint)
                 console.log("Native FS mounted:", mounted)
-                runScript(`import os\nprint("Files mounted at ${mountPoint}")\nprint(os.listdir("${mountPoint}"))\n`, true)
+                runScript(null, `import os\nprint("Files mounted at ${mountPoint}")\nprint(os.listdir("${mountPoint}"))\n`)
             } catch (e) {
                 console.error("Failed to mount native FS:", e)
             }
@@ -322,9 +485,9 @@
                     };
                 },
                 async execute(config) {
-                    const code = config["code"];
-                    console.log("CodeInterpreter running code:", code)
-                    const result = await runScript(code, false)
+                    console.log("CodeInterpreter running code:", config.code)
+                    const worker = await getWorker(config.worker_id)
+                    const result = await runScript(worker.id, config.code)
                     console.log("CodeInterpreter result:", result)
                     return result;
                 },
@@ -346,14 +509,14 @@
                     mountNativeFs,
                     async run(ctx) {
                         const code = (ctx.data && ctx.data.code) || "import sys\nprint(sys.version)\n"
-                        const results = await runScript(code, true)
+                        const results = await runScript(ctx.data && ctx.data.worker_id, code, true)
                         console.log(results)
                     }
                 })
                 console.log("CodeInterpreter is ready.")
             }
             else {
-                await runScript("import sys\nprint(sys.version)\n", false)
+                await runScript(null, "import sys\nprint(sys.version)\n", false)
                 console.log("CodeInterpreter is running in the main window.")
             }
         })
@@ -364,8 +527,22 @@
 const indexURL = 'https://cdn.jsdelivr.net/pyodide/v0.25.0/full/'
 importScripts(`${indexURL}pyodide.js`);
 
+self.sendMessage = (message) => {
+    self.postMessage({'rpc': message})
+}
+self.setMessageCallback = async (callback) => {
+    self.addEventListener("message", (event) => {
+        if(event.data.rpc){
+            callback(event.data.rpc)
+        }
+    })
+}
+
 (async () => {
     self.pyodide = await loadPyodide({ indexURL })
+    await self.pyodide.loadPackage("micropip");
+    const micropip = self.pyodide.pyimport("micropip");
+    await micropip.install(['numpy', 'imjoy-rpc']);
     // NOTE: We intentionally avoid runPythonAsync here because we don't want this to pre-load extra modules like matplotlib.
     self.pyodide.runPython(setupCode)
     self.postMessage({loading: true})  // Inform the main thread that we finished loading.
