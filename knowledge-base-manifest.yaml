@@ -57,6 +57,24 @@ collections:
     description: "A book written by Pete Bankhead about introduction to bioimage analysis, including practical exercises and Jupyter Book content"
     base_url: https://bioimagebook.github.io/
     format: markdown
+  - name: Deep Learning for Medical Image Analysis
+    id: book-deep-learning-for-medical-image-analysis
+    source: https://raw.githubusercontent.com/oeway/hypha-knowledge-base/gh-pages/deep-learning-for-medical-image-analysis-1nbsped-0128104082-978-0-12-810408-8_compress.pdf
+    description: "A book written by S. Kevin Zhou, Hayit Greenspan, Dinggang Shen about deep learning for medical image analysis"
+    base_url: https://www.elsevier.com/books/deep-learning-for-medical-image-analysis/zhou/978-0-12-810408-8
+    format: pdf
+  - name: How deep learning is used within microscopy
+    id: book-how-deep-learning-is-used-within-microscopy
+    source: https://raw.githubusercontent.com/oeway/hypha-knowledge-base/gh-pages/Nikon-Deep-Learning-ebook-compressed.pdf
+    description: "A book written by Nikon about how deep learning is used within microscopy"
+    base_url: https://www.microscope.healthcare.nikon.com/en_EU/products/software/deep-learning
+    format: pdf
+  - name: BioImage Data Analysis
+    id: book-bioimage-data-analysis
+    source: https://raw.githubusercontent.com/oeway/hypha-knowledge-base/gh-pages/bioimagedataanalysis-compressed.pdf
+    description: "A book written by Kota Miura about bioimage data analysis"
+    base_url: https://analyticalscience.wiley.com/content/article-do/bioimage-data-analysis
+    format: pdf
 
 additional_channels:
   - name: "biii.eu"
