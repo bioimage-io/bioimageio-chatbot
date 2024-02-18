@@ -128,18 +128,6 @@ def create_assistants(builtin_extensions):
     event_bus = melman.get_event_bus()
     event_bus.register_default_events()
 
-    async def respond_to_user(
-        question_with_history: QuestionWithHistory = None, role: Role = None
-    ) -> RichResponse:
-        """Answer the user's question."""
-        inputs = (
-            [question_with_history.user_profile]
-            + list(question_with_history.chat_history)
-            + [question_with_history.question]
-        )
-        response = await role.aask(inputs)
-        return RichResponse(text=response, steps=[])
-
     kowalski = Role(
         instructions="You are Kowalski from Madagascar, you serve the bioimaging community as an image analysis expert."
         "You ONLY respond to user's queries related to bioimage analysis."
@@ -150,14 +138,32 @@ def create_assistants(builtin_extensions):
         actions=[respond_to_user],
         model="gpt-4-0125-preview",
     )
+    
+    king_julien = Role(
+        instructions="You are King Julien from Madagascar, you serve the bioimaging community as a professional trainer."
+        "You ONLY respond to user's queries related to educational materials and tutorials in bioimaging."
+        "You communications should be accurate, concise, logical and most importantly, educational and enjoyable."
+        "Your goal is to educate users about bioimage analysis, provide educational materials and tutorials. ",
+        actions=[respond_to_user],
+        model="gpt-4-0125-preview",
+    )
     # return {"Melman": melman, "Kowalski": kowalski}
     # convert to a list
     all_extensions = [
         {"name": ext.name, "description": ext.description} for ext in builtin_extensions
     ]
+    # remove item with 'book' in all_extensions
+    melman_extensions = [
+        ext for ext in all_extensions if "book" not in ext["description"].lower()
+    ]
+    # only keep the item with 'book' in all_extensions
+    king_julien_extensions = [
+        ext for ext in all_extensions if "book" in ext["description"].lower()
+    ]
     return [
-        {"name": "Melman", "agent": melman, "extensions": all_extensions},
+        {"name": "Melman", "agent": melman, "extensions": melman_extensions},
         {"name": "Kowalski", "agent": kowalski, "extensions": []},
+        {"name": "King Julien", "agent": king_julien, "extensions": king_julien_extensions},
     ]
 
 
