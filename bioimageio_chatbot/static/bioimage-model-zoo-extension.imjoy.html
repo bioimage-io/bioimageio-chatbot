@@ -52,7 +52,11 @@ def matches_keywords(text: str, keywords: List[str]) -> bool:
 
 def search_item(item: Dict[str, Any], keywords: List[str]) -> bool:
     search_fields = [item.get('name', ''), item.get('description', '')] + [tag for tag in item.get('tags', [])]
+    search_fields += item.get('id', '')
+    search_fields += [maintainer.get('name', '') + maintainer.get('github_user', '') for maintainer in item.get('maintainers', [])]
     search_fields += [author['name'] for author in item.get('authors', [])]
+    if 'config' in item and 'bioimageio' in item['config'] and 'nickname' in item['config']['bioimageio']:
+        search_fields += [item['config']['bioimageio']['nickname']]
     return any(matches_keywords(field, keywords) for field in search_fields)
 
 def search(config: ModelZooSearchInput, resource_items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
