@@ -86,7 +86,7 @@ def get_extensions():
     return [
         ChatbotExtension(
             name="SearchDocs"+title_case(collection["id"]),
-            description="Documentation for "+collection["id"] + "\n" + collection["description"],
+            description="Search information in the documents of "+collection["name"] + "\n" + collection["description"],
             get_schema=partial(get_schema, collection),
             execute=partial(run_extension, docs_store_dict, collection["id"]),
         )

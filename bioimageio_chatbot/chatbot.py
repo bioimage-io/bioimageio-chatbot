@@ -154,15 +154,20 @@ def create_assistants(builtin_extensions):
     ]
     # remove item with 'book' in all_extensions
     melman_extensions = [
-        ext for ext in all_extensions if "book" not in ext["description"].lower()
+        ext for ext in all_extensions if "book" not in ext["name"].lower()
     ]
+    
+    kowalski_extensions = [
+        ext for ext in all_extensions if ext["name"] in ["SearchWeb"]
+    ]
+
     # only keep the item with 'book' in all_extensions
     king_julien_extensions = [
-        ext for ext in all_extensions if "book" in ext["description"].lower()
+        ext for ext in all_extensions if "book" in ext["name"].lower()
     ]
     return [
         {"name": "Melman", "agent": melman, "extensions": melman_extensions},
-        {"name": "Kowalski", "agent": kowalski, "extensions": []},
+        {"name": "Kowalski", "agent": kowalski, "extensions": kowalski_extensions},
         {"name": "King Julien", "agent": king_julien, "extensions": king_julien_extensions},
     ]
 
