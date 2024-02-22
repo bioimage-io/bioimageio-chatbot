@@ -52,50 +52,50 @@ collections:
     format: pdf
 
   - name: Introduction to Bioimage Analysis
-    id: book-intro-to-bioimage-analysis
+    id: book-itba
     source: https://github.com/bioimagebook/bioimagebook.github.io/archive/refs/heads/main.zip
     directory: chapters
     description: "A book written by Pete Bankhead about introduction to bioimage analysis, including practical exercises and Jupyter Book content"
     base_url: https://bioimagebook.github.io/
     format: markdown
   - name: Deep Learning for Medical Image Analysis
-    id: book-deep-learning-for-medical-image-analysis
+    id: book-dlmia
     source: https://raw.githubusercontent.com/oeway/hypha-knowledge-base/gh-pages/deep-learning-for-medical-image-analysis-1nbsped-0128104082-978-0-12-810408-8_compress.pdf
     description: "A book written by S. Kevin Zhou, Hayit Greenspan, Dinggang Shen about deep learning for medical image analysis"
     base_url: https://www.elsevier.com/books/deep-learning-for-medical-image-analysis/zhou/978-0-12-810408-8
     format: pdf
   - name: How deep learning is used within microscopy
-    id: book-how-deep-learning-is-used-within-microscopy
+    id: book-hdliuwm
     source: https://raw.githubusercontent.com/oeway/hypha-knowledge-base/gh-pages/Nikon-Deep-Learning-ebook-compressed.pdf
     description: "A book written by Nikon about how deep learning is used within microscopy"
     base_url: https://www.microscope.healthcare.nikon.com/en_EU/products/software/deep-learning
     format: pdf
   - name: BioImage Data Analysis
-    id: book-bioimage-data-analysis
+    id: book-bda
     source: https://raw.githubusercontent.com/oeway/hypha-knowledge-base/gh-pages/bioimagedataanalysis-compressed.pdf
     description: "A book written by Kota Miura about bioimage data analysis"
     base_url: https://analyticalscience.wiley.com/content/article-do/bioimage-data-analysis
     format: pdf
   - name: Deep Learning in Medical Imaging
-    id: book-deep-learning-in-medical-imaging
+    id: book-dlimi
     source: https://raw.githubusercontent.com/oeway/hypha-knowledge-base/gh-pages/Deep%20Learning%20in%20Medical%20Imaging.pdf
     description: "A book written by Daniel K. Sodickson, MD, PhD, and W. Clem Karl, PhD about deep learning in medical imaging"
     base_url: https://www.rsna.org/-/media/Files/RSNA/Education/RSNA-Press/Deep-Learning-in-Medical-Imaging.pdf
     format: pdf
   - name: FUTURE AI International consensus guideline for trustworthy and deployable AI in healthcare
-    id: book-future-ai-for-trustworthy #-international-consensus-guideline-for-trustworthy-and-deployable-artificial-intelligence-in-healthcare
+    id: book-faicgftadaih
     source: https://raw.githubusercontent.com/oeway/hypha-knowledge-base/gh-pages/FUTURE%20AI%20International%20consensus%20guideline%20for%20trustworthy%20and%20deployable%20artificial%20intelligence%20in%20healthcare.pdf
     description: "A book written by the FUTURE AI consortium about international consensus guideline for trustworthy and deployable artificial intelligence in healthcare"
     base_url: https://www.nature.com/articles/s41591-021-01412-4
     format: pdf
   - name: Roadmap on Deep Learning for Microscopy
-    id: book-roadmap-dl-for-microscopy
+    id: book-rodlfm
     source: https://raw.githubusercontent.com/oeway/hypha-knowledge-base/gh-pages/Roadmap%20on%20Deep%20Learning%20for%20Microscopy-compressed.pdf
     description: "A book written by the FUTURE AI consortium about international consensus guideline for trustworthy and deployable artificial intelligence in healthcare"
     base_url: https://www.nature.com/articles/s41592-021-01108-9
     format: pdf
   - name: The Rise of Data-Driven Microscopy powered by Machine Learning
-    id: book-the-data-driven-microscopy-powered-by-ml
+    id: book-troddmpml
     source: https://raw.githubusercontent.com/oeway/hypha-knowledge-base/gh-pages/The%20Rise%20of%20Data-Driven%20Microscopy%20powered%20by%20Machine%20Learning.pdf
     description: "A book written by the FUTURE AI consortium about international consensus guideline for trustworthy and deployable artificial intelligence in healthcare"
     base_url: https://www.nature.com/articles/s41592-021-01108-9
