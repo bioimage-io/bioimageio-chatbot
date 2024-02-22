@@ -3,11 +3,11 @@ requires = ["setuptools", "wheel"]
 
 [project]
 name = "bioimageio-chatbot"
-version = "0.1.57"
+version = "0.1.58"
 readme = "README.md"
 description = "Your Personal Assistant in BioImage Analysis."
 dependencies = [
-  "schema-agents>=0.1.36",
+  "schema-agents>=0.1.38",
   "imjoy-rpc",
   "requests",
   "pypdf",
