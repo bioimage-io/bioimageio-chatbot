@@ -375,7 +375,7 @@ async def register_chat_service(server):
 
     server_info = await server.get_connection_info()
 
-    await serve_actions(server, server_info.public_base_url)
+    await serve_actions(server, server_info.public_base_url, builtin_extensions)
 
     version = pkg_resources.get_distribution("bioimageio-chatbot").version
 
