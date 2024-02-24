@@ -318,6 +318,9 @@
           <button type="button" class="btn btn-info mt-3" id="feedback-btn">
             <i class="fas fa-comment"></i> Feedback
           </button>
+          <button type="button" class="btn btn-info mt-3" id="mount-folder-btn">
+            <i class="fas fa-folder"></i> Mount Folder
+          </button>
 
           <!-- Profile options initially collapsed -->
           <div id="profileOptions" class="collapse">
@@ -385,7 +388,11 @@
   <script src="https://lib.imjoy.io/imjoy-loader.js"></script>
   <script src="https://unpkg.com/marked@2.1.3/lib/marked.js"></script>
   <script src="https://www.unpkg.com/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
+  <script src="./worker-manager"></script>
   <script>
+    const workerManager = new PyodideWorkerManager()
+    let worker;
+    let mountedFolder;
     let extensions = [];
     const registeredExtensions = []
     function fileSelected() {
@@ -610,10 +617,66 @@
         $('#profileOptions').collapse('toggle');
       });
 
+      // add a button to select a folder from the local file system
+      $('#mount-folder-btn').click(async function () {
+        const dirHandle = await showDirectoryPicker();
+        if ((await dirHandle.queryPermission({ mode: "readwrite" })) !== "granted") {
+            if (
+                (await dirHandle.requestPermission({ mode: "readwrite" })) !== "granted"
+            ) {
+                throw Error("Unable to read and write directory");
+            }
+        }
+        await worker.mount("/mnt", dirHandle);
+        console.log("Mounted folder:", dirHandle);
+        mountedFolder = dirHandle;
+      });
+
+      $('#mount-folder-btn').hide();
       async function initializeService() {
         $('.message-holder').append(spinner);
         showConnectingStatus();
 
+        workerManager.createWorker().then(async w => {
+          if(mountedFolder){
+            await worker.mount("/mnt", mountedFolder);
+          }
+          worker = w;
+          console.log("Worker created:", worker);
+          await worker.runScript(`print('Hello from worker')`);
+          _registerExtension({
+            name: "CodeInterpreter",
+            description: "Execute Python3 code in the browser with Pyodide, standard outputs, errors and stack trace will be returned as the result.",
+            async get_schema() {
+              let description = "Execute Python3 code in the browser with Pyodide, standard outputs, errors and stack trace will be returned as the result."
+              if(mountedFolder){
+                description += "\n\nUser has mounted files at /mnt, you have read and write access to the folder."
+              }
+              return {
+                  type: "object",
+                  title: "CodeInterpreter",
+                  description,
+                  properties: {
+                      code: {
+                          type: "string",
+                          title: "code",
+                          description: "The Python3 code to execute",
+                      }
+                  },
+                  required: ["code"],
+                  allow_additional_properties: false,
+              };
+            },
+            async execute(config) {
+                console.log("CodeInterpreter running code:", config.code)
+                const result = await worker.runScript(config.code)
+                console.log("CodeInterpreter result:", result)
+                return result;
+            },
+          })
+          // show mount button
+          $('#mount-folder-btn').show();
+        })
         try {
           // get service_id from query string
           const urlParams = new URLSearchParams(window.location.search);

@@ -4,6 +4,7 @@ import json
 import datetime
 import secrets
 import aiofiles
+from functools import partial
 from imjoy_rpc.hypha import login, connect_to_server
 
 from pydantic import BaseModel, Field
@@ -130,7 +131,7 @@ def create_assistants(builtin_extensions):
 
     kowalski = Role(
         instructions="You are Kowalski from Madagascar, you serve the bioimaging community as an image analysis expert."
-        "You ONLY respond to user's queries related to bioimage analysis."
+        # "You ONLY respond to user's queries related to bioimage analysis."
         "Your communications should be accurate, concise, logical and avoid fabricating information, "
         "and if necessary, request additional clarification."
         "Your goal is to guide users to use image analysis tools, provide code and scripts, "
@@ -158,7 +159,7 @@ def create_assistants(builtin_extensions):
     ]
     
     kowalski_extensions = [
-        ext for ext in all_extensions if ext["name"] in ["SearchWeb"]
+        ext for ext in all_extensions if ext["name"] in ["SearchWeb", "CodeInterpreter"]
     ]
 
     # only keep the item with 'book' in all_extensions
@@ -422,6 +423,18 @@ async def register_chat_service(server):
             "headers": {"Content-Type": "text/html"},
             "body": assistants_html,
         }
+    
+    async def serve_js_file(file_path, event, context=None):
+        file_path = file_path.split("/")[-1]
+        with open(
+            os.path.join(os.path.dirname(__file__), "static", file_path), "rb"
+        ) as f:
+            content = f.read()
+        return {
+            "status": 200,
+            "headers": {"Content-Type": "application/javascript"},
+            "body": content,
+        }
 
     await server.register_service(
         {
@@ -430,6 +443,8 @@ async def register_chat_service(server):
             "config": {"visibility": "public", "require_context": False},
             "chat": chat,
             "index": index,
+            "pyodide-worker": partial(serve_js_file, "pyodide-worker.js"),
+            "worker-manager": partial(serve_js_file, "worker-manager.js"),
         }
     )
     server_url = server.config["public_base_url"]
