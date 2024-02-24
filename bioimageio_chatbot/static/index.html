@@ -410,7 +410,7 @@
       const options = extensions.map((ext)=>{
         return {
           text: `${ext.name}: ${ext.description}`,
-          value: ext.id 
+          value: ext.name
         }
       })
     
@@ -438,7 +438,7 @@
       const exts = []
       // If you want to do something with these values, you can iterate over them
       for (var i = 0; i < selectedValues.length; i++) {
-          exts.push(extensions[selectedValues[i]])
+          exts.push(extensions.find(ext=>ext.name === selectedValues[i]))
       }
   
       return exts; // Returns the array of selected values
@@ -506,7 +506,6 @@
       const schema = await extension.get_schema()
       if(!schema || !schema.title || schema.title.includes(" ") || !schema.description)
         throw new Error("Invalid extension schema")
-      extension.id = extensions.length
       const _execute = extension.execute;
 
       extension.execute = async function(config){
@@ -639,9 +638,9 @@
           }
 
           builtinExtensions.forEach((ext) => {
-            ext.id = extensions.length
             extensions.push(ext)
           });
+
           updateDropdownOptions(extensions);
           showReadyStatus();
           appendRobotMessage(shortIntroMessage, "message-0"); // Append robot message to the message container
