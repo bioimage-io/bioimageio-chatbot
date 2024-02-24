@@ -7,15 +7,14 @@ from imjoy_rpc.hypha import login, connect_to_server
 
 client = AsyncOpenAI()
 
-async def load_extensions():
+async def convert_extensions(builtin_extensions):
     extension_services = {}
-    builtin_extensions = get_builtin_extensions()
     for extension in builtin_extensions:
         extension_services[extension.name] = await extension_to_tool(extension)
     return extension_services
 
-async def serve_actions(server, server_url):
-    extension_services = await load_extensions()
+async def serve_actions(server, server_url, builtin_extensions):
+    extension_services = await convert_extensions(builtin_extensions)
     svc = {
         "id": "bioimageio-chatbot-extensions-api",
         "name": "BioImage.io Chatbot Extensions",
