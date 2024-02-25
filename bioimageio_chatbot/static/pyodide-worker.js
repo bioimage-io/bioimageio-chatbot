@@ -5,7 +5,7 @@ importScripts(`${indexURL}pyodide.js`);
     self.pyodide = await loadPyodide({ indexURL })
     await self.pyodide.loadPackage("micropip");
     const micropip = self.pyodide.pyimport("micropip");
-    await micropip.install(['numpy', 'imjoy-rpc']);
+    await micropip.install(['numpy', 'imjoy-rpc', 'pyodide-http']);
     // NOTE: We intentionally avoid runPythonAsync here because we don't want this to pre-load extra modules like matplotlib.
     self.pyodide.runPython(setupCode)
     self.postMessage({loading: true})  // Inform the main thread that we finished loading.
@@ -52,6 +52,9 @@ import sys
 import time
 import traceback
 import wave
+import pyodide_http
+
+pyodide_http.patch_all()  # Patch all libraries
 
 time.sleep = js.spin
 
