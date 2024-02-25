@@ -12,6 +12,32 @@
   <link rel="icon" type="image/x-icon" href="https://bioimage.io/static/icons/favicon.ico">
   <style>
     /* Custom CSS */
+    .message-output{
+      margin-left: 32px;
+      background-color: #ffffff;
+      padding: 14px;
+      border-radius: 10px;
+      max-width: 90%;
+      word-break: break-word;
+    }
+    .message-output > img {
+      max-width: 100%;
+      height: auto;
+    }
+    .message-output > audio {
+      width: 100%;
+    }
+    .message-output > video {
+      width: 100%;
+    }
+    .message-output > iframe {
+      width: 100%;
+      height: 300px;
+    }
+    .message-output > pre {
+      white-space: pre-wrap;
+      margin: 0;
+    }
     .file-selected {
       background-color: #036ffc;
       border-radius: 4px;
@@ -392,6 +418,7 @@
   <script>
     const workerManager = new PyodideWorkerManager()
     let worker;
+    let currentMessageId;
     let mountedFolder;
     let extensions = [];
     const registeredExtensions = []
@@ -551,9 +578,6 @@
         }, registerExtension: _registerExtension});
       }
 
-      
-      
-
       // Function to show the login screen
       function showLoginScreen() {
         $('#loading-container').hide();
@@ -643,7 +667,7 @@
           }
           worker = w;
           console.log("Worker created:", worker);
-          await worker.runScript(`print('Hello from worker')`);
+          // await worker.runScript(`print('Hello from worker')`);
           const prompt = "Code Interpreter for executing Python3 code in the browser with Pyodide, standard outputs, errors and stack trace will be returned as the result. Use this tool to help perform calculations, visualize data, run analysis and more."
           _registerExtension({
             name: "CodeInterpreter",
@@ -669,9 +693,27 @@
             },
             async execute(config) {
                 console.log("CodeInterpreter running script:", config.script)
+                const container = document.getElementById(`output-${currentMessageId}`) // $(`#output-${messageId}`).
+                container.style.display = "block";
                 const result = await worker.runScript(config.script)
                 console.log("CodeInterpreter result:", result)
-                return result;
+                worker.render(container)
+                container.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                // result is a list of objects,
+                // filter out the objects
+                // if type=img, then clip the content to 10 characters
+                // if type=audio, then clip the content to 10 characters
+                // remove the attrs from the result
+                const filteredResult = result.filter((obj) => {
+                  return obj.type !== "img" && obj.type !== "audio"
+                  }).map((obj) => {
+                    if (obj.type === "text") {
+                      obj.content = obj.content.slice(0, 10) + "..."
+                    }
+                    delete obj.attrs
+                    return obj
+                })
+                return filteredResult;
             },
           })
           // show mount button
@@ -823,6 +865,25 @@
         fileInput.value = ''; // Clear the file input
       }
 
+      function completeCodeBlocks(markdownText) {
+        const codeBlockIndicator = '```';
+
+        // Replace "```" in JSON strings with "```"
+        markdownText = markdownText.replace(/```/g, '```');
+
+        // Split text by code block indicator
+        const parts = markdownText.split(codeBlockIndicator);
+
+        // If there's an odd number of parts, it means a code block is not closed
+        if (parts.length > 1 && parts.length % 2 !== 0) {
+          // Append a closing code block indicator
+          markdownText += `\n${codeBlockIndicator}`;
+        }
+
+        return markdownText;
+      }
+      
+
       async function sendChatMessage(textMessage, imageData) {
         const userName = $('#userNameInput').val();
         const userOccupation = $('#userOccupationInput').val();
@@ -841,19 +902,9 @@
         // Show 'Thinking...' status while waiting for the server's response
         showThinkingStatus();
 
-        // Append the image if available
-        const imageHTML = imageData ? `<img src="data:image/png;base64,${imageData}" alt="User Image" style="max-width: 100%;">` : '';
-        $('.message-holder').append(`
-  <div id="progress-message-container" class="message-container robot-message">
-      <div class="rounded-icon-container">
-        <i class="fas fa-robot" style="margin-left: 0px;margin-top: -2px;"></i>
-      </div>
-      <div  class="markdown-body message-content">
-        <h3><div class="spinner" style='display: inline-block;width:25px;height:25px;margin-bottom:-4px;'></div>🤔Thinking...</h3>
-        <div id="progress-message-content">
-    </div>
-  </div>
-</div>`);
+        currentMessageId = "message-" + (chat_history.length+2)
+        appendRobotMessage("...", currentMessageId); // Append robot message to the message container
+
         let accumulatedArgs = ""
         function statusCallback(message) {
           if (message.type === 'function_call') {
@@ -863,11 +914,12 @@
             else {
               accumulatedArgs = message.arguments
             }
+            const args = accumulatedArgs.replace(/\\n/g, '\n');
             content = // `<details> <summary>${message.name}</summary>`+
-              "**Generating response for " + message.name + "...**" +
-              "\n" + accumulatedArgs.replace(/\\n/g, '\n') + "\n\n";
+              "## Generating response for " + message.name + "...\n\n" +
+              args;
             // + "</details>";
-            $('#progress-message-content').html(marked(content, { renderer: renderer }));
+            $(`#content-${currentMessageId}`).html(marked(completeCodeBlocks(content), { renderer: renderer }));
           }
           else if (message.type === 'text') {
             if (message.status === 'in_progress') {
@@ -876,7 +928,7 @@
             else{
               accumulatedArgs = message.content
             }
-            $('#progress-message-content').html(marked(accumulatedArgs, { renderer: renderer }));
+            $(`#content-${currentMessageId}`).html(marked(completeCodeBlocks(accumulatedArgs), { renderer: renderer }));
           }
         }
         try {
@@ -900,9 +952,18 @@
         finally {
           // Remove spinner and set status back to 'Ready to chat' after finishing
           $('.spinner').remove();
-          $('#progress-message-container').remove();
-
-          appendRobotMessage(response.text, "message-" + chat_history.length, response.steps); // Append robot message to the message container
+          // Convert the message to HTML using the marked library
+          const steps = response.steps;
+          let message = response.text;
+          if(steps && steps.length > 0){
+            message = message + "<br>\n<details> <summary>🔍More Details</summary>\n\n"
+            for(let step of steps){
+              message = message + `<div class="step">${step.name}</div>\n\n\`\`\`\n\n${JSON.stringify(step.details, null, 2)}\n\n\`\`\`\n\n`
+            }
+            message = message + "\n\n</details>"
+          }
+          const htmlMessage = message && marked(message, { renderer: renderer });
+          $(`#content-${currentMessageId}`).html(htmlMessage);
         }
       }
 
@@ -916,29 +977,18 @@
         $('.message-holder').append(messageContainer);
       }
 
-      function appendRobotMessage(message, messageId, steps) {
-        // Convert the message to HTML using the marked library
-        if(steps && steps.length > 0){
-          message = message + "\n\n<details> <summary>🔍More Details</summary>\n\n"
-          for(let step of steps){
-            message = message + `<div class="step">${step.name}</div>\n\n\`\`\`\n\n${JSON.stringify(step.details, null, 2)}\n\n\`\`\`\n\n`
-          }
-          message = message + "\n\n</details>"
-        }
-        const htmlMessage = marked(message, { renderer: renderer });
-        
-        let messageContainer = `<div class="message-container robot-message">
+      function appendRobotMessage(htmlMessage, messageId) {
+        const messageContainer = `<div class="message-container robot-message" id="container-${messageId}">
           <div class="rounded-icon-container">
             <img style="width: 20px;" src="https://bioimage.io/static/img/bioimage-io-icon.svg" alt="Melman the Giraffe" width="30" height="30">
           </div>
-          <div class="message-content markdown-body">${htmlMessage}</div>
+          <div class="message-content markdown-body" id="content-${messageId}">${htmlMessage}</div>
         </div>
+        <div class="message-output" style="display:none;" id="output-${messageId}"></div>
         <div class="feedback-buttons"  id="${messageId}" style="margin-left: 35px; margin-top: -6px;"> <!-- Add margin-top here -->
           <button class="feedback-button like-button small-grey-button"><i class="fas fa-thumbs-up"></i></button>
           <button class="feedback-button unlike-button small-grey-button"><i class="fas fa-thumbs-down"></i></button>
         </div>`;
-
-
         $('.message-holder').append(messageContainer);
       }
       // Function to update the status text
