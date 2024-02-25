@@ -668,14 +668,25 @@
           worker = w;
           console.log("Worker created:", worker);
           // await worker.runScript(`print('Hello from worker')`);
-          const prompt = "Code Interpreter for executing Python3 code in the browser with Pyodide, standard outputs, errors and stack trace will be returned as the result. Use this tool to help perform calculations, visualize data, run analysis and more."
+          const prompt = "Code Interpreter for executing Python3 code in the browser with Pyodide, standard outputs, errors and stack trace will be returned as the result. Use this tool to help perform calculations, visualize data, run analysis and more." +
+          "Some tips for using libraries:\n" +
+          " - Use matplotlib to make plot and display images\n" +
+          " - Use numpy for numerical computing\n" +
+          " - Use pandas for data manipulation\n" +
+          " - Use scikit-learn for machine learning\n" +
+          " - Use scipy for scientific computing\n" +
+          " - Use opencv-python for computer vision\n" +
+          " - Use imageio for reading and writing a wide range of image data\n" +
+          " - Use requests for making HTTP requests\n" +
+          " - Use skimage for image processing\n"
+
           _registerExtension({
             name: "CodeInterpreter",
             description: prompt,
             async get_schema() {
               let description = prompt
               if(mountedFolder){
-                description += "\n\nUser has mounted files at /mnt, you have read and write access to the folder."
+                description += `\n\nUser has mounted files (from ${mountedFolder.name}) under /mnt, you have read and write access to /mnt.`
               }
               return {
                   type: "object",
@@ -708,14 +719,21 @@
                 // if type=img, then clip the content to 10 characters
                 // if type=audio, then clip the content to 10 characters
                 // remove the attrs from the result
-                const filteredResult = result.filter((obj) => {
-                  return obj.type !== "img" && obj.type !== "audio"
-                  }).map((obj) => {
-                    if (obj.type === "text") {
-                      obj.content = obj.content.slice(0, 10) + "..."
+                const filteredResult = result.map((obj) => {
+                  let content;
+                    if (obj.type === "audio" || obj.type === "img") {
+                      content = obj.type + ": " + obj.content.slice(0, 10) + "..."
                     }
-                    delete obj.attrs
-                    return obj
+                    else if (obj.type === "stdout") {
+                      content = obj.content
+                    }
+                    else if (obj.type === "stderr") {
+                      content = "stderr: " + obj.content
+                    }
+                    else {
+                      content = obj.type + ": " + obj.content
+                    }
+                    return content
                 })
                 return filteredResult;
             },
