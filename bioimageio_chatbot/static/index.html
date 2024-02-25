@@ -14,7 +14,7 @@
     /* Custom CSS */
     .message-output{
       margin-left: 32px;
-      background-color: #ffffff;
+      background-color: #f8f5f537;
       padding: 14px;
       border-radius: 10px;
       max-width: 90%;
@@ -697,6 +697,10 @@
                 container.style.display = "block";
                 const result = await worker.runScript(config.script)
                 console.log("CodeInterpreter result:", result)
+                // create a title with emoji for the code interpreter
+                const title = document.createElement("p")
+                title.innerHTML = "🐍 Code Interpreter"
+                container.appendChild(title)
                 worker.render(container)
                 container.scrollIntoView({ behavior: 'smooth', block: 'end' });
                 // result is a list of objects,
