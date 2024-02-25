@@ -644,11 +644,12 @@
           worker = w;
           console.log("Worker created:", worker);
           await worker.runScript(`print('Hello from worker')`);
+          const prompt = "Code Interpreter for executing Python3 code in the browser with Pyodide, standard outputs, errors and stack trace will be returned as the result. Use this tool to help perform calculations, visualize data, run analysis and more."
           _registerExtension({
             name: "CodeInterpreter",
-            description: "Execute Python3 code in the browser with Pyodide, standard outputs, errors and stack trace will be returned as the result.",
+            description: prompt,
             async get_schema() {
-              let description = "Execute Python3 code in the browser with Pyodide, standard outputs, errors and stack trace will be returned as the result."
+              let description = prompt
               if(mountedFolder){
                 description += "\n\nUser has mounted files at /mnt, you have read and write access to the folder."
               }
@@ -657,10 +658,9 @@
                   title: "CodeInterpreter",
                   description,
                   properties: {
-                      code: {
+                      script: {
                           type: "string",
-                          title: "code",
-                          description: "The Python3 code to execute",
+                          description: "Python script to execute",
                       }
                   },
                   required: ["code"],
@@ -668,8 +668,8 @@
               };
             },
             async execute(config) {
-                console.log("CodeInterpreter running code:", config.code)
-                const result = await worker.runScript(config.code)
+                console.log("CodeInterpreter running script:", config.script)
+                const result = await worker.runScript(config.script)
                 console.log("CodeInterpreter result:", result)
                 return result;
             },
