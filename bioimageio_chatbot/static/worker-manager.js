@@ -58,6 +58,9 @@ class PyodideWorkerManager {
       async mount(mountPoint, dirHandle) {
         return await self.mountNativeFs(id, mountPoint, dirHandle)
       },
+      async render(container) {
+        self.render(id, container)
+      },
       async close() {
         await self.closeWorker(id)
       },
@@ -149,7 +152,7 @@ class PyodideWorkerManager {
       const serviceEl = document.createElement("div")
       serviceEl.textContent = `Service: ${record.content}`
       container.appendChild(serviceEl)
-    } else if (record.type === "audio" || record.type === "image") {
+    } else if (record.type === "audio" || record.type === "img") {
       const el = document.createElement(record.type)
       el.src = record.content
       if (record.attrs) {
