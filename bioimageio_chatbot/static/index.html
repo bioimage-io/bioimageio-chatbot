@@ -597,7 +597,7 @@
         const imjoyRPC = await loadImJoyRPC()
         const api = await imjoyRPC.setupRPC({name: 'BioImage.IO Chatbot'});
         await api.export({setup(){}, async run(ctx){
-          assistantName = ctx.config && ctx.config.assistant_name || "Melman"
+          assistantName = ctx.config && ctx.config.assistant_name || urlParams.get('assistant') || "Melman"
           if(api.getChatbotExtensions){
             const extensions = await api.getChatbotExtensions(_registerExtension) // object with name: extension
             for(let ext of Object.values(extensions)){
@@ -836,7 +836,6 @@
       }
 
       window.switchAssistant = (aName)=>{
-        // url format: http://127.0.0.1:9003/public/apps/bioimageio-chatbot-client/chat?assistant=Kowalski
         const url = new URL(window.location.href)
         url.searchParams.set('assistant', aName)
         window.open(url.toString(), '_self')
@@ -1072,7 +1071,7 @@
       }
       // Function to show the status as 'Thinking...'
       function showThinkingStatus() {
-        updateStatus('...');
+        updateStatus('🤔Thinking...');
       }
 
       // Function to show the status as 'Ready to chat'
