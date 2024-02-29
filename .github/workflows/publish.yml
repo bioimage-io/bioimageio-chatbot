@@ -19,8 +19,9 @@ jobs:
     # Add steps for any necessary setup, like installing dependencies
     - name: Build
       run: |
-        pip install -U twine
-        pip install -U wheel
+        python -m pip install --upgrade pip
+        python -m pip install -U twine
+        python -m pip install -U wheel
         python3 -m pip install --upgrade build
         rm -rf ./build
         rm -rf ./dist/*
