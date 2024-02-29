@@ -237,7 +237,7 @@
       min-height: 220px !important;
     }
 
-    .card-header {
+    .chat-dialog-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -314,7 +314,7 @@
     <div id="menu-container"></div>
     <div class="container mt-5">
       <div class="card" id="chat1">
-        <div class="card-header">
+        <div class="card-header chat-dialog-header">
           <div>
             <img src="https://bioimage.io/static/img/bioimage-io-icon.svg" alt="BioImage.IO Icon"
               style="height: 24px; margin-right: 10px">
@@ -480,6 +480,8 @@
       $select.multipleSelect('checkAll');
     }
 
+
+
     function getSelectedExtensions() {
       var selectedValues = $('#extensions').val(); // Gets the array of selected values
   
@@ -570,6 +572,9 @@
     }
 
     $(document).ready(async function () {
+      if(urlParams.get('disable-assistant-switch') === "true"){
+        document.getElementById('assistant-buttons').style.display = "none"
+      }
       let svc;
       let token = null;
       const spinner = `<div class="spinner"></div>`; // Spinner HTML
@@ -601,7 +606,19 @@
             }
           }
           shortIntroMessage = `Hi there! I'm ${assistantName}, how can I assist you today?`;
-        }, registerExtension: _registerExtension});
+        },
+        registerExtension: _registerExtension,
+        getAllExtensions(){
+          return extensions.map(ext=>ext.name)
+        },
+        getSelectedExtensions(){
+          // return the extenion names
+          return getSelectedExtensions().map(ext=>ext.name)
+        },
+        setSelectedExtensions(selected){
+          $('#extensions').multipleSelect('setSelects', Array.from(selected))
+        },
+      });
       }
 
       // Function to show the login screen
@@ -689,9 +706,8 @@
             $('.spinner').remove();
           }
         });
-
-        $('#mount-folder-btn').hide();
       }
+      $('#mount-folder-btn').hide();
       async function initializeService() {
         $('.message-holder').append(spinner);
         showConnectingStatus();
