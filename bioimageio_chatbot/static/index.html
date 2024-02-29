@@ -237,6 +237,12 @@
       min-height: 220px !important;
     }
 
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
 
 
     @keyframes spin {
@@ -309,9 +315,16 @@
     <div class="container mt-5">
       <div class="card" id="chat1">
         <div class="card-header">
-          <img src="https://bioimage.io/static/img/bioimage-io-icon.svg" alt="BioImage.IO Icon"
-            style="height: 24px; margin-right: 10px">
-          BioImage.IO Chatbot
+          <div>
+            <img src="https://bioimage.io/static/img/bioimage-io-icon.svg" alt="BioImage.IO Icon"
+              style="height: 24px; margin-right: 10px">
+            BioImage.IO Chatbot
+          </div>
+          <div id="assistant-buttons">
+            <button class="btn" onclick="switchAssistant('Melman')">Melman</button>
+            <button class="btn" onclick="switchAssistant('King Julien')">King Julien</button>
+            <button class="btn" onclick="switchAssistant('Kowalski')">Kowalski</button>
+          </div>
         </div>
 
         <div class="card-body">
@@ -416,6 +429,7 @@
   <script src="https://www.unpkg.com/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
   <script src="./worker-manager"></script>
   <script>
+    const urlParams = new URLSearchParams(window.location.search);
     const workerManager = new PyodideWorkerManager()
     let worker;
     let currentMessageId;
@@ -559,8 +573,20 @@
       let svc;
       let token = null;
       const spinner = `<div class="spinner"></div>`; // Spinner HTML
-  
-      let assistantName = "Melman"
+      const enableCodeInterpreter = urlParams.get('enable-code-interpreter') === "true";
+      let assistantName = urlParams.get('assistant') || "Melman";
+      // add button class primary to the selected assistant button
+      // use assistant-buttons to find the buttons container
+      const assistantButtons = document.getElementById('assistant-buttons')
+      for (let button of assistantButtons.children) {
+        if (button.textContent === assistantName) {
+          button.classList.add('btn-primary')
+        }
+        else{
+          button.classList.remove('btn-primary')
+          button.classList.add('btn-secondary')
+        }
+      }
       let shortIntroMessage = `Hi there! I'm ${assistantName}, how can I assist you today?`;
       if(window.self !== window.top){
         const imjoyRPC = await loadImJoyRPC()
@@ -605,7 +631,6 @@
         $('.login-spinner').show();
 
         try {
-          const urlParams = new URLSearchParams(window.location.search);
           const server_url = urlParams.get('server_url');
           // Call the login function to get the token
           token = await hyphaWebsocketClient.login({
@@ -642,106 +667,108 @@
       });
 
       // add a button to select a folder from the local file system
-      $('#mount-folder-btn').click(async function () {
-        const dirHandle = await showDirectoryPicker();
-        if ((await dirHandle.queryPermission({ mode: "readwrite" })) !== "granted") {
-            if (
-                (await dirHandle.requestPermission({ mode: "readwrite" })) !== "granted"
-            ) {
-                throw Error("Unable to read and write directory");
-            }
-        }
-        // show spinner
-        $('#mount-folder-btn').append(spinner);
-        try{
-          await worker.mount("/mnt", dirHandle);
-          console.log("Mounted folder:", dirHandle);
-          mountedFolder = dirHandle;
-          $('#mount-folder-btn').text(`Mount Folder (${mountedFolder.name})`);
-        }
-        finally{
-          $('.spinner').remove();
-        }
-      });
+      if(enableCodeInterpreter){
+        $('#mount-folder-btn').click(async function () {
+          const dirHandle = await showDirectoryPicker();
+          if ((await dirHandle.queryPermission({ mode: "readwrite" })) !== "granted") {
+              if (
+                  (await dirHandle.requestPermission({ mode: "readwrite" })) !== "granted"
+              ) {
+                  throw Error("Unable to read and write directory");
+              }
+          }
+          // show spinner
+          $('#mount-folder-btn').append(spinner);
+          try{
+            await worker.mount("/mnt", dirHandle);
+            console.log("Mounted folder:", dirHandle);
+            mountedFolder = dirHandle;
+            $('#mount-folder-btn').text(`Mount Folder (${mountedFolder.name})`);
+          }
+          finally{
+            $('.spinner').remove();
+          }
+        });
 
-      $('#mount-folder-btn').hide();
+        $('#mount-folder-btn').hide();
+      }
       async function initializeService() {
         $('.message-holder').append(spinner);
         showConnectingStatus();
-
-        workerManager.createWorker().then(async w => {
-          if(mountedFolder){
-            await worker.mount("/mnt", mountedFolder);
-          }
-          worker = w;
-          console.log("Worker created:", worker);
-          // await worker.runScript(`print('Hello from worker')`);
-          const prompt = `Utilize the Code Interpreter for executing Python3 code directly in your browser with Pyodide. It returns standard outputs, errors, and stack traces. Ideal for calculations, data visualization, analysis, and more, this tool supports interacting with user files optionally mounted under /mnt. It's particularly useful for questions related to image analysis or data processing using a variety of libraries.
-          The tool's output includes stdout for direct feedback, error messages for debugging, and matplotlib plots for visual data representation. Make sure the results are printed or plotted with matplotlib. Ensure your code interacts appropriately with files in /mnt for image and data processing tasks.`
-          _registerExtension({
-            name: "CodeInterpreter",
-            description: prompt,
-            async get_schema() {
-              let description = prompt
-              if(mountedFolder){
-                description += `\n\nUser has mounted files (from ${mountedFolder.name}) under /mnt, you have read and write access to /mnt.`
-              }
-              return {
-                  type: "object",
-                  title: "CodeInterpreter",
-                  description,
-                  properties: {
-                      script: {
-                          type: "string",
-                          description: "Python script to execute",
+        if(enableCodeInterpreter){
+          workerManager.createWorker().then(async w => {
+            if(mountedFolder){
+              await worker.mount("/mnt", mountedFolder);
+            }
+            worker = w;
+            console.log("Worker created:", worker);
+            // await worker.runScript(`print('Hello from worker')`);
+            const prompt = `Utilize the Code Interpreter for executing Python3 code directly in your browser with Pyodide. It returns standard outputs, errors, and stack traces. Ideal for calculations, data visualization, analysis, and more, this tool supports interacting with user files optionally mounted under /mnt. It's particularly useful for questions related to image analysis or data processing using a variety of libraries.
+            The tool's output includes stdout for direct feedback, error messages for debugging, and matplotlib plots for visual data representation. Make sure the results are printed or plotted with matplotlib. Ensure your code interacts appropriately with files in /mnt for image and data processing tasks.`
+            _registerExtension({
+              name: "CodeInterpreter",
+              description: prompt,
+              async get_schema() {
+                let description = prompt
+                if(mountedFolder){
+                  description += `\n\nUser has mounted files (from ${mountedFolder.name}) under /mnt, you have read and write access to /mnt.`
+                }
+                return {
+                    type: "object",
+                    title: "CodeInterpreter",
+                    description,
+                    properties: {
+                        script: {
+                            type: "string",
+                            description: "Python script to execute",
+                        }
+                    },
+                    required: ["code"],
+                    allow_additional_properties: false,
+                };
+              },
+              async execute(config) {
+                  console.log("CodeInterpreter running script:", config.script)
+                  const container = document.getElementById(`output-${currentMessageId}`) // $(`#output-${messageId}`).
+                  container.style.display = "block";
+                  const result = await worker.runScript(config.script)
+                  console.log("CodeInterpreter result:", result)
+                  // create a title with emoji for the code interpreter
+                  const title = document.createElement("p")
+                  title.innerHTML = "🐍 Code Interpreter"
+                  container.appendChild(title)
+                  worker.render(container)
+                  container.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                  // result is a list of objects,
+                  // filter out the objects
+                  // if type=img, then clip the content to 10 characters
+                  // if type=audio, then clip the content to 10 characters
+                  // remove the attrs from the result
+                  const filteredResult = result.map((obj) => {
+                    let content;
+                      if (obj.type === "audio" || obj.type === "img") {
+                        content = obj.type + ": " + obj.content.slice(0, 10) + "..."
                       }
-                  },
-                  required: ["code"],
-                  allow_additional_properties: false,
-              };
-            },
-            async execute(config) {
-                console.log("CodeInterpreter running script:", config.script)
-                const container = document.getElementById(`output-${currentMessageId}`) // $(`#output-${messageId}`).
-                container.style.display = "block";
-                const result = await worker.runScript(config.script)
-                console.log("CodeInterpreter result:", result)
-                // create a title with emoji for the code interpreter
-                const title = document.createElement("p")
-                title.innerHTML = "🐍 Code Interpreter"
-                container.appendChild(title)
-                worker.render(container)
-                container.scrollIntoView({ behavior: 'smooth', block: 'end' });
-                // result is a list of objects,
-                // filter out the objects
-                // if type=img, then clip the content to 10 characters
-                // if type=audio, then clip the content to 10 characters
-                // remove the attrs from the result
-                const filteredResult = result.map((obj) => {
-                  let content;
-                    if (obj.type === "audio" || obj.type === "img") {
-                      content = obj.type + ": " + obj.content.slice(0, 10) + "..."
-                    }
-                    else if (obj.type === "stdout") {
-                      content = obj.content
-                    }
-                    else if (obj.type === "stderr") {
-                      content = "stderr: " + obj.content
-                    }
-                    else {
-                      content = obj.type + ": " + obj.content
-                    }
-                    return content
-                })
-                return filteredResult;
-            },
+                      else if (obj.type === "stdout") {
+                        content = obj.content
+                      }
+                      else if (obj.type === "stderr") {
+                        content = "stderr: " + obj.content
+                      }
+                      else {
+                        content = obj.type + ": " + obj.content
+                      }
+                      return content
+                  })
+                  return filteredResult;
+              },
+            })
+            // show mount button
+            $('#mount-folder-btn').show();
           })
-          // show mount button
-          $('#mount-folder-btn').show();
-        })
+        }
         try {
           // get service_id from query string
-          const urlParams = new URLSearchParams(window.location.search);
           const service_id = urlParams.get('service_id');
           const server_url = urlParams.get('server_url');
           const server = await hyphaWebsocketClient.connectToServer({
@@ -783,12 +810,20 @@
       }
       // Reset the chat session and clear chat history
       function resetChat() {
+        shortIntroMessage = `Hi there! I'm ${assistantName}, how can I assist you today?`;
         sessionId = generateSessionID(); // Generate a new session ID
         chat_history.length = 0; // Clear the chat history
         code = ''; // Reset code
         error_message = ''; // Reset error message
         $('.message-holder').empty(); // Clear the messages
         initializeService();
+      }
+
+      window.switchAssistant = (aName)=>{
+        // url format: http://127.0.0.1:9003/public/apps/bioimageio-chatbot-client/chat?assistant=Kowalski
+        const url = new URL(window.location.href)
+        url.searchParams.set('assistant', aName)
+        window.open(url.toString(), '_self')
       }
 
       $('#reset-btn').click(function () {
@@ -923,7 +958,7 @@
         showThinkingStatus();
 
         currentMessageId = "message-" + (chat_history.length+2)
-        appendRobotMessage("...", currentMessageId); // Append robot message to the message container
+        appendRobotMessage("Thinking...", currentMessageId); // Append robot message to the message container
 
         let accumulatedArgs = ""
         function statusCallback(message) {
