@@ -5,6 +5,7 @@ pypdf
 hypha
 tqdm
 aiofiles
+serpapi
 langchain==0.1.6
 beautifulsoup4
 pandas
