@@ -35,7 +35,7 @@ The BioImage.IO Chatbot offers the following features:
 
 We are providing a public chatbot service for you to try out. You can access the chatbot [here](https://chat.bioimage.io/chat).
 
-Please note that the chatbot is still in beta and is being actively developed. See the [Disclaimer for BioImage.IO Chatbot](./docs/DISCLAIMER.md).
+Please note that the chatbot is still in beta and is being actively developed, we will log the message you input into the chatbot for further investigation of issues and support our development. See the [Disclaimer for BioImage.IO Chatbot](./docs/DISCLAIMER.md). If you want to to remove your chat logs, please contact us via [this form](https://oeway.typeform.com/to/K3j2tJt7).
 
 If you encounter any issues, please report them via [Github](https://github.com/bioimage-io/bioimageio-chatbot/issues).
 
