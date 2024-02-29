@@ -128,9 +128,9 @@ async def register_chatbot_extension(register):
         script: str = Field(..., description="""Executable python script (Python runtime: Pyodide) for querying information""")
     
     ModelZooInfoScript.__doc__ = (
-        "Use Pyodide in the browser to execute Python3 scripts for querying model statistics, "
-        "applications, and datasets in the BioImage Model Zoo (bioimage.io). "
-        "Access data through the 'resources' local variable, containing zoo resources as dictionaries. "
+        "Search the BioImage Model Zoo for statistical information by executing Python3 scripts on the resource items."
+        "For exampling counting models, applications, and datasets filtered by tags in the BioImage Model Zoo (bioimage.io). "
+        "The generated scripts will be executed browser pyodide environment, the script can access data through the 'resources' local variable, containing zoo resources as dictionaries. "
         "Handle any missing fields in zoo items, and ensure outputs are directed to stdout. "
         "Filter resources by the 'type' key without making remote server requests. 'resources' variable details:\\n"
     ) + resource_item_stats
