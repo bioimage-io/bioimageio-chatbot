@@ -38,7 +38,7 @@ class ResourceType(str):
     APPLICATION = "application"
 
 class ModelZooSearchInput(BaseModel):
-    """Search the BioImage Model Zoo (bioimage.io) resource items such as models, applications, datasets, etc. in the model zoo and return detailed information. The link format to the models etc. is: https://bioimage.io/#/?model=MODEL_ID"""
+    """Search the BioImage Model Zoo (bioimage.io) resource items such as models, applications, datasets, etc. in the model zoo and return detailed information. The link format to the models etc. is: https://bioimage.io/#/?id=[ResourceID]"""
     keywords: List[str] = Field(..., description="List of keywords to search for in the model zoo.")
     top_k: int = Field(3, description="The maximum number of search results to return. Default is 3. Please be aware each item may contain a large amount of data.")
     type: Optional[ResourceType] = Field(None, description="The type of resource to search for. Options include 'model', 'dataset', 'application'.")
