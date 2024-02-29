@@ -12,6 +12,32 @@
   <link rel="icon" type="image/x-icon" href="https://bioimage.io/static/icons/favicon.ico">
   <style>
     /* Custom CSS */
+    .message-output{
+      margin-left: 32px;
+      background-color: #f8f5f537;
+      padding: 14px;
+      border-radius: 10px;
+      max-width: 90%;
+      word-break: break-word;
+    }
+    .message-output > img {
+      max-width: 100%;
+      height: auto;
+    }
+    .message-output > audio {
+      width: 100%;
+    }
+    .message-output > video {
+      width: 100%;
+    }
+    .message-output > iframe {
+      width: 100%;
+      height: 300px;
+    }
+    .message-output > pre {
+      white-space: pre-wrap;
+      margin: 0;
+    }
     .file-selected {
       background-color: #036ffc;
       border-radius: 4px;
@@ -318,6 +344,9 @@
           <button type="button" class="btn btn-info mt-3" id="feedback-btn">
             <i class="fas fa-comment"></i> Feedback
           </button>
+          <button type="button" class="btn btn-info mt-3" id="mount-folder-btn">
+            <i class="fas fa-folder"></i> Mount Folder
+          </button>
 
           <!-- Profile options initially collapsed -->
           <div id="profileOptions" class="collapse">
@@ -385,7 +414,12 @@
   <script src="https://lib.imjoy.io/imjoy-loader.js"></script>
   <script src="https://unpkg.com/marked@2.1.3/lib/marked.js"></script>
   <script src="https://www.unpkg.com/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
+  <script src="./worker-manager"></script>
   <script>
+    const workerManager = new PyodideWorkerManager()
+    let worker;
+    let currentMessageId;
+    let mountedFolder;
     let extensions = [];
     const registeredExtensions = []
     function fileSelected() {
@@ -544,9 +578,6 @@
         }, registerExtension: _registerExtension});
       }
 
-      
-      
-
       // Function to show the login screen
       function showLoginScreen() {
         $('#loading-container').hide();
@@ -610,10 +641,104 @@
         $('#profileOptions').collapse('toggle');
       });
 
+      // add a button to select a folder from the local file system
+      $('#mount-folder-btn').click(async function () {
+        const dirHandle = await showDirectoryPicker();
+        if ((await dirHandle.queryPermission({ mode: "readwrite" })) !== "granted") {
+            if (
+                (await dirHandle.requestPermission({ mode: "readwrite" })) !== "granted"
+            ) {
+                throw Error("Unable to read and write directory");
+            }
+        }
+        // show spinner
+        $('#mount-folder-btn').append(spinner);
+        try{
+          await worker.mount("/mnt", dirHandle);
+          console.log("Mounted folder:", dirHandle);
+          mountedFolder = dirHandle;
+          $('#mount-folder-btn').text(`Mount Folder (${mountedFolder.name})`);
+        }
+        finally{
+          $('.spinner').remove();
+        }
+      });
+
+      $('#mount-folder-btn').hide();
       async function initializeService() {
         $('.message-holder').append(spinner);
         showConnectingStatus();
 
+        workerManager.createWorker().then(async w => {
+          if(mountedFolder){
+            await worker.mount("/mnt", mountedFolder);
+          }
+          worker = w;
+          console.log("Worker created:", worker);
+          // await worker.runScript(`print('Hello from worker')`);
+          const prompt = `Utilize the Code Interpreter for executing Python3 code directly in your browser with Pyodide. It returns standard outputs, errors, and stack traces. Ideal for calculations, data visualization, analysis, and more, this tool supports interacting with user files optionally mounted under /mnt. It's particularly useful for questions related to image analysis or data processing using a variety of libraries.
+          The tool's output includes stdout for direct feedback, error messages for debugging, and matplotlib plots for visual data representation. Make sure the results are printed or plotted with matplotlib. Ensure your code interacts appropriately with files in /mnt for image and data processing tasks.`
+          _registerExtension({
+            name: "CodeInterpreter",
+            description: prompt,
+            async get_schema() {
+              let description = prompt
+              if(mountedFolder){
+                description += `\n\nUser has mounted files (from ${mountedFolder.name}) under /mnt, you have read and write access to /mnt.`
+              }
+              return {
+                  type: "object",
+                  title: "CodeInterpreter",
+                  description,
+                  properties: {
+                      script: {
+                          type: "string",
+                          description: "Python script to execute",
+                      }
+                  },
+                  required: ["code"],
+                  allow_additional_properties: false,
+              };
+            },
+            async execute(config) {
+                console.log("CodeInterpreter running script:", config.script)
+                const container = document.getElementById(`output-${currentMessageId}`) // $(`#output-${messageId}`).
+                container.style.display = "block";
+                const result = await worker.runScript(config.script)
+                console.log("CodeInterpreter result:", result)
+                // create a title with emoji for the code interpreter
+                const title = document.createElement("p")
+                title.innerHTML = "🐍 Code Interpreter"
+                container.appendChild(title)
+                worker.render(container)
+                container.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                // result is a list of objects,
+                // filter out the objects
+                // if type=img, then clip the content to 10 characters
+                // if type=audio, then clip the content to 10 characters
+                // remove the attrs from the result
+                const filteredResult = result.map((obj) => {
+                  let content;
+                    if (obj.type === "audio" || obj.type === "img") {
+                      content = obj.type + ": " + obj.content.slice(0, 10) + "..."
+                    }
+                    else if (obj.type === "stdout") {
+                      content = obj.content
+                    }
+                    else if (obj.type === "stderr") {
+                      content = "stderr: " + obj.content
+                    }
+                    else {
+                      content = obj.type + ": " + obj.content
+                    }
+                    return content
+                })
+                return filteredResult;
+            },
+          })
+          // show mount button
+          $('#mount-folder-btn').show();
+        })
         try {
           // get service_id from query string
           const urlParams = new URLSearchParams(window.location.search);
@@ -760,6 +885,25 @@
         fileInput.value = ''; // Clear the file input
       }
 
+      function completeCodeBlocks(markdownText) {
+        const codeBlockIndicator = '```';
+
+        // Replace "```" in JSON strings with "```"
+        markdownText = markdownText.replace(/```/g, '```');
+
+        // Split text by code block indicator
+        const parts = markdownText.split(codeBlockIndicator);
+
+        // If there's an odd number of parts, it means a code block is not closed
+        if (parts.length > 1 && parts.length % 2 !== 0) {
+          // Append a closing code block indicator
+          markdownText += `\n${codeBlockIndicator}`;
+        }
+
+        return markdownText;
+      }
+      
+
       async function sendChatMessage(textMessage, imageData) {
         const userName = $('#userNameInput').val();
         const userOccupation = $('#userOccupationInput').val();
@@ -778,19 +922,9 @@
         // Show 'Thinking...' status while waiting for the server's response
         showThinkingStatus();
 
-        // Append the image if available
-        const imageHTML = imageData ? `<img src="data:image/png;base64,${imageData}" alt="User Image" style="max-width: 100%;">` : '';
-        $('.message-holder').append(`
-  <div id="progress-message-container" class="message-container robot-message">
-      <div class="rounded-icon-container">
-        <i class="fas fa-robot" style="margin-left: 0px;margin-top: -2px;"></i>
-      </div>
-      <div  class="markdown-body message-content">
-        <h3><div class="spinner" style='display: inline-block;width:25px;height:25px;margin-bottom:-4px;'></div>🤔Thinking...</h3>
-        <div id="progress-message-content">
-    </div>
-  </div>
-</div>`);
+        currentMessageId = "message-" + (chat_history.length+2)
+        appendRobotMessage("...", currentMessageId); // Append robot message to the message container
+
         let accumulatedArgs = ""
         function statusCallback(message) {
           if (message.type === 'function_call') {
@@ -800,11 +934,12 @@
             else {
               accumulatedArgs = message.arguments
             }
+            const args = accumulatedArgs.replace(/\\n/g, '\n');
             content = // `<details> <summary>${message.name}</summary>`+
-              "**Generating response for " + message.name + "...**" +
-              "\n" + accumulatedArgs.replace(/\\n/g, '\n') + "\n\n";
+              "## Generating response for " + message.name + "...\n\n" +
+              args;
             // + "</details>";
-            $('#progress-message-content').html(marked(content, { renderer: renderer }));
+            $(`#content-${currentMessageId}`).html(marked(completeCodeBlocks(content), { renderer: renderer }));
           }
           else if (message.type === 'text') {
             if (message.status === 'in_progress') {
@@ -813,7 +948,7 @@
             else{
               accumulatedArgs = message.content
             }
-            $('#progress-message-content').html(marked(accumulatedArgs, { renderer: renderer }));
+            $(`#content-${currentMessageId}`).html(marked(completeCodeBlocks(accumulatedArgs), { renderer: renderer }));
           }
         }
         try {
@@ -837,9 +972,18 @@
         finally {
           // Remove spinner and set status back to 'Ready to chat' after finishing
           $('.spinner').remove();
-          $('#progress-message-container').remove();
-
-          appendRobotMessage(response.text, "message-" + chat_history.length, response.steps); // Append robot message to the message container
+          // Convert the message to HTML using the marked library
+          const steps = response.steps;
+          let message = response.text;
+          if(steps && steps.length > 0){
+            message = message + "<br>\n<details> <summary>🔍More Details</summary>\n\n"
+            for(let step of steps){
+              message = message + `<div class="step">${step.name}</div>\n\n\`\`\`\n\n${JSON.stringify(step.details, null, 2)}\n\n\`\`\`\n\n`
+            }
+            message = message + "\n\n</details>"
+          }
+          const htmlMessage = message && marked(message, { renderer: renderer });
+          $(`#content-${currentMessageId}`).html(htmlMessage);
         }
       }
 
@@ -853,29 +997,18 @@
         $('.message-holder').append(messageContainer);
       }
 
-      function appendRobotMessage(message, messageId, steps) {
-        // Convert the message to HTML using the marked library
-        if(steps && steps.length > 0){
-          message = message + "\n\n<details> <summary>🔍More Details</summary>\n\n"
-          for(let step of steps){
-            message = message + `<div class="step">${step.name}</div>\n\n\`\`\`\n\n${JSON.stringify(step.details, null, 2)}\n\n\`\`\`\n\n`
-          }
-          message = message + "\n\n</details>"
-        }
-        const htmlMessage = marked(message, { renderer: renderer });
-        
-        let messageContainer = `<div class="message-container robot-message">
+      function appendRobotMessage(htmlMessage, messageId) {
+        const messageContainer = `<div class="message-container robot-message" id="container-${messageId}">
           <div class="rounded-icon-container">
             <img style="width: 20px;" src="https://bioimage.io/static/img/bioimage-io-icon.svg" alt="Melman the Giraffe" width="30" height="30">
           </div>
-          <div class="message-content markdown-body">${htmlMessage}</div>
+          <div class="message-content markdown-body" id="content-${messageId}">${htmlMessage}</div>
         </div>
+        <div class="message-output" style="display:none;" id="output-${messageId}"></div>
         <div class="feedback-buttons"  id="${messageId}" style="margin-left: 35px; margin-top: -6px;"> <!-- Add margin-top here -->
           <button class="feedback-button like-button small-grey-button"><i class="fas fa-thumbs-up"></i></button>
           <button class="feedback-button unlike-button small-grey-button"><i class="fas fa-thumbs-down"></i></button>
         </div>`;
-
-
         $('.message-holder').append(messageContainer);
       }
       // Function to update the status text
