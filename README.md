@@ -2,9 +2,7 @@
 
 **📣New Preprint: <a href="https://zenodo.org/records/10032228" target="_blank"><img id="record-doi-badge" data-target="[data-modal='10.5281/zenodo.10032228']" src="https://zenodo.org/badge/DOI/10.5281/zenodo.10032228.svg" alt="10.5281/zenodo.10032228"></a>**
 
-**👇 Want to Try the Chatbot? [Sign Up Here!](https://forms.gle/fEnj68Rxut1VUX1Y8)**
-
-🔍 We are currently looking for early testers. If you are interested, please sign up using [this form](https://forms.gle/fEnj68Rxut1VUX1Y8). We will get back to you soon!
+**👇 Want to Try the Chatbot? [Visit here!](https://bioimage.io/chat)**
 
 ## Your Personal Assistant in BioImage Analysis
 
@@ -35,7 +33,7 @@ The BioImage.IO Chatbot offers the following features:
 
 ## Using the Chatbot
 
-We are providing a public chatbot service for you to try out. Please sign up [here](https://forms.gle/fEnj68Rxut1VUX1Y8) to get access to the chatbot. After approval, you will receive an email from us with detailed instructions on how to access the chatbot.
+We are providing a public chatbot service for you to try out. You can access the chatbot [here](https://chat.bioimage.io/chat).
 
 Please note that the chatbot is still in beta and is being actively developed. See the [Disclaimer for BioImage.IO Chatbot](./docs/DISCLAIMER.md).
 

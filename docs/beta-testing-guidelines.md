@@ -5,7 +5,7 @@ Thank you for participating in the beta testing phase of the BioImage.IO Chatbot
 ## Prerequisites
 
 1. Please Read the [Disclaimer for BioImage.IO Chatbot](./DISCLAIMER.md).
-2. **Login with Your Email Account:** First, please create an account [here](https://ai.imjoy.io/public/apps/hypha-login/), please make sure you used the same email address that you provided in the [Sign up google form](https://forms.gle/fEnj68Rxut1VUX1Y8). Then login to the chatbot via the linked provided in the email we sent you. If you have any issues with the login, please contact us.
+2. **Login with Your Email Account:** First, please create an account [here](https://ai.imjoy.io/public/apps/hypha-login/). Then use the chatbot via [https://bioimage.io/chat](https://bioimage.io/chat). If you have any issues with the login, please contact us.
 
 ## Beta Testing Steps
 
