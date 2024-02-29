@@ -651,9 +651,17 @@
                 throw Error("Unable to read and write directory");
             }
         }
-        await worker.mount("/mnt", dirHandle);
-        console.log("Mounted folder:", dirHandle);
-        mountedFolder = dirHandle;
+        // show spinner
+        $('#mount-folder-btn').append(spinner);
+        try{
+          await worker.mount("/mnt", dirHandle);
+          console.log("Mounted folder:", dirHandle);
+          mountedFolder = dirHandle;
+          $('#mount-folder-btn').text(`Mount Folder (${mountedFolder.name})`);
+        }
+        finally{
+          $('.spinner').remove();
+        }
       });
 
       $('#mount-folder-btn').hide();
@@ -668,18 +676,8 @@
           worker = w;
           console.log("Worker created:", worker);
           // await worker.runScript(`print('Hello from worker')`);
-          const prompt = "Code Interpreter for executing Python3 code in the browser with Pyodide, standard outputs, errors and stack trace will be returned as the result. Use this tool to help perform calculations, visualize data, run analysis and more." +
-          "Some tips for using libraries:\n" +
-          " - Use matplotlib to make plot and display images\n" +
-          " - Use numpy for numerical computing\n" +
-          " - Use pandas for data manipulation\n" +
-          " - Use scikit-learn for machine learning\n" +
-          " - Use scipy for scientific computing\n" +
-          " - Use opencv-python for computer vision\n" +
-          " - Use imageio for reading and writing a wide range of image data\n" +
-          " - Use requests for making HTTP requests\n" +
-          " - Use skimage for image processing\n"
-
+          const prompt = `Utilize the Code Interpreter for executing Python3 code directly in your browser with Pyodide. It returns standard outputs, errors, and stack traces. Ideal for calculations, data visualization, analysis, and more, this tool supports interacting with user files optionally mounted under /mnt. It's particularly useful for questions related to image analysis or data processing using a variety of libraries.
+          The tool's output includes stdout for direct feedback, error messages for debugging, and matplotlib plots for visual data representation. Make sure the results are printed or plotted with matplotlib. Ensure your code interacts appropriately with files in /mnt for image and data processing tasks.`
           _registerExtension({
             name: "CodeInterpreter",
             description: prompt,
