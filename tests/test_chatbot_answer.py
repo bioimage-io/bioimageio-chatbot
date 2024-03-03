@@ -9,7 +9,7 @@ import pytest
 
 KNOWLEDGE_BASE_PATH = "./bioimageio-knowledge-base"
 builtin_extensions = get_builtin_extensions()
-extensions = [{key:value for key, value in ext.dict().items() if key in ["name", "description"]} for ext in builtin_extensions]
+extensions = [{key:value for key, value in ext.model_dump().items() if key in ["name", "description"]} for ext in builtin_extensions]
 customer_service = create_customer_service(builtin_extensions)
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -40,8 +40,8 @@ async def validate_chatbot_answer(question, reference_answer, use_tools_gt, chan
     chat_history=[]
     profile = UserProfile(name="", occupation="", background="")
     
-    m = QuestionWithHistory(question=question, chat_history=chat_history, user_profile=UserProfile.parse_obj(profile), chatbot_extensions=extensions)
-    resp = await customer_service.handle(Message(content=m.json(), data=m , role="User"))
+    m = QuestionWithHistory(question=question, chat_history=chat_history, user_profile=UserProfile.model_validate(profile), chatbot_extensions=extensions)
+    resp = await customer_service.handle(Message(content=m.model_dump_json(), data=m , role="User"))
     # use_tools =resp[0].data.steps[0].details["use_tools"]
     # assert use_tools == use_tools_gt
     # execute_tool = resp[0].data.steps[1].name

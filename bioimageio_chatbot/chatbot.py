@@ -15,7 +15,7 @@ import pkg_resources
 from bioimageio_chatbot.chatbot_extensions import (
     convert_to_dict,
     get_builtin_extensions,
-    extension_to_tool,
+    extension_to_tools,
 )
 from bioimageio_chatbot.utils import ChatbotExtension
 from bioimageio_chatbot.gpts_action import serve_actions
@@ -86,10 +86,10 @@ def create_assistants(builtin_extensions):
             if ext["name"] in extensions_by_name:
                 extension = extensions_by_name[ext["name"]]
             else:
-                extension = ChatbotExtension.parse_obj(ext)
+                extension = ChatbotExtension.model_validate(ext)
 
-            tool = await extension_to_tool(extension)
-            tools.append(tool)
+            ts = await extension_to_tools(extension)
+            tools += ts
 
         class ThoughtsSchema(BaseModel):
             """Details about the thoughts"""
@@ -297,7 +297,7 @@ async def register_chat_service(server):
         async def stream_callback(message):
             if message.type in ["function_call", "text"]:
                 if message.session.id == session_id:
-                    await status_callback(message.dict())
+                    await status_callback(message.model_dump())
 
         event_bus = assistant.get_event_bus()
         event_bus.on("stream", stream_callback)
@@ -337,7 +337,7 @@ async def register_chat_service(server):
             chat_log_full_path = os.path.join(chat_logs_path, filename)
             await save_chat_history(chat_log_full_path, chat_his_dict)
             print(f"Chat history saved to {filename}")
-        return response.dict()
+        return response.model_dump()
 
     async def chat(
         text,
@@ -356,7 +356,7 @@ async def register_chat_service(server):
         m = QuestionWithHistory(
             question=text,
             chat_history=chat_history,
-            user_profile=UserProfile.parse_obj(user_profile),
+            user_profile=UserProfile.model_validate(user_profile),
             chatbot_extensions=extensions,
             context=context,
         )
@@ -370,7 +370,7 @@ async def register_chat_service(server):
         return "pong"
 
     def encode_base_model(data):
-        return data.dict()
+        return data.model_dump()
 
     server.register_codec(
         {
