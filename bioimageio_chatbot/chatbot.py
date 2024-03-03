@@ -8,7 +8,7 @@ from functools import partial
 from imjoy_rpc.hypha import login, connect_to_server
 
 from pydantic import BaseModel, Field
-from schema_agents import Role, Message, tool
+from schema_agents import Role, Message
 from typing import Any, Dict, List, Optional
 import pkg_resources
 from bioimageio_chatbot.chatbot_extensions import (
@@ -405,9 +405,9 @@ async def register_chat_service(server):
         }
     )
 
-    # server_info = await server.get_connection_info()
+    server_info = await server.get_connection_info()
 
-    # await serve_actions(server, server_info.public_base_url, builtin_extensions)
+    await serve_actions(server, server_info.public_base_url, builtin_extensions)
 
     version = pkg_resources.get_distribution("bioimageio-chatbot").version
 
