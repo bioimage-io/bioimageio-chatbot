@@ -3,12 +3,13 @@ import requests
 import yaml
 import os
 from tqdm import tqdm
-from enum import Enum
-from pydantic import BaseModel, Field, Extra
+from pydantic import BaseModel, Field
 from typing import Callable, Optional
 import typing
 from inspect import signature
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Optional
+from bioimageio_chatbot.jsonschema_pydantic import json_schema_to_pydantic_model
+from schema_agents import tool
 
 def get_manifest():
     # If no manifest is provided, download from the repo
@@ -63,3 +64,51 @@ class ChatbotExtension(BaseModel):
     description: str
     tools: Optional[Dict[str, Any]] = {}
     get_schema: Optional[Callable] = None
+
+class LegacyChatbotExtension(BaseModel):
+    """A class that defines the interface for a user extension"""
+    name: str = Field(..., description="The name of the extension")
+    description: str = Field(..., description="A description of the extension")
+    get_schema: Optional[Callable] = Field(None, description="A function that returns the schema for the extension")
+    execute: Callable = Field(..., description="The extension's execution function")
+    schema_class: Optional[BaseModel] = Field(None, description="The schema class for the extension")
+
+def convert_to_dict(obj):
+    if isinstance(obj, BaseModel):
+        return obj.dict()
+    if isinstance(obj, dict):
+        return {k: convert_to_dict(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [convert_to_dict(v) for v in obj]
+    return obj
+
+
+async def legacy_extension_to_tool(extension: LegacyChatbotExtension):
+    if extension.get_schema:
+        schema = await extension.get_schema()
+        extension.schema_class = json_schema_to_pydantic_model(schema)
+    else:
+        input_schemas, _ = extract_schemas(extension.execute)
+        extension.schema_class = input_schemas[0]
+
+    assert extension.schema_class, f"Extension {extension.name} has no valid schema class."
+
+    # NOTE: Right now, the first arguments has to be req
+    async def execute(req: extension.schema_class):
+        print("Executing extension:", extension.name, req)
+        # req = extension.schema_class.parse_obj(req)
+        result = await extension.execute(req)
+        return convert_to_dict(result)
+
+    execute.__name__ = extension.name
+
+    if extension.get_schema:
+        execute.__doc__ = schema['description']
+    
+    if not execute.__doc__:
+        # if extension.execute is partial
+        if hasattr(extension.execute, "func"):
+            execute.__doc__ = extension.execute.func.__doc__ or extension.description
+        else:
+            execute.__doc__ = extension.execute.__doc__ or extension.description
+    return tool(execute)
