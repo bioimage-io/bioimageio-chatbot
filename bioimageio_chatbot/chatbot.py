@@ -8,8 +8,7 @@ from functools import partial
 from imjoy_rpc.hypha import login, connect_to_server
 
 from pydantic import BaseModel, Field
-from schema_agents.role import Role
-from schema_agents.schema import Message
+from schema_agents import Role, Message, tool
 from typing import Any, Dict, List, Optional
 import pkg_resources
 from bioimageio_chatbot.chatbot_extensions import (
@@ -17,7 +16,7 @@ from bioimageio_chatbot.chatbot_extensions import (
     get_builtin_extensions,
     extension_to_tools,
 )
-from bioimageio_chatbot.utils import ChatbotExtension
+from bioimageio_chatbot.utils import ChatbotExtension, LegacyChatbotExtension, legacy_extension_to_tool
 from bioimageio_chatbot.gpts_action import serve_actions
 import logging
 
@@ -89,9 +88,17 @@ def create_assistants(builtin_extensions):
             elif "name" in ext and ext["name"] in extensions_by_name:
                 extension = extensions_by_name[ext["name"]]
             else:
-                extension = ChatbotExtension.model_validate(ext)
+                # legacy chatbot extension
+                if "execute" in ext and "get_schema" in ext:
+                    extension = LegacyChatbotExtension.model_validate(ext)
+                    logger.warning(f"Legacy chatbot extension is deprecated. Please use the new ChatbotExtension interface for {extension.name} with multi-tool support.")
+                else:
+                    extension = ChatbotExtension.model_validate(ext)
 
-            ts = await extension_to_tools(extension)
+            if isinstance(extension, LegacyChatbotExtension):
+                ts = [await legacy_extension_to_tool(extension)]
+            else:
+                ts = await extension_to_tools(extension)
             tools += ts
 
         class ThoughtsSchema(BaseModel):
@@ -398,9 +405,9 @@ async def register_chat_service(server):
         }
     )
 
-    server_info = await server.get_connection_info()
+    # server_info = await server.get_connection_info()
 
-    await serve_actions(server, server_info.public_base_url, builtin_extensions)
+    # await serve_actions(server, server_info.public_base_url, builtin_extensions)
 
     version = pkg_resources.get_distribution("bioimageio-chatbot").version
 

@@ -8,37 +8,11 @@ from bioimageio_chatbot.utils import get_manifest
 from bioimageio_chatbot.utils import ChatbotExtension
 from schema_agents import tool
 
-
 class DocWithScore(BaseModel):
     """A document with an associated relevance score."""
 
     doc: str = Field(description="The document retrieved.")
     score: float = Field(description="The relevance score of the retrieved document.")
-
-
-async def get_schema(collections):
-    for collection in collections.values():
-
-        class DocumentRetrievalInput(BaseModel):
-            """Searching knowledge base for relevant documents."""
-
-            query: str = Field(
-                description="The query used to retrieve documents related to the user's request. It should be a sentence which will be used to match descriptions using the OpenAI text embedding to match document chunks in a vector database."
-            )
-            top_k: int = Field(
-                3,
-                description="The maximum number of search results to return. Should use a small number to avoid overwhelming the user.",
-            )
-
-        channel_id = collection["id"]
-        base_url = collection.get("base_url")
-        if base_url:
-            base_url_prompt = f" The documentation is available at {base_url}."
-        else:
-            base_url_prompt = ""
-        DocumentRetrievalInput.__name__ = "Search" + title_case(channel_id)
-        DocumentRetrievalInput.__doc__ = f"""Searching documentation for {channel_id}: {collection['description']}.{base_url_prompt}"""
-        return DocumentRetrievalInput.model_json_schema()
 
 
 async def run_extension(
@@ -91,6 +65,61 @@ async def run_extension(
 def title_case(s):
     return s.replace(".", " ").replace("-", " ").title().replace(" ", "")
 
+def create_tool(docs_store_dict, collection):
+    async def run_extension(
+        query: str = Field(
+            description="The query used to retrieve documents related to the user's request. It should be a sentence which will be used to match descriptions using the OpenAI text embedding to match document chunks in a vector database."
+        ),
+        top_k: int = Field(
+            3,
+            description="The maximum number of search results to return. Should use a small number to avoid overwhelming the user.",
+        ),
+    ):
+        channel_results = []
+        # channel_urls = []
+        # limit top_k from 1 to 15
+        top_k = max(1, min(top_k, 15))
+        docs_store = docs_store_dict[collection["id"]]
+
+        print(f"Retrieving documents from database {collection['id']} with query: {query}")
+        channel_results.append(
+            await docs_store.asimilarity_search_with_relevance_scores(
+                query, k=top_k
+            )
+        )
+
+        docs_with_score = [
+            DocWithScore(
+                doc=doc.page_content,
+                score=round(score, 2),
+                metadata=doc.metadata,  # , base_url=base_url
+            )
+            for results_with_scores in channel_results
+            for doc, score in results_with_scores
+        ]
+        # sort by relevance score
+        docs_with_score = sorted(docs_with_score, key=lambda x: x.score, reverse=True)[
+            : top_k
+        ]
+
+        if len(docs_with_score) > 2:
+            print(
+                f"Retrieved documents:\n{docs_with_score[0].doc[:20] + '...'} (score: {docs_with_score[0].score})\n{docs_with_score[1].doc[:20] + '...'} (score: {docs_with_score[1].score})\n{docs_with_score[2].doc[:20] + '...'} (score: {docs_with_score[2].score})"
+            )
+        else:
+            print(f"Retrieved documents:\n{docs_with_score}")
+        return docs_with_score
+
+    channel_id = collection["id"]
+    base_url = collection.get("base_url")
+    if base_url:
+        base_url_prompt = f" The documentation is available at {base_url}."
+    else:
+        base_url_prompt = ""
+        
+    run_extension.__name__ = "Search" + title_case(channel_id)
+    run_extension.__doc__ = f"""Searching documentation for {channel_id}: {collection['description']}.{base_url_prompt}"""
+    return tool(run_extension)
 
 def get_extension():
     collections = get_manifest()["collections"]
@@ -112,15 +141,12 @@ def get_extension():
     docs_store_dict = load_knowledge_base(knowledge_base_path)
     tools = {}
     for col in collections:
-        tools[col["id"]] = tool(
-            partial(run_extension, docs_store_dict, collections[0]["id"])
-        )
+        tools["search_" + col["id"]] = create_tool(docs_store_dict, col)
 
     sinfo = ChatbotExtension(
         id="search_docs",
         name="SearchDocs",
         description="Search information in the documents of the bioimage.io knowledge base.",
-        get_schema=lambda: get_schema({col["id"]: col for col in collections}),
         tools=tools,
     )
 
