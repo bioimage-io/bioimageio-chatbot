@@ -80,10 +80,13 @@ def create_assistants(builtin_extensions):
             + [question_with_history.question]
         )
         assert question_with_history.chatbot_extensions is not None
+        extensions_by_id = {ext.id: ext for ext in builtin_extensions}
         extensions_by_name = {ext.name: ext for ext in builtin_extensions}
         tools = []
         for ext in question_with_history.chatbot_extensions:
-            if ext["name"] in extensions_by_name:
+            if "id" in ext and ext["id"] in extensions_by_id:
+                extension = extensions_by_id[ext["id"]]
+            elif "name" in ext and ext["name"] in extensions_by_name:
                 extension = extensions_by_name[ext["name"]]
             else:
                 extension = ChatbotExtension.model_validate(ext)
