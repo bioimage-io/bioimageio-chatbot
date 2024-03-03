@@ -62,6 +62,7 @@ class ChatbotExtension(BaseModel):
     id: str
     name: str
     description: str
+    tool_prompt: Optional[str] = None
     tools: Optional[Dict[str, Any]] = {}
     get_schema: Optional[Callable] = None
 
