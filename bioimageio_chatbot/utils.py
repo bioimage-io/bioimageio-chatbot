@@ -3,10 +3,12 @@ import requests
 import yaml
 import os
 from tqdm import tqdm
-from pydantic import BaseModel, Field
+from enum import Enum
+from pydantic import BaseModel, Field, Extra
 from typing import Callable, Optional
 import typing
 from inspect import signature
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 def get_manifest():
     # If no manifest is provided, download from the repo
@@ -54,9 +56,10 @@ def extract_schemas(function):
     return input_schemas, output_schemas
 
 class ChatbotExtension(BaseModel):
-    """A class that defines the interface for a user extension"""
-    name: str = Field(..., description="The name of the extension")
-    description: str = Field(..., description="A description of the extension")
-    get_schema: Optional[Callable] = Field(None, description="A function that returns the schema for the extension")
-    execute: Callable = Field(..., description="The extension's execution function")
-    schema_class: Optional[BaseModel] = Field(None, description="The schema class for the extension")
+    """Chatbot extension."""
+
+    id: str
+    name: str
+    description: str
+    tools: Optional[Dict[str, Any]] = {}
+    get_schema: Optional[Callable] = None

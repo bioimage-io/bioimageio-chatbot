@@ -5,7 +5,7 @@ import pandas as pd
 from typing import List, Optional
 from pydantic import BaseModel, Field
 from bioimageio_chatbot.utils import ChatbotExtension
-
+from schema_agents import tool
 
 class BiiiQuery(BaseModel):
     """Queries parameters for biii.eu search"""
@@ -114,17 +114,6 @@ def search_biii_with_links(
             return df
 
 
-class SearchBiii(BaseModel):
-    """Find bioimage analysis tools on BioImage Informatics Index (biii.eu). It contains most basic information about image analysis tools."""
-    keywords: List[str] = Field(
-        description="A list of search keywords, no space allowed in each keyword."
-    )
-    top_k: int = Field(
-        10,
-        description="The maximum number of search results to return. Should use a small number to avoid overwhelming the user.",
-    )
-
-
 class BiiiSearchResult(BaseModel):
     """Search results from biii.eu"""
     results: List[BiiiRow] = Field(description="Search results from biii.eu")
@@ -140,33 +129,40 @@ class BiiiResponse(BaseModel):
         description="The answer to the user's question based on the search results. Can be either a detailed response in markdown format if the search results are relevant to the user's question or 'I don't know'. It should resolve relative URLs in the search results using the base_url."
     )
 
-
-async def run_extension(req: SearchBiii):
+@tool
+async def search_biii(
+    keywords: List[str] = Field(
+        description="A list of search keywords, no space allowed in each keyword."
+    ),
+    top_k: int = Field(
+        10,
+        description="The maximum number of search results to return. Should use a small number to avoid overwhelming the user.",
+    )):
+    """Search software tools on BioImage Informatics Index (biii.eu) is a platform for sharing bioimage analysis software and tools."""
     # limit top_k from 1 to 15
-    req.top_k = max(1, min(req.top_k, 15))
-    print(f"Searching biii.eu with keywords: {req.keywords}, top_k: {req.top_k}")
+    top_k = max(1, min(top_k, 15))
+    print(f"Searching biii.eu with keywords: {keywords}, top_k: {top_k}")
     loop = asyncio.get_running_loop()
-    # steps.append(ResponseStep(name="Search on biii.eu", details=req.dict()))
+    # steps.append(ResponseStep(name="Search on biii.eu", details=dict()))
     results = await loop.run_in_executor(
-        None, search_biii_with_links, req.keywords, "software", ""
+        None, search_biii_with_links, keywords, "software", ""
     )
     if results:
         results = BiiiSearchResult(
-            results=results[: req.top_k],
+            results=results[: top_k],
             base_url="https://biii.eu",
         )
         return results
     else:
-        return f"Sorry I didn't find relevant information in biii.eu about {req.keywords}"
+        return f"Sorry I didn't find relevant information in biii.eu about {keywords}"
 
-def get_extensions():
-    return [
-        ChatbotExtension(
-            name="SearchInBiii",
-            description="Search software tools on BioImage Informatics Index (biii.eu) is a platform for sharing bioimage analysis software and tools.",
-            execute=run_extension,
-        )
-    ]
+def get_extension():
+    return ChatbotExtension(
+        id="search_biii",
+        name="SearchBiiiEu",
+        description="Search software tools on BioImage Informatics Index (biii.eu) is a platform for sharing bioimage analysis software and tools.",
+        tools=dict(search=search_biii),
+    )
 
 
 if __name__ == "__main__":
