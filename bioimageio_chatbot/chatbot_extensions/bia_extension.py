@@ -93,7 +93,7 @@ def get_extension():
         id="bioimage_archive",
         name="BioImageArchive",
         description="A service to search and read studies from the BioImage Archive.",
-        tool_prompt="For querying the BioImage Archive, use the `search` tool to search for studies and the `read` tool to read detailed information about a specific study. For example, `search(query='cells', pageSize=1)` which will return a list of studies with accession id, and `read(accession='S-BSST314')",
+        tool_prompt="For querying the BioImage Archive by performing a search or reading a specific study.",
         get_schema=get_schema, # This is optional, exists only for testing purposes
         tools=dict(
             search=search_tool,

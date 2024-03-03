@@ -160,7 +160,7 @@ def get_extension():
     return ChatbotExtension(
         id="search_biii",
         name="SearchBiiiEu",
-        tool_prompt="Use the `search` tool to search for software tools on BioImage Informatics Index (biii.eu). For example, `search(keywords=['image', 'segmentation'], top_k=3)` which will return a list of software tools with the top 3 relevance scores.",
+        tool_prompt="Provide a list of keywords to search for software tools on biii.eu. Returns a list of relevant documents.",
         description="Search software tools on BioImage Informatics Index (biii.eu) is a platform for sharing bioimage analysis software and tools.",
         tools=dict(search=search_biii),
     )

@@ -16,8 +16,9 @@ async def search_web(query: str):
 
 def get_extension():
     return ChatbotExtension(
-        id="search_web",
-        name="SearchWeb",
+        id="web_browsing",
+        name="WebBrowsing",
+        tool_prompt="Search the web using keywords, returns a list of relevant documents.",
         description="Search the web for information using duckduckgo.",
-        tools=dict(execute=search_web),
+        tools=dict(search=search_web),
     )
