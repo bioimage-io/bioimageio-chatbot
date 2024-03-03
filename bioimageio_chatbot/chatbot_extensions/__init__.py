@@ -1,4 +1,5 @@
 import asyncio
+import re
 import pkgutil
 from pydantic import BaseModel
 from bioimageio_chatbot.utils import ChatbotExtension
@@ -29,9 +30,11 @@ def convert_to_dict(obj):
         return [convert_to_dict(v) for v in obj]
     return obj
 
-
-def create_tool_name(ext_id, tool_id):
-    return (ext_id + " " + tool_id).replace(".", " ").replace("-", " ").replace("_", " ").title().replace(" ", "")
+def create_tool_name(ext_id, tool_id=""):
+    text = f"{ext_id}_{tool_id}"
+    text = text.replace("-", " ").replace("_", " ").replace(".", " ")
+    words = re.findall(r'[A-Z]?[a-z]+|[A-Z]+(?=[A-Z]|$)|\d+', text)
+    return ''.join(word if word.istitle() else word.capitalize() for word in words)
 
 async def extension_to_tools(extension: ChatbotExtension):
 

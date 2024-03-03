@@ -15,6 +15,7 @@ from bioimageio_chatbot.chatbot_extensions import (
     convert_to_dict,
     get_builtin_extensions,
     extension_to_tools,
+    create_tool_name,
 )
 from bioimageio_chatbot.utils import ChatbotExtension, LegacyChatbotExtension, legacy_extension_to_tool
 from bioimageio_chatbot.gpts_action import serve_actions
@@ -82,6 +83,7 @@ def create_assistants(builtin_extensions):
         extensions_by_id = {ext.id: ext for ext in builtin_extensions}
         extensions_by_name = {ext.name: ext for ext in builtin_extensions}
         tools = []
+        tool_prompts = {}
         for ext in question_with_history.chatbot_extensions:
             if "id" in ext and ext["id"] in extensions_by_id:
                 extension = extensions_by_id[ext["id"]]
@@ -97,9 +99,15 @@ def create_assistants(builtin_extensions):
 
             if isinstance(extension, LegacyChatbotExtension):
                 ts = [await legacy_extension_to_tool(extension)]
+                assert len(extension.description) <= 1000, f"Extension description is too long: {extension.description}"
+                tool_prompts[create_tool_name(extension.name)] = extension.description.replace("\n", ";")[:256]
             else:
                 ts = await extension_to_tools(extension)
+                assert len(extension.tool_prompt) <= 1000, f"Extension tool prompt is too long: {extension.tool_prompt}"
+                
+                tool_prompts[create_tool_name(extension.id) + "*"] = extension.tool_prompt.replace("\n", ";")[:256]
             tools += ts
+            
 
         class ThoughtsSchema(BaseModel):
             """Details about the thoughts"""
@@ -111,12 +119,14 @@ def create_assistants(builtin_extensions):
             # reasoning: str = Field(..., description="brief explanation about the reasoning")
             # criticism: str = Field(..., description="constructive self-criticism")
 
+        tool_usage_prompt = "Tool usage guidelines (* represent the prefix of a tool group):\n" + "\n".join([f" - {ext}:{tool_prompt}" for ext, tool_prompt in tool_prompts.items()])
         response, metadata = await role.acall(
             inputs,
             tools,
             return_metadata=True,
             thoughts_schema=ThoughtsSchema,
             max_loop_count=10,
+            tool_usage_prompt=tool_usage_prompt,
         )
         result_steps = metadata["steps"]
         for idx, step_list in enumerate(result_steps):

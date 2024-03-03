@@ -125,6 +125,7 @@ def get_extension():
         id="search_image_sc",
         name="SearchImageScForum",
         description="Search the Image.sc Forum for posts and topics.",
+        tool_prompt="Provide a search query to search the Image.sc Forum for posts or post, and read a specific topic",
         tools=dict(
             search=tool(discourse_client.search_image_sc),
             read=tool(discourse_client.read_image_sc_posts)
