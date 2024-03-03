@@ -151,7 +151,7 @@ async def register_chatbot_extension(register):
     })
 
     def get_search_schema():
-        return ModelZooSearchInput.schema()
+        return ModelZooSearchInput.model_json_schema()
 
     async def execute_search(config: dict):
         config = ModelZooSearchInput.parse_obj(config)

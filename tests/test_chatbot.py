@@ -25,22 +25,22 @@ async def test_chatbot(builtin_extensions, melman):
     question = "Which tool can I use to analyse western blot image?"
     profile = UserProfile(name="lulu", occupation="data scientist", background="machine learning and AI")
     m = QuestionWithHistory(question=question, chat_history=chat_history, user_profile=UserProfile.model_validate(profile), channel_id=None, chatbot_extensions=select_extensions)
-    resp = await melman.handle(Message(content=m.model_dump_json(), data=m , role="User"))
+    resp = await melman.handle(Message(content="", data=m , role="User"))
     assert resp
 
     question = "Which tool can I use to segment an cell image?"
     profile = UserProfile(name="lulu", occupation="data scientist", background="machine learning and AI")
     m = QuestionWithHistory(question=question, chat_history=chat_history, user_profile=UserProfile.model_validate(profile), channel_id=None, chatbot_extensions=select_extensions)
-    resp = await melman.handle(Message(content=m.model_dump_json(), data=m , role="User"))
+    resp = await melman.handle(Message(content="", data=m , role="User"))
     assert resp
     
     question = "How can I test the models?"
     profile = UserProfile(name="lulu", occupation="data scientist", background="machine learning and AI")
     m = QuestionWithHistory(question=question, chat_history=chat_history, user_profile=UserProfile.model_validate(profile), channel_id=None, chatbot_extensions=select_extensions)
-    resp = await melman.handle(Message(content=m.model_dump_json(), data=m , role="User"))
+    resp = await melman.handle(Message(content="", data=m , role="User"))
     assert resp
 
     question = "What are Model Contribution Guidelines?"
     m = QuestionWithHistory(question=question, chat_history=chat_history, user_profile=UserProfile.model_validate(profile), channel_id=None, chatbot_extensions=select_extensions)
-    resp = await melman.handle(Message(content=m.model_dump_json(), data=m , role="User"))
+    resp = await melman.handle(Message(content="", data=m , role="User"))
     assert resp

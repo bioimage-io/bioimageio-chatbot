@@ -17,8 +17,7 @@ class DocWithScore(BaseModel):
 
 
 async def get_schema(collections):
-    schemas = {}
-    for collection in collections:
+    for collection in collections.values():
 
         class DocumentRetrievalInput(BaseModel):
             """Searching knowledge base for relevant documents."""
@@ -39,7 +38,7 @@ async def get_schema(collections):
             base_url_prompt = ""
         DocumentRetrievalInput.__name__ = "Search" + title_case(channel_id)
         DocumentRetrievalInput.__doc__ = f"""Searching documentation for {channel_id}: {collection['description']}.{base_url_prompt}"""
-        return DocumentRetrievalInput.schema()
+        return DocumentRetrievalInput.model_json_schema()
 
 
 async def run_extension(
