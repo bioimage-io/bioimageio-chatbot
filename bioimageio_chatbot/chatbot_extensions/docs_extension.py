@@ -146,6 +146,7 @@ def get_extension():
     sinfo = ChatbotExtension(
         id="search_docs",
         name="SearchDocs",
+        tool_prompt="Use the cooresponding doc search tool to search for information in the documents.",
         description="Search information in the documents of the bioimage.io knowledge base.",
         tools=tools,
     )

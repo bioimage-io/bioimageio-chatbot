@@ -83,6 +83,7 @@ def get_extension():
         id="bioimage_archive",
         name="BioImageArchive",
         description="A service to search and read studies from the BioImage Archive.",
+        tool_prompt="For querying the BioImage Archive, use the `search` tool to search for studies and the `read` tool to read detailed information about a specific study. For example, `search(query='cells', pageSize=1)` which will return a list of studies with accession id, and `read(accession='S-BSST314')",
         tools=dict(
             serach=tool(bioimage_archive_client.search_bioimage_archive),
             read=tool(bioimage_archive_client.read_bioimage_archive_study),
