@@ -19,7 +19,7 @@ def melman(builtin_extensions):
 @pytest.mark.asyncio
 async def test_chatbot(builtin_extensions, melman):
     select_extensions = [
-        {"name": "BioImageArchive"}
+        {"id": "bioimage_archive"}
     ]
     chat_history=[]
     question = "Which tool can I use to analyse western blot image?"
@@ -30,17 +30,17 @@ async def test_chatbot(builtin_extensions, melman):
 
     question = "Which tool can I use to segment an cell image?"
     profile = UserProfile(name="lulu", occupation="data scientist", background="machine learning and AI")
-    m = QuestionWithHistory(question=question, chat_history=chat_history, user_profile=UserProfile.model_validate(profile), channel_id=None)
+    m = QuestionWithHistory(question=question, chat_history=chat_history, user_profile=UserProfile.model_validate(profile), channel_id=None, chatbot_extensions=select_extensions)
     resp = await melman.handle(Message(content=m.model_dump_json(), data=m , role="User"))
     assert resp
     
     question = "How can I test the models?"
     profile = UserProfile(name="lulu", occupation="data scientist", background="machine learning and AI")
-    m = QuestionWithHistory(question=question, chat_history=chat_history, user_profile=UserProfile.model_validate(profile), channel_id="bioimage.io")
+    m = QuestionWithHistory(question=question, chat_history=chat_history, user_profile=UserProfile.model_validate(profile), channel_id=None, chatbot_extensions=select_extensions)
     resp = await melman.handle(Message(content=m.model_dump_json(), data=m , role="User"))
     assert resp
 
     question = "What are Model Contribution Guidelines?"
-    m = QuestionWithHistory(question=question, chat_history=chat_history, user_profile=UserProfile.model_validate(profile))
+    m = QuestionWithHistory(question=question, chat_history=chat_history, user_profile=UserProfile.model_validate(profile), channel_id=None, chatbot_extensions=select_extensions)
     resp = await melman.handle(Message(content=m.model_dump_json(), data=m , role="User"))
     assert resp
