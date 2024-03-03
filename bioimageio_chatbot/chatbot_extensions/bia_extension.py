@@ -77,16 +77,27 @@ class BioImageArchiveClient:
         return simplified_details
 
 
+
 def get_extension():
     bioimage_archive_client = BioImageArchiveClient()
+    search_tool = tool(bioimage_archive_client.search_bioimage_archive)
+    read_tool = tool(bioimage_archive_client.read_bioimage_archive_study)
+
+    async def get_schema():
+        return {
+            "search": search_tool.input_model.schema(),
+            "read": read_tool.input_model.schema(),
+        }
+
     return ChatbotExtension(
         id="bioimage_archive",
         name="BioImageArchive",
         description="A service to search and read studies from the BioImage Archive.",
         tool_prompt="For querying the BioImage Archive, use the `search` tool to search for studies and the `read` tool to read detailed information about a specific study. For example, `search(query='cells', pageSize=1)` which will return a list of studies with accession id, and `read(accession='S-BSST314')",
+        get_schema=get_schema, # This is optional, exists only for testing purposes
         tools=dict(
-            serach=tool(bioimage_archive_client.search_bioimage_archive),
-            read=tool(bioimage_archive_client.read_bioimage_archive_study),
+            search=search_tool,
+            read=read_tool
         )
     )
 
