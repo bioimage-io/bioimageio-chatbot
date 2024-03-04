@@ -1,5 +1,5 @@
 schema-agents>=0.1.45
-imjoy-rpc>=0.5.48.post1
+imjoy-rpc>=0.5.48.post2
 requests
 pypdf
 hypha>=0.15.48
