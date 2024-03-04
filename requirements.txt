@@ -2,14 +2,14 @@ schema-agents>=0.1.45
 imjoy-rpc>=0.5.48.post1
 requests
 pypdf
-hypha>=0.15.47
+hypha>=0.15.48
 tqdm
 aiofiles
 serpapi
-langchain==0.1.6
+langchain>=0.1.10
 beautifulsoup4
 pandas
 duckduckgo-search==4.2.0
-langchain-openai==0.0.5
+langchain-openai==0.0.8
 rank-bm25==0.2.2
 html2text==2020.1.16

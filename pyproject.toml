@@ -11,7 +11,7 @@ dependencies = [
   "imjoy-rpc>=0.5.48.post1",
   "requests",
   "pypdf",
-  "hypha>=0.15.47",
+  "hypha>=0.15.48",
   "tqdm",
   "aiofiles",
   "langchain>=0.1.6",
