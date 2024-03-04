@@ -553,7 +553,7 @@
     async function _registerExtension(extension) {
       // convert legacy extension to new format
       if(!extension.tools && extension.execute){
-        extension.id = extension.name.replace(/\s+/g, '-').toLowerCase()
+        extension.id = extension.name.replace(/\s+/g, '-')
         extension.tools = {
           run: extension.execute
         }
