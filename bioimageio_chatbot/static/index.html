@@ -1039,16 +1039,17 @@
           $(`#spinner-${currentMessageId}`).hide();
           // Convert the message to HTML using the marked library
           const steps = response.steps;
-          let message = response.text;
+          let message = response.text && marked(response.text, { renderer: renderer }) || "";
           if(steps && steps.length > 0){
-            message = message + "\n\n<details> <summary>🔍More Details</summary>\n\n"
+            let details = "<details> <summary>🔍More Details</summary>\n\n"
             for(let step of steps){
-              message = message + `<div class="step">${step.name}</div>\n\n\`\`\`\n\n${JSON.stringify(step.details, null, 2)}\n\n\`\`\`\n\n`
+              details = details + `<div class="step">${step.name}</div>\n\n\`\`\`\n\n${JSON.stringify(step.details, null, 2)}\n\n\`\`\`\n\n`
             }
-            message = message + "\n\n</details>"
+            details = details + "\n\n</details>"
+            details = marked(details, { renderer: renderer })
+            message = message + details
           }
-          const htmlMessage = message && marked(message, { renderer: renderer });
-          $(`#content-${currentMessageId}`).html(htmlMessage);
+          $(`#content-${currentMessageId}`).html(message);
         }
       }
 
