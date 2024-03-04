@@ -458,7 +458,7 @@
       const options = extensions.map((ext)=>{
         return {
           text: `${ext.name}: ${ext.description}`,
-          value: ext.name
+          value: ext.id
         }
       })
     
@@ -488,7 +488,7 @@
       const exts = []
       // If you want to do something with these values, you can iterate over them
       for (var i = 0; i < selectedValues.length; i++) {
-          exts.push(extensions.find(ext=>ext.name === selectedValues[i]))
+          exts.push(extensions.find(ext=>ext.id === selectedValues[i]))
       }
   
       return exts; // Returns the array of selected values
@@ -573,9 +573,12 @@
       const schemas = await extension.get_schema()
       for(let k of Object.keys(schemas)){
         const schema = schemas[k]
-        if(!schema || !schema.title || schema.title.includes(" ") || !schema.description)
-          throw new Error("Invalid extension schema: " + k)
+        if(!schema || !schema.title || schema.title.includes(" "))
+          throw new Error("Invalid title in schema: " + k)
+        if(!schema.description){
+          throw new Error("Schema description is required: " + k)}
       }
+
       extensions.push(extension);
       // remove duplicates
       extensions = extensions.filter((v,i,a)=>a.findIndex(t=>(t.id === v.id))===i)
@@ -605,33 +608,7 @@
         }
       }
       let shortIntroMessage = `Hi there! I'm ${assistantName}, how can I assist you today?`;
-      if(window.self !== window.top){
-        const imjoyRPC = await loadImJoyRPC()
-        const api = await imjoyRPC.setupRPC({name: 'BioImage.IO Chatbot'});
-        await api.export({setup(){}, async run(ctx){
-          assistantName = urlParams.get('assistant') || (ctx.config && ctx.config.assistant_name) || "Melman"
-          if(api.getChatbotExtensions){
-            const extensions = await api.getChatbotExtensions(_registerExtension) // object with name: extension
-            for(let ext of Object.values(extensions)){
-              _registerExtension(ext)
-              console.log(`Registered extension: ${ext.name} (${ext.description}) for assistant ${assistantName}`)
-            }
-          }
-          shortIntroMessage = `Hi there! I'm ${assistantName}, how can I assist you today?`;
-        },
-        registerExtension: _registerExtension,
-        getAllExtensions(){
-          return extensions.map(ext=>ext.name)
-        },
-        getSelectedExtensions(){
-          // return the extenion names
-          return getSelectedExtensions().map(ext=>ext.name)
-        },
-        setSelectedExtensions(selected){
-          $('#extensions').multipleSelect('setSelects', Array.from(selected))
-        },
-      });
-      }
+      
 
       // Function to show the login screen
       function showLoginScreen() {
@@ -641,11 +618,39 @@
       }
 
       // Function to show the app interface
-      function showAppInterface() {
+      async function showAppInterface() {
         $('#loading-container').hide();
         $('#login-container').hide();
         $('#app-container').show();
         $('.announcement-banner').show();
+
+        if(window.self !== window.top){
+          const imjoyRPC = await loadImJoyRPC()
+          const api = await imjoyRPC.setupRPC({name: 'BioImage.IO Chatbot'});
+          await api.export({setup(){}, async run(ctx){
+            assistantName = urlParams.get('assistant') || (ctx.config && ctx.config.assistant_name) || "Melman"
+            if(api.getChatbotExtensions){
+              const extensions = await api.getChatbotExtensions(_registerExtension) // object with name: extension
+              for(let ext of Object.values(extensions)){
+                _registerExtension(ext)
+                console.log(`Registered extension: ${ext.name} (${ext.description}) for assistant ${assistantName}`)
+              }
+            }
+            shortIntroMessage = `Hi there! I'm ${assistantName}, how can I assist you today?`;
+          },
+          registerExtension: _registerExtension,
+          getAllExtensions(){
+            return extensions.map(ext=>ext.id)
+          },
+          getSelectedExtensions(){
+            // return the extenion names
+            return getSelectedExtensions().map(ext=>ext.id)
+          },
+          setSelectedExtensions(selected){
+            $('#extensions').multipleSelect('setSelects', Array.from(selected))
+          },
+        });
+        }
       }
 
       // Function to handle the login callback
