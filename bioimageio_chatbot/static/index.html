@@ -1041,7 +1041,7 @@
           const steps = response.steps;
           let message = response.text;
           if(steps && steps.length > 0){
-            message = message + "\n\n<br><details> <summary>🔍More Details</summary>\n\n"
+            message = message + "\n\n<details> <summary>🔍More Details</summary>\n\n"
             for(let step of steps){
               message = message + `<div class="step">${step.name}</div>\n\n\`\`\`\n\n${JSON.stringify(step.details, null, 2)}\n\n\`\`\`\n\n`
             }
