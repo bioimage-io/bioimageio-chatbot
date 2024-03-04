@@ -6,7 +6,7 @@ from typing import Any, Dict, Optional
 from bioimageio_chatbot.knowledge_base import load_knowledge_base
 from bioimageio_chatbot.utils import get_manifest
 from bioimageio_chatbot.utils import ChatbotExtension
-from schema_agents import tool
+from schema_agents import schema_tool
 
 class DocWithScore(BaseModel):
     """A document with an associated relevance score."""
@@ -119,7 +119,7 @@ def create_tool(docs_store_dict, collection):
         
     run_extension.__name__ = "Search" + title_case(channel_id)
     run_extension.__doc__ = f"""Searching documentation for {channel_id}: {collection['description']}.{base_url_prompt}"""
-    return tool(run_extension)
+    return schema_tool(run_extension)
 
 def get_extension():
     collections = get_manifest()["collections"]
@@ -144,10 +144,9 @@ def get_extension():
         tools["search_" + col["id"]] = create_tool(docs_store_dict, col)
 
     sinfo = ChatbotExtension(
-        id="search_docs",
-        name="SearchDocs",
-        tool_prompt="Provide a list of keywords to search information in the documents. Returns a list of relevant documents.",
-        description="Search information in the documents of the bioimage.io knowledge base.",
+        id="docs",
+        name="Search BioImage Knowledge Base",
+        description="Search information in the documents of the bioimage.io knowledge base. Provide a list of keywords to search information in the documents. Returns a list of relevant documents.",
         tools=tools,
     )
 

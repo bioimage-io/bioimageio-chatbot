@@ -1,12 +1,12 @@
 
-from schema_agents import tool
+from schema_agents import schema_tool
 from bioimageio_chatbot.utils import ChatbotExtension
 from bioimageio_chatbot.chatbot_extensions.web_search_extension.llm_web_search import search_duckduckgo
 from bioimageio_chatbot.chatbot_extensions.web_search_extension.langchain_websearch import LangchainCompressor
 
 langchain_compressor = None
 
-@tool
+@schema_tool
 async def search_web(query: str):
     """Search the web for information using duckduckgo."""
     global langchain_compressor
@@ -16,9 +16,8 @@ async def search_web(query: str):
 
 def get_extension():
     return ChatbotExtension(
-        id="web_browsing",
-        name="WebBrowsing",
-        tool_prompt="Search the web using keywords, returns a list of relevant documents.",
-        description="Search the web for information using duckduckgo.",
+        id="web",
+        name="Search Web",
+        description="Search the web for information using duckduckgo. Search by keywords and returns a list of relevant documents.",
         tools=dict(search=search_web),
     )

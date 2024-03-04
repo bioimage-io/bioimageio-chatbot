@@ -2,7 +2,7 @@ import httpx
 from pydantic import BaseModel, Field
 from typing import Dict, Any, Optional
 from bioimageio_chatbot.utils import ChatbotExtension
-from schema_agents import tool
+from schema_agents import schema_tool
 
 class BioImageArchiveClient:
     def __init__(self):
@@ -80,8 +80,8 @@ class BioImageArchiveClient:
 
 def get_extension():
     bioimage_archive_client = BioImageArchiveClient()
-    search_tool = tool(bioimage_archive_client.search_bioimage_archive)
-    read_tool = tool(bioimage_archive_client.read_bioimage_archive_study)
+    search_tool = schema_tool(bioimage_archive_client.search_bioimage_archive)
+    read_tool = schema_tool(bioimage_archive_client.read_bioimage_archive_study)
 
     async def get_schema():
         return {
@@ -91,9 +91,8 @@ def get_extension():
 
     return ChatbotExtension(
         id="bioimage_archive",
-        name="BioImageArchive",
+        name="Search BioImage Archive",
         description="A service to search and read studies from the BioImage Archive.",
-        tool_prompt="For querying the BioImage Archive by performing a search or reading a specific study.",
         get_schema=get_schema, # This is optional, exists only for testing purposes
         tools=dict(
             search=search_tool,

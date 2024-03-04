@@ -551,22 +551,17 @@
     }
     
     async function _registerExtension(extension) {
-      if(!extension.name || !extension.execute || !extension.get_schema) 
+      if(!extension.id || !extension.tools || !extension.get_schema) 
         throw new Error("Invalid extension")
-      const schema = await extension.get_schema()
-      if(!schema || !schema.title || schema.title.includes(" ") || !schema.description)
-        throw new Error("Invalid extension schema")
-      const _execute = extension.execute;
-
-      extension.execute = async function(config){
-        config = decodeData(config)
-        const result = await _execute(config)        
-        return encodeData(result)
+      const schemas = await extension.get_schema()
+      for(let k of Object.keys(schemas)){
+        const schema = schemas[k]
+        if(!schema || !schema.title || schema.title.includes(" ") || !schema.description)
+          throw new Error("Invalid extension schema: " + k)
       }
-
       extensions.push(extension);
       // remove duplicates
-      extensions = extensions.filter((v,i,a)=>a.findIndex(t=>(t.name === v.name))===i)
+      extensions = extensions.filter((v,i,a)=>a.findIndex(t=>(t.id === v.id))===i)
       registeredExtensions.push(extension);
       updateDropdownOptions(extensions);
     }
@@ -986,6 +981,7 @@
               accumulatedArgs = message.arguments
             }
             const args = accumulatedArgs.replace(/\\n/g, '\n');
+            
             content = // `<details> <summary>${message.name}</summary>`+
               "## Generating response for " + message.name + "...\n\n" +
               args;

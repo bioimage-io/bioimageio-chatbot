@@ -5,7 +5,7 @@ import pandas as pd
 from typing import List, Optional
 from pydantic import BaseModel, Field
 from bioimageio_chatbot.utils import ChatbotExtension
-from schema_agents import tool
+from schema_agents import schema_tool
 
 class BiiiQuery(BaseModel):
     """Queries parameters for biii.eu search"""
@@ -129,7 +129,7 @@ class BiiiResponse(BaseModel):
         description="The answer to the user's question based on the search results. Can be either a detailed response in markdown format if the search results are relevant to the user's question or 'I don't know'. It should resolve relative URLs in the search results using the base_url."
     )
 
-@tool
+@schema_tool
 async def search_biii(
     keywords: List[str] = Field(
         description="A list of search keywords, no space allowed in each keyword."
@@ -158,10 +158,9 @@ async def search_biii(
 
 def get_extension():
     return ChatbotExtension(
-        id="search_biii",
-        name="SearchBiiiEu",
-        tool_prompt="Provide a list of keywords to search for software tools on biii.eu. Returns a list of relevant documents.",
-        description="Search software tools on BioImage Informatics Index (biii.eu) is a platform for sharing bioimage analysis software and tools.",
+        id="biii",
+        name="Search BioImage Informatics Index (biii.eu)",
+        description="Search software tools on BioImage Informatics Index (biii.eu) is a platform for sharing bioimage analysis software and tools. Provide a list of keywords to search for software tools on biii.eu. Returns a list of relevant documents.",
         tools=dict(search=search_biii),
     )
 
