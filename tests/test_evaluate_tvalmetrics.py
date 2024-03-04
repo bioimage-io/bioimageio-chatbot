@@ -56,8 +56,8 @@ async def evaluate_retrieval():
     #     chatgpt_answer_list.append(chatgpt_answer)
     #     # BioImage.IO Chatbot
     #     profile = UserProfile(name="", occupation="", background="")
-    #     m = QuestionWithHistory(question=question, chat_history=chat_history, user_profile=UserProfile.parse_obj(profile), channel_id=None)
-    #     llm_answer = await customer_service.handle(Message(content=m.json(), data=m , role="User"))
+    #     m = QuestionWithHistory(question=question, chat_history=chat_history, user_profile=UserProfile.model_validate(profile), channel_id=None)
+    #     llm_answer = await customer_service.handle(Message(content=m.model_dump_json(), data=m , role="User"))
     #     # add a column to query_answer, content is llm_answer[0].content
     #     query_answer.loc[i, 'BioImage.IO Chatbot Answer'] = llm_answer[0].content
     #     BMZ_chatbot_answer_list.append(llm_answer)
