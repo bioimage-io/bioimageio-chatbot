@@ -92,7 +92,7 @@ def create_assistants(builtin_extensions):
             elif "name" in ext and ext["name"] in extensions_by_name:
                 extension = extensions_by_name[ext["name"]]
             else:
-                if "execute" in ext and "get_schema" in ext:
+                if "tools" not in ext and "execute" in ext and "get_schema" in ext:
                     # legacy chatbot extension
                     extension = LegacyChatbotExtension.model_validate(ext)
                     logger.warning(f"Legacy chatbot extension is deprecated. Please use the new ChatbotExtension interface for {extension.name} with multi-tool support.")

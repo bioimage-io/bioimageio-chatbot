@@ -551,6 +551,23 @@
     }
     
     async function _registerExtension(extension) {
+      // convert legacy extension to new format
+      if(!extension.tools && extension.execute){
+        extension.id = extension.name.replace(/\s+/g, '-').toLowerCase()
+        extension.tools = {
+          run: extension.execute
+        }
+        const get_schema = extension.get_schema
+        if(get_schema){
+          extension.get_schema = async function(){
+            const schema = await get_schema()
+            return {
+              run: schema
+            }
+          }
+        }
+        delete extension.execute
+      }
       if(!extension.id || !extension.tools || !extension.get_schema) 
         throw new Error("Invalid extension")
       const schemas = await extension.get_schema()
