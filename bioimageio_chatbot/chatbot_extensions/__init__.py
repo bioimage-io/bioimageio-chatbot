@@ -4,7 +4,7 @@ import pkgutil
 from pydantic import BaseModel
 from bioimageio_chatbot.utils import ChatbotExtension
 from bioimageio_chatbot.jsonschema_pydantic import json_schema_to_pydantic_model
-from bioimageio_chatbot.utils import extract_schemas
+from schema_agents import schema_tool
 
 def get_builtin_extensions():
     extensions = []
@@ -36,6 +36,12 @@ def create_tool_name(ext_id, tool_id=""):
     words = re.findall(r'[A-Z]?[a-z]+|[A-Z]+(?=[A-Z]|$)|\d+', text)
     return ''.join(word if word.istitle() else word.capitalize() for word in words)
 
+def tool_factory(ext_id, tool_id, ext_tool, schema):
+    input_model = json_schema_to_pydantic_model(schema)
+    ext_tool.__name__ = create_tool_name(ext_id, tool_id)
+    ext_tool.__doc__ = input_model.__doc__
+    return schema_tool(ext_tool, input_model=input_model)
+
 async def extension_to_tools(extension: ChatbotExtension):
 
     if extension.get_schema:
@@ -43,17 +49,15 @@ async def extension_to_tools(extension: ChatbotExtension):
         tools = []
         for k in schemas:
             assert k in extension.tools, f"Tool `{k}` not found in extension `{extension.id}`."
-            tool = extension.tools[k]
-            tool.input_model = json_schema_to_pydantic_model(schemas[k])
-            tool.__name__ = create_tool_name(extension.id, k)
-            # tool = tool_factory(k, tool)
+            ext_tool = extension.tools[k]
+            tool = tool_factory(extension.id, k, ext_tool, schemas[k])
             tools.append(tool)
     else:
         tools = []
         for k in extension.tools:
-            tool = extension.tools[k]
-            tool.__name__ = create_tool_name(extension.id, k)
-            tools.append(tool)
+            ext_tool = extension.tools[k]
+            ext_tool.__name__ = create_tool_name(extension.id, k)
+            tools.append(ext_tool)
     
     return tools
 

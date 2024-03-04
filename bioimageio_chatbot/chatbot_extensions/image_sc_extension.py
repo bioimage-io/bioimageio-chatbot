@@ -7,7 +7,7 @@ import html2text
 from pydantic import BaseModel, Field
 from bioimageio_chatbot.utils import ChatbotExtension
 from typing import List, Dict, Any, Optional
-from schema_agents import tool
+from schema_agents import schema_tool
 class SearchParameters(BaseModel):
     """Parameters for searching the Image.sc Forum."""
     query: str = Field(..., description="The search query string.")
@@ -122,13 +122,12 @@ def get_extension():
 
     discourse_client = DiscourseClient(base_url="https://forum.image.sc/", username=username, api_key=api_key)
     return ChatbotExtension(
-        id="search_image_sc",
-        name="SearchImageScForum",
-        description="Search the Image.sc Forum for posts and topics.",
-        tool_prompt="Provide a search query to search the Image.sc Forum for posts or post, and read a specific topic",
+        id="image_sc_forum",
+        name="Search image.sc Forum",
+        description="Search the Image.sc Forum for posts and topics. Provide a search query to search the Image.sc Forum for posts or post, and read a specific topic",
         tools=dict(
-            search=tool(discourse_client.search_image_sc),
-            read=tool(discourse_client.read_image_sc_posts)
+            search=schema_tool(discourse_client.search_image_sc),
+            read=schema_tool(discourse_client.read_image_sc_posts)
         )
     )
 

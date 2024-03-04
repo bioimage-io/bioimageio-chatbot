@@ -9,7 +9,7 @@ import typing
 from inspect import signature
 from typing import Any, Callable, Dict, Optional
 from bioimageio_chatbot.jsonschema_pydantic import json_schema_to_pydantic_model
-from schema_agents import tool
+from schema_agents import schema_tool
 
 def get_manifest():
     # If no manifest is provided, download from the repo
@@ -62,7 +62,6 @@ class ChatbotExtension(BaseModel):
     id: str
     name: str
     description: str
-    tool_prompt: str
     tools: Optional[Dict[str, Any]] = {}
     get_schema: Optional[Callable] = None
 
@@ -112,4 +111,4 @@ async def legacy_extension_to_tool(extension: LegacyChatbotExtension):
             execute.__doc__ = extension.execute.func.__doc__ or extension.description
         else:
             execute.__doc__ = extension.execute.__doc__ or extension.description
-    return tool(execute)
+    return schema_tool(execute)

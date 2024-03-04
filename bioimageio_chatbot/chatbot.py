@@ -82,6 +82,8 @@ def create_assistants(builtin_extensions):
         assert question_with_history.chatbot_extensions is not None
         extensions_by_id = {ext.id: ext for ext in builtin_extensions}
         extensions_by_name = {ext.name: ext for ext in builtin_extensions}
+        extensions_by_tool_name = {}
+        
         tools = []
         tool_prompts = {}
         for ext in question_with_history.chatbot_extensions:
@@ -90,8 +92,8 @@ def create_assistants(builtin_extensions):
             elif "name" in ext and ext["name"] in extensions_by_name:
                 extension = extensions_by_name[ext["name"]]
             else:
-                # legacy chatbot extension
                 if "execute" in ext and "get_schema" in ext:
+                    # legacy chatbot extension
                     extension = LegacyChatbotExtension.model_validate(ext)
                     logger.warning(f"Legacy chatbot extension is deprecated. Please use the new ChatbotExtension interface for {extension.name} with multi-tool support.")
                 else:
@@ -103,9 +105,9 @@ def create_assistants(builtin_extensions):
                 tool_prompts[create_tool_name(extension.name)] = extension.description.replace("\n", ";")[:256]
             else:
                 ts = await extension_to_tools(extension)
-                assert len(extension.tool_prompt) <= 1000, f"Extension tool prompt is too long: {extension.tool_prompt}"
-                
-                tool_prompts[create_tool_name(extension.id) + "*"] = extension.tool_prompt.replace("\n", ";")[:256]
+                assert len(extension.description) <= 1000, f"Extension tool prompt is too long: {extension.tool_prompt}"
+                tool_prompts[create_tool_name(extension.id) + "*"] = extension.description.replace("\n", ";")[:256]
+            extensions_by_tool_name.update({t.__name__: extension for t in ts})
             tools += ts
             
 
@@ -192,7 +194,7 @@ For more complex questions, DO NOT generate lots of code at once, instead, break
     # return {"Melman": melman, "Kowalski": kowalski}
     # convert to a list
     all_extensions = [
-        {"name": ext.name, "description": ext.description} for ext in builtin_extensions
+        {"id": ext.id, "name": ext.name, "description": ext.description} for ext in builtin_extensions
     ]
     # remove item with 'book' in all_extensions
     melman_extensions = [
@@ -388,17 +390,6 @@ async def register_chat_service(server):
                 context.get("user")
             ), "You don't have permission to use the chatbot, please sign up and wait for approval"
         return "pong"
-
-    def encode_base_model(data):
-        return data.model_dump()
-
-    server.register_codec(
-        {
-            "name": "pydantic-base-model",
-            "type": BaseModel,
-            "encoder": encode_base_model,
-        }
-    )
 
     hypha_service_info = await server.register_service(
         {
