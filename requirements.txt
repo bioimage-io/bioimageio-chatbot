@@ -1,4 +1,4 @@
-schema-agents
+schema-agents>=0.1.45
 imjoy-rpc>=0.5.48.post1
 requests
 pypdf

@@ -37,12 +37,6 @@ class ResourceType(str):
     DATASET = "dataset"
     APPLICATION = "application"
 
-class ModelZooSearchInput(BaseModel):
-    """Search the BioImage Model Zoo (bioimage.io) resource items such as models, applications, datasets, etc. in the model zoo and return detailed information. The link format to the models etc. is: https://bioimage.io/#/?id=[ResourceID]"""
-    keywords: List[str] = Field(..., description="List of keywords to search for in the model zoo.")
-    top_k: int = Field(3, description="The maximum number of search results to return. Default is 3. Please be aware each item may contain a large amount of data.")
-    type: Optional[ResourceType] = Field(None, description="The type of resource to search for. Options include 'model', 'dataset', 'application'.")
-
 def normalize_text(text: str) -> str:
     return text.replace('_', ' ').lower()
 
@@ -57,15 +51,15 @@ def search_item(item: Dict[str, Any], keywords: List[str]) -> bool:
     search_fields += [author['name'] for author in item.get('authors', [])]
     return any(matches_keywords(field, keywords) for field in search_fields)
 
-def search(config: ModelZooSearchInput, resource_items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    keywords = [normalize_text(keyword) for keyword in config.keywords]
+def search(keywords, type, top_k, resource_items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    keywords = [normalize_text(keyword) for keyword in keywords]
     filtered_items = []
     for item in resource_items:
-        if config.type and item.get('type') != config.type:
+        if type and item.get('type') != type:
             continue
         if search_item(item, keywords):
             filtered_items.append(item)
-        if len(filtered_items) == config.top_k:
+        if len(filtered_items) == top_k:
             break
     return filtered_items
 
@@ -135,35 +129,40 @@ async def register_chatbot_extension(register):
         "Filter resources by the 'type' key without making remote server requests. 'resources' variable details:\\n"
     ) + resource_item_stats
 
+
+    class ModelZooSearchInput(BaseModel):
+        """Search the BioImage Model Zoo (bioimage.io) resource items such as models, applications, datasets, etc. in the model zoo and return detailed information. The link format to the models etc. is: https://bioimage.io/#/?id=[ResourceID]"""
+        keywords: List[str] = Field(..., description="List of keywords to search for in the model zoo.")
+        top_k: int = Field(3, description="The maximum number of search results to return. Default is 3. Please be aware each item may contain a large amount of data.")
+        type: Optional[ResourceType] = Field(None, description="The type of resource to search for. Options include 'model', 'dataset', 'application'.")
+
+
     def get_schema():
-        return ModelZooInfoScript.schema()
+        return {
+            "run_script": ModelZooInfoScript.schema(),
+            "search": ModelZooSearchInput.schema()
+        }
 
-    async def execute(req):
-        result = execute_code(req['script'], {"resources": resource_items})
+    async def execute_script(kwargs):
+        info_script = ModelZooInfoScript.parse_obj(kwargs)
+        result = execute_code(info_script.script, {"resources": resource_items})
+        return result
+
+    async def execute_search(kwargs):
+        config = ModelZooSearchInput.parse_obj(kwargs)
+        result = search(config.keywords, config.type, config.top_k, resource_items)
         return result
 
     await register({
         "_rintf": True,
-        "name": "ModelZooInfoScript",
-        "description": ModelZooInfoScript.__doc__,
+        "id": "bioimage_model_zoo",
+        "name": "BioImage Model Zoo",
+        "description": "Getting information about models, applications, datasets, etc. in the BioImage Model Zoo. It takes a list of keywords or a python script to query the resources in the BioImage Model Zoo.",
         "get_schema": get_schema,
-        "execute": execute
-    })
-
-    def get_search_schema():
-        return ModelZooSearchInput.schema()
-
-    async def execute_search(config: dict):
-        config = ModelZooSearchInput.parse_obj(config)
-        result = search(config, resource_items)
-        return result
-
-    await register({
-        "_rintf": True,
-        "name": "ModelZooSearch",
-        "description": ModelZooSearchInput.__doc__,
-        "get_schema": get_search_schema,
-        "execute": execute_search
+        "tools": {
+            "run_script": execute_script,
+            "search": execute_search,
+        }
     })
 
 

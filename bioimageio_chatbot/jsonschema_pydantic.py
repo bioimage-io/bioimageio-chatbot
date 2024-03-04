@@ -130,7 +130,7 @@ if __name__ == "__main__":
     assert RunMacroClass.__name__ == input_schema["title"]
     assert RunMacroClass.__doc__ == input_schema["description"]
     m = RunMacroClass(macro="test", args={"test": "test"})
-    schema = RunMacroClass.schema()
+    schema = RunMacroClass.model_json_schema()
     print(schema)
     assert schema['title'] == input_schema['title']
     assert schema['description'] == input_schema['description']
