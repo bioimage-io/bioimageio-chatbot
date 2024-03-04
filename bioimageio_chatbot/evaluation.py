@@ -55,7 +55,7 @@ def create_eval_agent():
 async def evaluate(question, reference_answer, llm_answer):
     eval_bot = create_eval_agent()
     eval_input = EvalInput(question=question, reference_answer=reference_answer, llm_answer=llm_answer)
-    scores = await eval_bot.handle(Message(content=eval_input.json(), data=eval_input, role="User"))
+    scores = await eval_bot.handle(Message(content=eval_input.model_dump_json(), data=eval_input, role="User"))
     similarity_score = scores[0].data.similarity_score
     return similarity_score
     

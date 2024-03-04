@@ -1,7 +1,7 @@
 import asyncio
 from openai import AsyncOpenAI
 from pydantic import BaseModel
-from bioimageio_chatbot.chatbot_extensions import get_builtin_extensions, extension_to_tool
+from bioimageio_chatbot.chatbot_extensions import get_builtin_extensions, extension_to_tools
 from schema_agents.utils.schema_conversion import get_service_openapi_schema
 from imjoy_rpc.hypha import login, connect_to_server
 
@@ -10,7 +10,9 @@ client = AsyncOpenAI()
 async def convert_extensions(builtin_extensions):
     extension_services = {}
     for extension in builtin_extensions:
-        extension_services[extension.name] = await extension_to_tool(extension)
+        tools = await extension_to_tools(extension)
+        for tool in tools:
+            extension_services[tool.__name__] = tool
     return extension_services
 
 async def serve_actions(server, server_url, builtin_extensions):

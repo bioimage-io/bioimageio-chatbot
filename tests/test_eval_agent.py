@@ -127,10 +127,10 @@ async def generate_all_anwsers(eval_file, eval_index):
         return anwser,  "NA"
 
     async def process_chatbot(question):
-        m = QuestionWithHistory(question=question, chat_history=chat_history, user_profile=UserProfile.parse_obj(profile), channel_id=None)
-        responses = await customer_service.handle(Message(content=m.json(), data=m, role="User"))
+        m = QuestionWithHistory(question=question, chat_history=chat_history, user_profile=UserProfile.model_validate(profile), channel_id=None)
+        responses = await customer_service.handle(Message(content=m.model_dump_json(), data=m, role="User"))
         response = responses[-1]
-        return response.data.text,  "\n\n".join([str(step.dict()) for step in response.data.steps])
+        return response.data.text,  "\n\n".join([str(step.model_dump()) for step in response.data.steps])
 
     async def process_gpt4(question):
         gpt4 = create_gpt(model="chatgpt4")
@@ -217,7 +217,7 @@ async def start_evaluate_paral(eval_file, question_col='Question', groundtruth_c
         eval_input = EvalInput(question=question, reference_answer=reference_answer, llm_answer=answer, retrieved_context_list=retrieved_context_list)
         
         try:
-            scores_chatbot = await evalBot.handle(Message(content=eval_input.json(), data=eval_input, role="User"))
+            scores_chatbot = await evalBot.handle(Message(content=eval_input.model_dump_json(), data=eval_input, role="User"))
             
             # results = await asyncio.gather(*tasks)
             

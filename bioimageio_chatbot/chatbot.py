@@ -8,16 +8,16 @@ from functools import partial
 from imjoy_rpc.hypha import login, connect_to_server
 
 from pydantic import BaseModel, Field
-from schema_agents.role import Role
-from schema_agents.schema import Message
+from schema_agents import Role, Message
 from typing import Any, Dict, List, Optional
 import pkg_resources
 from bioimageio_chatbot.chatbot_extensions import (
     convert_to_dict,
     get_builtin_extensions,
-    extension_to_tool,
+    extension_to_tools,
+    create_tool_name,
 )
-from bioimageio_chatbot.utils import ChatbotExtension
+from bioimageio_chatbot.utils import ChatbotExtension, LegacyChatbotExtension, legacy_extension_to_tool
 from bioimageio_chatbot.gpts_action import serve_actions
 import logging
 
@@ -80,16 +80,36 @@ def create_assistants(builtin_extensions):
             + [question_with_history.question]
         )
         assert question_with_history.chatbot_extensions is not None
+        extensions_by_id = {ext.id: ext for ext in builtin_extensions}
         extensions_by_name = {ext.name: ext for ext in builtin_extensions}
+        extensions_by_tool_name = {}
+        
         tools = []
+        tool_prompts = {}
         for ext in question_with_history.chatbot_extensions:
-            if ext["name"] in extensions_by_name:
+            if "id" in ext and ext["id"] in extensions_by_id:
+                extension = extensions_by_id[ext["id"]]
+            elif "name" in ext and ext["name"] in extensions_by_name:
                 extension = extensions_by_name[ext["name"]]
             else:
-                extension = ChatbotExtension.parse_obj(ext)
+                if "tools" not in ext and "execute" in ext and "get_schema" in ext:
+                    # legacy chatbot extension
+                    extension = LegacyChatbotExtension.model_validate(ext)
+                    logger.warning(f"Legacy chatbot extension is deprecated. Please use the new ChatbotExtension interface for {extension.name} with multi-tool support.")
+                else:
+                    extension = ChatbotExtension.model_validate(ext)
 
-            tool = await extension_to_tool(extension)
-            tools.append(tool)
+            if isinstance(extension, LegacyChatbotExtension):
+                ts = [await legacy_extension_to_tool(extension)]
+                assert len(extension.description) <= 1000, f"Extension description is too long: {extension.description}"
+                tool_prompts[create_tool_name(extension.name)] = extension.description.replace("\n", ";")[:256]
+            else:
+                ts = await extension_to_tools(extension)
+                assert len(extension.description) <= 1000, f"Extension tool prompt is too long: {extension.tool_prompt}"
+                tool_prompts[create_tool_name(extension.id) + "*"] = extension.description.replace("\n", ";")[:256]
+            extensions_by_tool_name.update({t.__name__: extension for t in ts})
+            tools += ts
+            
 
         class ThoughtsSchema(BaseModel):
             """Details about the thoughts"""
@@ -101,12 +121,14 @@ def create_assistants(builtin_extensions):
             # reasoning: str = Field(..., description="brief explanation about the reasoning")
             # criticism: str = Field(..., description="constructive self-criticism")
 
+        tool_usage_prompt = "Tool usage guidelines (* represent the prefix of a tool group):\n" + "\n".join([f" - {ext}:{tool_prompt}" for ext, tool_prompt in tool_prompts.items()])
         response, metadata = await role.acall(
             inputs,
             tools,
             return_metadata=True,
             thoughts_schema=ThoughtsSchema,
             max_loop_count=10,
+            tool_usage_prompt=tool_usage_prompt,
         )
         result_steps = metadata["steps"]
         for idx, step_list in enumerate(result_steps):
@@ -172,7 +194,7 @@ For more complex questions, DO NOT generate lots of code at once, instead, break
     # return {"Melman": melman, "Kowalski": kowalski}
     # convert to a list
     all_extensions = [
-        {"name": ext.name, "description": ext.description} for ext in builtin_extensions
+        {"id": ext.id, "name": ext.name, "description": ext.description} for ext in builtin_extensions
     ]
     # remove item with 'book' in all_extensions
     melman_extensions = [
@@ -297,7 +319,7 @@ async def register_chat_service(server):
         async def stream_callback(message):
             if message.type in ["function_call", "text"]:
                 if message.session.id == session_id:
-                    await status_callback(message.dict())
+                    await status_callback(message.model_dump())
 
         event_bus = assistant.get_event_bus()
         event_bus.on("stream", stream_callback)
@@ -337,7 +359,7 @@ async def register_chat_service(server):
             chat_log_full_path = os.path.join(chat_logs_path, filename)
             await save_chat_history(chat_log_full_path, chat_his_dict)
             print(f"Chat history saved to {filename}")
-        return response.dict()
+        return response.model_dump()
 
     async def chat(
         text,
@@ -356,7 +378,7 @@ async def register_chat_service(server):
         m = QuestionWithHistory(
             question=text,
             chat_history=chat_history,
-            user_profile=UserProfile.parse_obj(user_profile),
+            user_profile=UserProfile.model_validate(user_profile),
             chatbot_extensions=extensions,
             context=context,
         )
@@ -368,17 +390,6 @@ async def register_chat_service(server):
                 context.get("user")
             ), "You don't have permission to use the chatbot, please sign up and wait for approval"
         return "pong"
-
-    def encode_base_model(data):
-        return data.dict()
-
-    server.register_codec(
-        {
-            "name": "pydantic-base-model",
-            "type": BaseModel,
-            "encoder": encode_base_model,
-        }
-    )
 
     hypha_service_info = await server.register_service(
         {

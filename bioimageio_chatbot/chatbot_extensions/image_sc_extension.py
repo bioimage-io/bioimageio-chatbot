@@ -7,7 +7,7 @@ import html2text
 from pydantic import BaseModel, Field
 from bioimageio_chatbot.utils import ChatbotExtension
 from typing import List, Dict, Any, Optional
-
+from schema_agents import schema_tool
 class SearchParameters(BaseModel):
     """Parameters for searching the Image.sc Forum."""
     query: str = Field(..., description="The search query string.")
@@ -78,7 +78,7 @@ class DiscourseClient:
 
         # Check if the request was successful
         if response.status_code == 200:
-            return self._cleanup_search_results(response.json(), req.top_k)  # Return the JSON response
+            return self._cleanup_search_results(response.model_dump_json(), req.top_k)  # Return the JSON response
         else:
             response.raise_for_status()  # Raise an error for bad responses
 
@@ -95,7 +95,7 @@ class DiscourseClient:
         async with httpx.AsyncClient() as client:
             response = await client.get(url, headers=headers)
         response.raise_for_status()
-        topic_data = response.json()
+        topic_data = response.model_dump_json()
 
         post_ids = [post['id'] for post in topic_data['post_stream']['posts']]
         messages = await asyncio.gather(*[self.get_post_content(post_id) for post_id in post_ids])
@@ -110,29 +110,26 @@ class DiscourseClient:
         async with httpx.AsyncClient() as client:
             response = await client.get(url, headers=headers)
         response.raise_for_status()
-        post_data = response.json()
+        post_data = response.model_dump_json()
         return {"username": post_data["username"], "content": post_data["cooked"], "url": f"{self._base_url}/t/{post_data['topic_slug']}"}
     
-def get_extensions():
+def get_extension():
     username = os.environ.get("DISCOURSE_USERNAME")
     api_key = os.environ.get("DISCOURSE_API_KEY")
     if not username or not api_key:
         print("WARNING: Image.sc Forum extensions require DISCOURSE_USERNAME and DISCOURSE_API_KEY environment variables to be set, disabling it for now.")
-        return []
+        return None
 
     discourse_client = DiscourseClient(base_url="https://forum.image.sc/", username=username, api_key=api_key)
-    return [
-        ChatbotExtension(
-            name="SearchInImageScForum",
-            description="Search the Image.sc Forum for posts and topics.",
-            execute=discourse_client.search_image_sc,
-        ),
-        ChatbotExtension(
-            name="ReadImageScForumPosts",
-            description="Read a single or all the posts in a topic from the Image.sc Forum.",
-            execute=discourse_client.read_image_sc_posts,
+    return ChatbotExtension(
+        id="image_sc_forum",
+        name="Search image.sc Forum",
+        description="Search the Image.sc Forum for posts and topics. Provide a search query to search the Image.sc Forum for posts or post, and read a specific topic",
+        tools=dict(
+            search=schema_tool(discourse_client.search_image_sc),
+            read=schema_tool(discourse_client.read_image_sc_posts)
         )
-    ]
+    )
 
 if __name__ == "__main__":
     async def main():

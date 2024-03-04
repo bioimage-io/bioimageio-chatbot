@@ -551,22 +551,34 @@
     }
     
     async function _registerExtension(extension) {
-      if(!extension.name || !extension.execute || !extension.get_schema) 
-        throw new Error("Invalid extension")
-      const schema = await extension.get_schema()
-      if(!schema || !schema.title || schema.title.includes(" ") || !schema.description)
-        throw new Error("Invalid extension schema")
-      const _execute = extension.execute;
-
-      extension.execute = async function(config){
-        config = decodeData(config)
-        const result = await _execute(config)        
-        return encodeData(result)
+      // convert legacy extension to new format
+      if(!extension.tools && extension.execute){
+        extension.id = extension.name.replace(/\s+/g, '-')
+        extension.tools = {
+          _: extension.execute
+        }
+        const get_schema = extension.get_schema
+        if(get_schema){
+          extension.get_schema = async function(){
+            const schema = await get_schema()
+            return {
+              _: schema
+            }
+          }
+        }
+        delete extension.execute
       }
-
+      if(!extension.id || !extension.tools || !extension.get_schema) 
+        throw new Error("Invalid extension")
+      const schemas = await extension.get_schema()
+      for(let k of Object.keys(schemas)){
+        const schema = schemas[k]
+        if(!schema || !schema.title || schema.title.includes(" ") || !schema.description)
+          throw new Error("Invalid extension schema: " + k)
+      }
       extensions.push(extension);
       // remove duplicates
-      extensions = extensions.filter((v,i,a)=>a.findIndex(t=>(t.name === v.name))===i)
+      extensions = extensions.filter((v,i,a)=>a.findIndex(t=>(t.id === v.id))===i)
       registeredExtensions.push(extension);
       updateDropdownOptions(extensions);
     }
@@ -986,6 +998,7 @@
               accumulatedArgs = message.arguments
             }
             const args = accumulatedArgs.replace(/\\n/g, '\n');
+            
             content = // `<details> <summary>${message.name}</summary>`+
               "## Generating response for " + message.name + "...\n\n" +
               args;
@@ -1028,7 +1041,7 @@
           const steps = response.steps;
           let message = response.text;
           if(steps && steps.length > 0){
-            message = message + "<br>\n\n<details> <summary>🔍More Details</summary>\n\n"
+            message = message + "\n\n<br><details> <summary>🔍More Details</summary>\n\n"
             for(let step of steps){
               message = message + `<div class="step">${step.name}</div>\n\n\`\`\`\n\n${JSON.stringify(step.details, null, 2)}\n\n\`\`\`\n\n`
             }

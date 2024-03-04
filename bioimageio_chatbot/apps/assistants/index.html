@@ -140,7 +140,12 @@
           await api.createWindow({src: `${origin}/assistants/code-interpreter.html`, w:25, h:20, name: "Code Interpreter"})
         },
       });
-      await app.loadPlugin("https://raw.githubusercontent.com/bioimage-io/bioimageio-chatbot/main/bioimageio_chatbot/static/bioimage-model-zoo-extension.imjoy.html");
+      if(origin.includes('127.0.0.1') || origin.includes('localhost')){
+        await app.loadPlugin(`${origin}/assets/bioimage-model-zoo-extension.imjoy.html`)
+      }
+      else{
+        await app.loadPlugin("https://raw.githubusercontent.com/bioimage-io/bioimageio-chatbot/main/bioimageio_chatbot/static/bioimage-model-zoo-extension.imjoy.html");
+      }
       
       /*  app.addMenuItem({
         label: "Enable SearchBioImageModelZoo",
