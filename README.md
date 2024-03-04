@@ -239,6 +239,10 @@ Enjoy using the BioImage.IO Chatbot!
 
 Please read the [technical overview](./docs/technical-overview.md) for more details about the chatbot's design and implementation.
 
+## Develop Chatbot Extensions
+
+The BioImage.IO Chatbot is designed to be extensible, allowing developers to create custom extensions to add new functionalities to the chatbot. You can create extensions to integrate new tools, databases, and services into the chatbot, making it more powerful and versatile. See the [development guide](./docs/development.md) for more details.
+
 ## Join Us as a Community Partner
 
 The BioImage.IO Chatbot is a community-driven project. We welcome contributions from the community to help improve the chatbot's knowledge base and make it more informative and useful to the community.
