@@ -666,13 +666,36 @@
 
         try {
           const server_url = urlParams.get('server_url');
-          // Call the login function to get the token
-          token = await hyphaWebsocketClient.login({
-            "server_url": server_url || "https://ai.imjoy.io",
-            "login_callback": login_callback,
-          });
-          // If the login is successful, proceed to initialize the service
-          svc = await initializeService();
+          // try to load token from localstorage before trying to get it, after getting it save it to localstorage with a expiry time (3h), when using a saved token, always check the expiry time
+          try{
+            token = localStorage.getItem('token');
+            if(token){
+              const tokenExpiry = localStorage.getItem('tokenExpiry');
+              if(tokenExpiry && new Date(tokenExpiry) > new Date()){
+                console.log("Using saved token:", token)
+              }
+              else{
+                // Call the login function to get the token
+                token = await hyphaWebsocketClient.login({
+                  "server_url": server_url || "https://ai.imjoy.io",
+                  "login_callback": login_callback,
+                });
+                localStorage.setItem('token', token);
+                localStorage.setItem('tokenExpiry', new Date(Date.now() + 3*60*60*1000).toISOString());
+              }
+            }
+            // If the login is successful, proceed to initialize the service
+            svc = await initializeService();
+          }
+          catch(e){
+            console.error("Failed to login:", e)
+            token = null;
+            localStorage.removeItem('token');
+            localStorage.removeItem('tokenExpiry');
+            alert("Failed to login, please reload the page and try again, error:" + e)
+            throw e;
+          }
+          
           // Show the app interface
           showAppInterface();
         } catch (e) {

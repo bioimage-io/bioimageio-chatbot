@@ -198,17 +198,20 @@ For more complex questions, DO NOT generate lots of code at once, instead, break
     ]
     # remove item with 'book' in all_extensions
     melman_extensions = [
-        ext for ext in all_extensions if "book" not in ext["name"].lower()
+        ext for ext in all_extensions if ext["id"] != "books"
     ]
     
     kowalski_extensions = [
-        ext for ext in all_extensions if ext["name"] in ["SearchWeb", "CodeInterpreter"]
+        ext for ext in all_extensions if ext["id"] == "web"
     ]
 
     # only keep the item with 'book' in all_extensions
     king_julien_extensions = [
-        ext for ext in all_extensions if "book" in ext["name"].lower()
+        ext for ext in all_extensions if "books" == ext["id"]
+    ] + [
+        ext for ext in all_extensions if ext["id"] == "web"
     ]
+
     return [
         {"name": "Melman", "agent": melman, "extensions": melman_extensions},
         {"name": "Kowalski", "agent": kowalski, "extensions": kowalski_extensions},

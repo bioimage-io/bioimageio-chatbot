@@ -139,15 +139,28 @@ def get_extension():
         "BIOIMAGEIO_KNOWLEDGE_BASE_PATH", "./bioimageio-knowledge-base"
     )
     docs_store_dict = load_knowledge_base(knowledge_base_path)
-    tools = {}
+    
+    docs_tools = {}
+    books_tools = {}
     for col in collections:
-        tools["search_" + col["id"]] = create_tool(docs_store_dict, col)
+        if "book" in col["id"]:
+            books_tools["search_" + col["id"]] = create_tool(docs_store_dict, col)
+        else:
+            docs_tools["search_" + col["id"]] = create_tool(docs_store_dict, col)
 
-    sinfo = ChatbotExtension(
-        id="docs",
-        name="Search BioImage Knowledge Base",
-        description="Search information in the documents of the bioimage.io knowledge base. Provide a list of keywords to search information in the documents. Returns a list of relevant documents.",
-        tools=tools,
-    )
+    if docs_tools:
+        sinfo1 = ChatbotExtension(
+            id="docs",
+            name="Search BioImage Docs",
+            description="Search information in the documents of the bioimage.io knowledge base. Provide a list of keywords to search information in the documents. Returns a list of relevant documents.",
+            tools=docs_tools,
+        )
+    if books_tools:
+        sinfo2 = ChatbotExtension(
+            id="books",
+            name="Search BioImage Books",
+            description="Search information in BioImage books. Provide a list of keywords to search information in the books. Returns a list of relevant documents.",
+            tools=books_tools,
+        )
 
-    return sinfo
+    return sinfo1, sinfo2
