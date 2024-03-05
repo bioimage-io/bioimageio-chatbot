@@ -39,14 +39,16 @@ chatbot.registerExtension({
 Here is an example of a simple extension that can be used to control a microscope.
 
 ```python
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from imjoy_rpc import api
     
 class MoveStageInput(BaseModel):
+    """Move the microscope stage"""
     x: float = Field(..., description="x offset")
     y: float = Field(..., description="y offset")
 
 class SnapImageInput(BaseModel):
+    """Move the microscope stage"""
     exposure: float = Field(..., description="exposure time")
 
 def move_stage(kwargs):
