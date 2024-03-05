@@ -11,13 +11,16 @@ def get_builtin_extensions():
     for module in pkgutil.walk_packages(__path__, __name__ + '.'):
         if module.name.endswith('_extension'):
             ext_module = module.module_finder.find_module(module.name).load_module(module.name)
-            ext = ext_module.get_extension()
-            if not isinstance(ext, ChatbotExtension):
-                print(f"Failed to load chatbot extension: {module.name}.")
-                continue
-            if ext.id in [e.id for e in extensions]:
-                raise ValueError(f"Extension name {ext.id} already exists.")
-            extensions.append(ext)
+            exts = ext_module.get_extension()
+            if isinstance(exts, ChatbotExtension):
+                exts = [exts]
+            for ext in exts:
+                if not isinstance(ext, ChatbotExtension):
+                    print(f"Failed to load chatbot extension: {module.name}.")
+                    continue
+                if ext.id in [e.id for e in extensions]:
+                    raise ValueError(f"Extension name {ext.id} already exists.")
+                extensions.append(ext)
             
     return extensions
 
