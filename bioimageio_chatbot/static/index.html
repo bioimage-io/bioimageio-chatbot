@@ -321,9 +321,9 @@
             BioImage.IO Chatbot
           </div>
           <div id="assistant-buttons">
-            <button class="btn" onclick="switchAssistant('Melman')">Melman</button>
-            <button class="btn" onclick="switchAssistant('King Julien')">King Julien</button>
-            <button class="btn" onclick="switchAssistant('Kowalski')">Kowalski</button>
+            <button type="button" class="btn" onclick="switchAssistant('Melman')">Melman</button>
+            <button type="button" class="btn" onclick="switchAssistant('Bridget')">Bridget</button>
+            <button type="button" class="btn" onclick="switchAssistant('Nina')">Nina</button>
           </div>
         </div>
 
@@ -436,6 +436,12 @@
     let mountedFolder;
     let extensions = [];
     const registeredExtensions = []
+    const assistantIcons = {
+      "Melman": "/bioimageio_chatbot/static/melman-bmz.png",
+      "Bridget": "/bioimageio_chatbot/static/bridget-bmz.png",
+      "Nina": "/bioimageio_chatbot/static/nina-bmz.png" 
+    };
+
     function fileSelected() {
       var input = document.getElementById('fileUpload');
       var label = document.getElementById('paperclipIcon');
@@ -1092,9 +1098,10 @@
       }
 
       function appendRobotMessage(htmlMessage, messageId) {
+        const iconUrl = assistantIcons[assistantName];
         const messageContainer = `<div class="message-container robot-message" id="container-${messageId}">
           <div class="rounded-icon-container">
-            <img style="width: 20px;" src="https://bioimage.io/static/img/bioimage-io-icon.svg" alt="Melman the Giraffe" width="30" height="30">
+            <img src="${iconUrl}" alt="${assistantName}" width="20" height="20">
           </div>
           <div class="message-content markdown-body">
             <h3 id="spinner-${messageId}" style="display:none;"><div class="spinner" style='display: inline-block;width:25px;height:25px;margin-bottom:-4px;'></div>🤔Thinking...</h3>
