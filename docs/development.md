@@ -1,16 +1,18 @@
 # Developing Chatbot Extensions
 
 ## Introduction
-BioImage.IO Chatbot is designed to be easily extensible. This document describes how to develop and integrate new extensions into the chatbot.
+The BioImage.IO Chatbot offers a framework designed for easy extensibility, allowing developers to enrich its capabilities with custom extensions. This guide walks you through the process of developing and integrating new extensions into the chatbot, emphasizing the minimal requirements and the steps involved in using ImJoy to interact with the chatbot.
 
-The minimal requirement for an extension is to have a function that can be called from the chatbot. The function should take a single argument, which is a dictionary of parameters. The function should return a dictionary with the result of the operation.
+Extensions must expose a callable function that adheres to a specific interface: it should accept a dictionary of parameters as its single argument and return a dictionary containing the results of its operations. This design facilitates seamless integration and communication between the chatbot and its extensions.
 
-You can use ImJoy to interact with the chatbot. After creating the chatbot window in ImJoy, the chatbot extension can be registered with the chatbot using the `registerExtension` method. For example in javascript:
+Below are examples demonstrating how to register an extension with the chatbot using both JavaScript and Python:
+
+### JavaScript Example
 ```javascript
 const chatbot = await api.createWindow({
     src: "https://chat.bioimage.io/public/apps/bioimageio-chatbot-client/chat",
     name:"BioImage.IO Chatbot",
-})
+});
 chatbot.registerExtension({
     id: "my-extension",
     name: "My Extension",
@@ -26,18 +28,18 @@ chatbot.registerExtension({
                     }
                 }
             }
-        }
+        };
     },
     tools: {
         my_tool(config) {
-            console.log(config.my_param)
-            return {result: "success"}
+            console.log(config.my_param);
+            return {result: "success"};
         }
     }
-})
+});
 ```
 
-Or in Python:
+### Python Example
 ```python
 from imjoy_rpc import api
 
@@ -52,16 +54,16 @@ def get_schema():
                 }
             }
         }
-    }
+    };
 
 def my_tool(config):
-    print(config["my_param"])
-    return {"result": "success"}
+    print(config["my_param"]);
+    return {"result": "success"};
 
 chatbot = await api.createWindow(
     src="https://chat.bioimage.io/public/apps/bioimageio-chatbot-client/chat",
     name="BioImage.IO Chatbot",
-)
+);
 await chatbot.registerExtension({
     "id": "my-extension",
     "name": "My Extension",
@@ -70,10 +72,23 @@ await chatbot.registerExtension({
     "tools": {
         "my_tool": my_tool
     }
-})
-
+});
 ```
 
 ## Tutorial
+For an in-depth understanding, refer to [our detailed tutorial](./bioimage-chatbot-extension-tutorial.ipynb), accessible directly through the ImJoy Jupyter Notebook in your browser without installation. [Click here to launch the notebook](https://imjoy-notebook.netlify.app/lab/index.html?load=https://raw.githubusercontent.com/bioimage-io/bioimageio-chatbot/main/docs/bioimage-chatbot-extension-tutorial.ipynb&open=1).
 
-For a more compelte example, we provide [a notebook here](./bioimage-chatbot-extension-tutorial.ipynb). You can also try it directly in your browser without installing anything by using the ImJoy Jupyter Notebook, [click here to launch the notebook](https://imjoy-notebook.netlify.app/lab/index.html?load=https://raw.githubusercontent.com/bioimage-io/bioimageio-chatbot/main/docs/bioimage-chatbot-extension-tutorial.ipynb&open=1).
+## Extension Development Details
+
+### `tools` and `get_schema`
+When developing extensions, it's essential to define the `tools` and `get_schema` functionalities carefully:
+- **`tools`**: Represents the set of functions your extension offers, each accepting configuration parameters as input. These functions should carry out specific tasks and return their results in a dictionary.
+- **`get_schema`**: Returns a JSON schema for each tool function, specifying the structure and types of the expected parameters. This schema is crucial for validating the inputs and ensuring they adhere to the expected format.
+
+### Notes on Function Input/Output
+The input and output of tool functions are restricted to primitive types (e.g., numbers, strings) that can be encoded in JSON. This limitation ensures compatibility and facilitates the exchange of data between the chatbot and extensions.
+
+### Importance of Detailed Descriptions
+Providing a detailed description for your extension and its arguments is vital. These descriptions assist the chatbot in correctly invoking the tools and help users understand the functionality and purpose of your extension. Ensure that each argument is accompanied by a clear title and a comprehensive description to improve usability and interaction quality.
+
+By adhering to these guidelines, you will enhance the clarity, utility, and ease of integration of your chatbot extensions, contributing to a richer ecosystem of tools within the BioImage.IO community.
