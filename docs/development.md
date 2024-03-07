@@ -7,12 +7,6 @@ The minimal requirement for an extension is to have a function that can be calle
 
 After creating the chatbot window, the extension can be registered with the chatbot using the `registerExtension` method. For example:
 ```javascript
-
-function my_tool_function(kwargs) {
-    console.log(kwargs)
-    return {result: "success"}
-}
-
 chatbot.registerExtension({
     id: "my-extension",
     name: "My Extension",
@@ -31,11 +25,12 @@ chatbot.registerExtension({
         }
     },
     tools: {
-        my_tool: my_tool_function
+        my_tool(config) {
+            console.log(config.my_param)
+            return {result: "success"}
+        }
     }
 })
 ```
 
-[Here](./bioimage-chatbot-extension-tutorial.ipynb) you can find a notebook with tutorials on how you can create your own extensions for the chatbot.
-
-You can also try it directly in your browser without installing anything by using the [ImJoy Jupyter Notebook](https://imjoy-notebook.netlify.app/lab/index.html?load=https://raw.githubusercontent.com/bioimage-io/bioimageio-chatbot/main/docs/bioimage-chatbot-extension-tutorial.ipynb&open=1).
+For a more compelte example, we provide [a notebook here](./bioimage-chatbot-extension-tutorial.ipynb). You can also try it directly in your browser without installing anything by using the ImJoy Jupyter Notebook, [click here to launch the notebook](https://imjoy-notebook.netlify.app/lab/index.html?load=https://raw.githubusercontent.com/bioimage-io/bioimageio-chatbot/main/docs/bioimage-chatbot-extension-tutorial.ipynb&open=1).
