@@ -5,7 +5,10 @@ The BioImage.IO Chatbot offers a framework designed for easy extensibility, allo
 
 Extensions must expose a callable function that adheres to a specific interface: it should accept a dictionary of parameters as its single argument and return a dictionary containing the results of its operations. This design facilitates seamless integration and communication between the chatbot and its extensions.
 
-Below are examples demonstrating how to register an extension with the chatbot using both JavaScript and Python:
+You can extend the chatbot using [ImJoy](https://imjoy.io).
+Below are examples demonstrating how to register an extension with the chatbot using both JavaScript and Python in ImJoy:
+
+You can try them here: https://imjoy.io/lite?plugin=https://if.imjoy.io
 
 ### JavaScript Example
 ```javascript
