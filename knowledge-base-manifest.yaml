@@ -99,6 +99,32 @@ collections:
     description: "A book written by the FUTURE AI consortium about international consensus guideline for trustworthy and deployable artificial intelligence in healthcare"
     base_url: https://www.nature.com/articles/s41592-021-01108-9
     format: pdf
+  - name: The ITK Software Guide Book 1 Introduction and Development Guidelines
+    id: book-isg1idg
+    source: https://github.com/InsightSoftwareConsortium/ITKSoftwareGuide/releases/download/v5.3.0/InsightSoftwareGuide-Book1-5.3.0.pdf
+    description: "Introduction to ITK, how to install, build, basis system concepts, design of data structures and application of analysis methods, and how to contribute"
+    base_url: https://docs.itk.org
+    format: pdf
+  - name: The ITK Software Guide Book 2 Design and Functionality
+    id: book-isg2df
+    source: https://github.com/InsightSoftwareConsortium/ITKSoftwareGuide/releases/download/v5.3.0/InsightSoftwareGuide-Book2-5.3.0.pdf
+    description: "Detailed design and functionality for reading and writing images, filtering, registration, segmentation, and performing statistical analysis"
+    base_url: https://docs.itk.org
+    format: pdf
+  - name: ITK
+    id: itk-docs
+    source: https://github.com/InsightSoftwareConsortium/ITK/archive/refs/heads/master.zip
+    directory: Documentation/docs
+    description: "ITK builds on a proven, spatially-oriented architecture for processing, segmentation, and registration of scientific images in two, three, or more dimensions"
+    base_url: https://docs.itk.org
+    format: markdown
+  - name: ITK-Wasm
+    id: itkwasm-docs
+    source: https://github.com/InsightSoftwareConsortium/itk-wasm/archive/refs/heads/main.zip
+    directory: docs
+    description: "High-performance spatial analysis in a web browser, Node.js, and across programming languages and hardware architectures"
+    base_url: https://wasm.itk.org
+    format: markdown
 
 
 additional_channels:
