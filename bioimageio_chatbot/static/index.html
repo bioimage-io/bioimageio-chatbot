@@ -321,9 +321,9 @@
             BioImage.IO Chatbot
           </div>
           <div id="assistant-buttons">
-            <button type="button" class="btn" onclick="switchAssistant('Melman')">Melman</button>
-            <button type="button" class="btn" onclick="switchAssistant('Bridget')">Bridget</button>
-            <button type="button" class="btn" onclick="switchAssistant('Nina')">Nina</button>
+            <button type="button" class="btn btn-secondary" data-assistant="Melman">BIASeeker</button>
+            <button type="button" class="btn btn-secondary" data-assistant="Bridget">BIAExecutor</button>
+            <button type="button" class="btn btn-secondary" data-assistant="Nina">BIATutor</button>
           </div>
         </div>
 
@@ -601,18 +601,13 @@
       const spinner = `<div class="spinner"></div>`; // Spinner HTML
       const enableCodeInterpreter = urlParams.get('enable-code-interpreter') === "true";
       let assistantName = urlParams.get('assistant') || "Melman";
+
       // add button class primary to the selected assistant button
       // use assistant-buttons to find the buttons container
-      const assistantButtons = document.getElementById('assistant-buttons')
-      for (let button of assistantButtons.children) {
-        if (button.textContent === assistantName) {
-          button.classList.add('btn-primary')
-        }
-        else{
-          button.classList.remove('btn-primary')
-          button.classList.add('btn-secondary')
-        }
-      }
+      $('#assistant-buttons button[data-assistant="' + assistantName + '"]')
+        .removeClass('btn-secondary')
+        .addClass('btn-primary');
+  
       let shortIntroMessage = `Hi there! I'm ${assistantName}, how can I assist you today?`;
       
 
@@ -881,11 +876,12 @@
         initializeService();
       }
 
-      window.switchAssistant = (aName)=>{
-        const url = new URL(window.location.href)
-        url.searchParams.set('assistant', aName)
-        window.open(url.toString(), '_self')
-      }
+      $('#assistant-buttons button').click(function() {
+        const assistantName = $(this).data('assistant');
+        const url = new URL(document.location.href);
+        url.searchParams.set('assistant', assistantName);
+        document.location.href = url.toString();
+      });
 
       $('#reset-btn').click(function () {
         resetChat(); // Call the reset function when the "Reset" button is clicked
