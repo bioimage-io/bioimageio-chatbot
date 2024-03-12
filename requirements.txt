@@ -9,7 +9,7 @@ serpapi
 langchain>=0.1.10
 beautifulsoup4
 pandas
-duckduckgo-search==4.2.0
+duckduckgo-search==5.0
 langchain-openai==0.0.8
 rank-bm25==0.2.2
 html2text==2020.1.16

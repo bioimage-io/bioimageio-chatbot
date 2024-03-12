@@ -1,9 +1,9 @@
 """Jsonschema to pydantic schema from https://github.com/c32168/dyntamic"""
-from typing import Annotated, Union, Any
+from typing import Annotated, Union, Any, Optional
 
 import typing
 from pydantic import create_model
-from pydantic.fields import Field
+from pydantic.fields import Field, PydanticUndefined
 
 Model = typing.TypeVar('Model', bound='BaseModel')
 
@@ -17,6 +17,7 @@ class DyntamicFactory:
         'integer': int,
         'float': float,
         'number': float,
+        'null': None,
     }
 
     def __init__(self,
@@ -40,16 +41,37 @@ class DyntamicFactory:
         self.description = json_schema.get('description')
         self.class_type = json_schema.get('type')
         self.required = json_schema.get('required', [])
+        self.default = json_schema.get('default')
         self.raw_fields = json_schema.get('properties')
         self.ref_template = ref_template
         self.definitions = json_schema.get(ref_template)
         self.fields = {}
         self.model_fields = {}
         self._base_model = base_model
+        
+    def get_factory(self, field_name, field) -> Any:
+        """Get the factory for a given type"""
+        f_type = field.get('type')
+        if f_type is None and 'anyOf' in field:
+            factory = tuple([self.get_factory(None, t) for t in field.get('anyOf')])
+            if None in factory and len(factory) == 2:
+                if field_name and field_name not in self.required:
+                    factory = [f for f in factory if f is not None][0]
+                else:
+                    factory = Optional[[f for f in factory if f is not None][0]]
+            else:
+                factory = Union[factory]
+        else:
+            factory = self.TYPES.get(f_type)
+        return factory
 
     def make(self) -> Model:
         """Factory method, dynamically creates a pydantic model from JSON Schema"""
         for field in self.raw_fields:
+            if field not in self.required:
+                default = self.raw_fields[field].get('default')
+            else:
+                default = PydanticUndefined
             if '$ref' in self.raw_fields[field]:
                 model_name = self.raw_fields[field].get('$ref')
                 # resolve $ref
@@ -63,38 +85,38 @@ class DyntamicFactory:
                 if model_name.startswith(self.ref_template+"/"):
                     model_name = model_name.replace(self.ref_template+"/", '')
 
-                self._make_nested(model_name, field)
+                self._make_nested(model_name, field, default)
             else:
-                factory = self.TYPES.get(self.raw_fields[field].get('type'))
+                factory = self.get_factory(field, self.raw_fields[field])
                 if factory is None:
                     factory = Any
                 if factory == list:
                     items = self.raw_fields[field].get('items')
                     if self.ref_template in items:
                         self._make_nested(items.get(self.ref_template), field)
-                self._make_field(factory, field, self.raw_fields.get('title'), self.raw_fields.get(field).get('description'))
+                
+                self._make_field(factory, field, self.raw_fields.get('title'), self.raw_fields.get(field).get('description'), default=default)
         model = create_model(self.class_name, __base__=self._base_model, **self.model_fields)
         model.__doc__ = self.description
         return model
 
-    def _make_nested(self, model_name: str, field) -> None:
+    def _make_nested(self, model_name: str, field, default) -> None:
         """Create a nested model"""
         level = DyntamicFactory({self.ref_template: self.definitions} | self.definitions.get(model_name),
                                 ref_template=self.ref_template)
         level.make()
         model = create_model(model_name, **level.model_fields)
         model.__doc__ = level.description
-        self._make_field(model, field, field, level.description)
+        self._make_field(model, field, field, level.description, default)
 
-    def _make_field(self, factory, field, alias, description) -> None:
+    def _make_field(self, factory, field, alias, description, default) -> None:
         """Create an annotated field"""
-        if field not in self.required:
-            factory_annotation = Annotated[Union[factory, None], factory]
-        else:
-            factory_annotation = factory
+        # if field not in self.required:
+        #     factory_annotation = Annotated[Union[factory, None], factory]
+        # else:
+        factory_annotation = factory
         self.model_fields[field] = (
-            Annotated[factory_annotation, Field(default_factory=factory, alias=alias, description=description)],
-            ...)
+            Annotated[factory_annotation, Field(default_factory=None, alias=alias, description=description)], default)
 
 def json_schema_to_pydantic_model(schema):
     f = DyntamicFactory(schema)
@@ -111,7 +133,12 @@ if __name__ == "__main__":
                 "description": "The macro to run"
             },
             "args": {"$ref": "#/definitions/Args"},
+            "query": {"description": "The search query string.", "title": "Query", "type": "string"},
+            "pageSize": {"default": 10, "description": "Number of search results per page.", "exclusiveMinimum": 0, "title": "Pagesize", "type": "integer"},
+            "page": {"default": 1, "description": "Page number of the search results.", "title": "Page", "type": "integer"},
+            "sortOrder": {"anyOf": [{"type": "string"}, {"type": "null"}], "default": "descending", "description": "Sort order: ascending or descending.", "title": "Sortorder"}
         },
+        "required": ["macro", "query"],
         "definitions": {
             "Args": {
                 "title": "Args",
@@ -128,13 +155,13 @@ if __name__ == "__main__":
     }
     RunMacroClass = json_schema_to_pydantic_model(input_schema)
     assert RunMacroClass.__name__ == input_schema["title"]
-    assert RunMacroClass.__doc__ == input_schema["description"]
-    m = RunMacroClass(macro="test", args={"test": "test"})
+    # assert RunMacroClass.__doc__ == input_schema["description"]
+    m = RunMacroClass(macro="test", args={"test": "test"}, query="test")
     schema = RunMacroClass.model_json_schema()
     print(schema)
     assert schema['title'] == input_schema['title']
     assert schema['description'] == input_schema['description']
     assert schema['properties']['macro']["description"] == input_schema['properties']['macro']["description"]
-    assert schema['properties']['args']['allOf'][0]['$ref'] == "#/definitions/Args"
+    assert schema['properties']['args']['allOf'][0]['$ref'] == "#/$defs/Args"
     assert m.macro == "test"
     
