@@ -78,7 +78,7 @@ class DiscourseClient:
 
         # Check if the request was successful
         if response.status_code == 200:
-            return self._cleanup_search_results(response.model_dump_json(), req.top_k)  # Return the JSON response
+            return self._cleanup_search_results(response.json(), req.top_k)  # Return the JSON response
         else:
             response.raise_for_status()  # Raise an error for bad responses
 
@@ -95,7 +95,7 @@ class DiscourseClient:
         async with httpx.AsyncClient() as client:
             response = await client.get(url, headers=headers)
         response.raise_for_status()
-        topic_data = response.model_dump_json()
+        topic_data = response.json()
 
         post_ids = [post['id'] for post in topic_data['post_stream']['posts']]
         messages = await asyncio.gather(*[self.get_post_content(post_id) for post_id in post_ids])
@@ -110,7 +110,7 @@ class DiscourseClient:
         async with httpx.AsyncClient() as client:
             response = await client.get(url, headers=headers)
         response.raise_for_status()
-        post_data = response.model_dump_json()
+        post_data = response.json()
         return {"username": post_data["username"], "content": post_data["cooked"], "url": f"{self._base_url}/t/{post_data['topic_slug']}"}
     
 def get_extension():

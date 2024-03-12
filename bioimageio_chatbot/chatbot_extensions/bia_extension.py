@@ -25,7 +25,7 @@ class BioImageArchiveClient:
         async with httpx.AsyncClient() as client:
             response = await client.get(url, params=params)
         response.raise_for_status()
-        return self._simplify_search_results(response.model_dump_json())
+        return self._simplify_search_results(response.json())
 
     def _simplify_search_results(self, results: Dict[str, Any]) -> Dict[str, Any]:
         simplified_results = {
@@ -49,7 +49,7 @@ class BioImageArchiveClient:
         async with httpx.AsyncClient() as client:
             response = await client.get(url)
         response.raise_for_status()
-        return self._simplify_study_details(response.model_dump_json())
+        return self._simplify_study_details(response.json())
 
     def _simplify_study_details(self, study_details: Dict[str, Any]) -> Dict[str, Any]:
         # Initialize simplified details with placeholders for title and description
