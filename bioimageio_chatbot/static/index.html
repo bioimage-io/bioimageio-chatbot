@@ -320,10 +320,10 @@
               style="height: 24px; margin-right: 10px">
             BioImage.IO Chatbot
           </div>
-          <div id="assistant-buttons">
-            <button type="button" class="btn btn-secondary" data-assistant="Melman">BIASeeker</button>
-            <button type="button" class="btn btn-secondary" data-assistant="Bridget">BIAExecutor</button>
-            <button type="button" class="btn btn-secondary" data-assistant="Nina">BIATutor</button>
+          <div id="assistant-buttons" class="btn-group d-flex flex-column flex-md-row">
+            <button type="button" class="btn btn-secondary mb-2 mb-md-0 mr-md-1" data-assistant="Melman">BIA Seeker</button>
+            <button type="button" class="btn btn-secondary mb-2 mb-md-0 mx-md-1" data-assistant="Bridget">BIA Executor</button>
+            <button type="button" class="btn btn-secondary mb-2 mb-md-0 ml-md-1" data-assistant="Nina">BIA Tutor</button>
           </div>
         </div>
 
@@ -360,9 +360,12 @@
           <button type="button" class="btn btn-info mt-3" id="mount-folder-btn">
             <i class="fas fa-folder"></i> Mount Folder
           </button>
+          <button type="button" class="btn btn-outline-secondary mt-3" id="advanced-options-btn">
+            <i class="fas fa-ellipsis-h"></i> More Options
+          </button>
 
           <!-- Profile options initially collapsed -->
-          <div id="profileOptions" class="collapse">
+          <div id="profile-options" class="collapse">
             <input type="text" class="form-control mt-3" id="userNameInput" placeholder="Enter your name...">
             <input type="text" class="form-control mt-3" id="userOccupationInput"
               placeholder="Enter your occupation...">
@@ -384,10 +387,11 @@
             </button>
           </div>
           <!-- Add the "Extensions" dropdown menu -->
-          <br>
-          <br>
-          <span>Extensions: </span>
-          <select multiple="multiple" style="width: calc(100% - 100px);" id="extensions"></select>
+          <div id="advanced-options" class="collapse">
+            <br>
+            <span>Extensions: </span>
+            <select multiple="multiple" style="width: calc(100% - 100px);" id="extensions"></select>
+          </div>
         </div>
       </div>
       <div class="card-footer text-center">
@@ -437,9 +441,9 @@
     let extensions = [];
     const registeredExtensions = []
     const assistantIcons = {
-      "Melman": "/bioimageio_chatbot/static/melman-bmz.png",
-      "Bridget": "/bioimageio_chatbot/static/bridget-bmz.png",
-      "Nina": "/bioimageio_chatbot/static/nina-bmz.png" 
+      "Melman": "https://bioimage.io/static/img/bioimage-io-icon.svg", // "https://raw.githubusercontent.com/bioimage-io/bioimageio-chatbot/main/bioimageio_chatbot/static/melman-bmz.png",
+      "Bridget": "https://bioimage.io/static/img/bioimage-io-icon.svg", // "https://raw.githubusercontent.com/bioimage-io/bioimageio-chatbot/main/bioimageio_chatbot/static/bridget-bmz.png",
+      "Nina": "https://bioimage.io/static/img/bioimage-io-icon.svg", // "https://raw.githubusercontent.com/bioimage-io/bioimageio-chatbot/main/bioimageio_chatbot/static/nina-bmz.png" 
     };
 
     function fileSelected() {
@@ -685,6 +689,18 @@
                 localStorage.setItem('tokenExpiry', new Date(Date.now() + 3*60*60*1000).toISOString());
               }
             }
+            else{
+              // Call the login function to get the token
+              token = await hyphaWebsocketClient.login({
+                "server_url": server_url || "https://ai.imjoy.io",
+                "login_callback": login_callback,
+              });
+              localStorage.setItem('token', token);
+              localStorage.setItem('tokenExpiry', new Date(Date.now() + 3*60*60*1000).toISOString());
+            }
+            if(!token){
+              throw new Error("Failed to get token")
+            }
             // If the login is successful, proceed to initialize the service
             svc = await initializeService();
           }
@@ -712,7 +728,20 @@
 
       const login_required = "LOGIN_REQUIRED";
       if (login_required !== "false") {
-        showLoginScreen();
+        token = localStorage.getItem('token');
+        if(token){
+          const tokenExpiry = localStorage.getItem('tokenExpiry');
+          if(tokenExpiry && new Date(tokenExpiry) > new Date()){
+            console.log("Using saved token:", token)
+            svc = await initializeService();
+            showAppInterface();
+          }
+          else{
+            showLoginScreen();
+          }
+        }
+        else
+          showLoginScreen();
       }
       else {
         svc = await initializeService();
@@ -721,7 +750,7 @@
       }
       // Manually toggle the collapse for profile options
       $('#edit-profile-btn').click(function () {
-        $('#profileOptions').collapse('toggle');
+        $('#profile-options').collapse('toggle');
       });
 
       // add a button to select a folder from the local file system
@@ -912,7 +941,7 @@
         localStorage.setItem('userProfile', JSON.stringify(user_profile));
 
         // Collapse the profile options after saving
-        $('#profileOptions').collapse('hide');
+        $('#profile-options').collapse('hide');
       });
       var code;
       var error_message;
@@ -1208,6 +1237,9 @@
       $('.send-btn').on('click', sendMessage);
 
 
+      $('#advanced-options-btn').click(function () {
+        $('#advanced-options').collapse('toggle');
+      });
 
       // Add a click event handler for the "Feedback" button
       $('#feedback-btn').click(function () {

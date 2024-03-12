@@ -23,6 +23,8 @@ import logging
 
 
 logger = logging.getLogger("bioimageio-chatbot")
+# set logger level
+logger.setLevel(logging.INFO)
 
 
 class UserProfile(BaseModel):
@@ -172,8 +174,8 @@ When to use this tool:
 If needed, use the CodeInterpreter to run Python code snippets (in one step or multiple rounds) and provide the output to the user.
 For more complex questions, DO NOT generate lots of code at once, instead, break the problem into steps and in each step, use the CodeInterpreter interactively like a jupyter notebook to run the code and provide the output to the user or refine the code based on the intermediate results.
 """
-    kowalski = Role(
-        instructions="You are Kowalski from Madagascar, you serve the bioimaging community as an image analysis expert."
+    bridget = Role(
+        instructions="You are Bridget from Madagascar, you serve the bioimaging community as an image analysis expert."
         # "You ONLY respond to user's queries related to bioimage analysis."
         "Your communications should be accurate, concise, logical and avoid fabricating information, "
         "and if necessary, request additional clarification."
@@ -183,7 +185,7 @@ For more complex questions, DO NOT generate lots of code at once, instead, break
         model="gpt-4-0125-preview",
     )
     
-    king_julien = Role(
+    nina = Role(
         instructions="You are King Julien from Madagascar, you serve the bioimaging community as a professional trainer."
         "You ONLY respond to user's queries related to educational materials and tutorials in bioimaging."
         "You communications should be accurate, concise, logical and most importantly, educational and enjoyable."
@@ -191,7 +193,7 @@ For more complex questions, DO NOT generate lots of code at once, instead, break
         actions=[respond_to_user],
         model="gpt-4-0125-preview",
     )
-    # return {"Melman": melman, "Kowalski": kowalski}
+    # return {"Melman": melman, "Bridget": bridget}
     # convert to a list
     all_extensions = [
         {"id": ext.id, "name": ext.name, "description": ext.description} for ext in builtin_extensions
@@ -206,7 +208,7 @@ For more complex questions, DO NOT generate lots of code at once, instead, break
     ]
 
     # only keep the item with 'book' in all_extensions
-    king_julien_extensions = [
+    nina_extensions = [
         ext for ext in all_extensions if "books" == ext["id"]
     ] + [
         ext for ext in all_extensions if ext["id"] == "web"
@@ -214,8 +216,8 @@ For more complex questions, DO NOT generate lots of code at once, instead, break
 
     return [
         {"name": "Melman", "agent": melman, "extensions": melman_extensions},
-        {"name": "Kowalski", "agent": kowalski, "extensions": kowalski_extensions},
-        {"name": "King Julien", "agent": king_julien, "extensions": king_julien_extensions},
+        {"name": "Bridget", "agent": bridget, "extensions": kowalski_extensions},
+        {"name": "Nina", "agent": nina, "extensions": nina_extensions},
     ]
 
 
@@ -279,6 +281,8 @@ async def register_chat_service(server):
     authorized_emails = load_authorized_emails()
 
     def check_permission(user):
+        if user['is_anonymous']:
+            return False
         if authorized_emails is None or user["email"] in authorized_emails:
             return True
         else:
@@ -375,6 +379,7 @@ async def register_chat_service(server):
         context=None,
     ):
         if login_required and context and context.get("user"):
+            logger.info(f"User: {context.get('user')}, Message: {text}")
             assert check_permission(
                 context.get("user")
             ), "You don't have permission to use the chatbot, please sign up and wait for approval"

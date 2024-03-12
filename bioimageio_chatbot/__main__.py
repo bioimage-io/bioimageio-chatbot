@@ -8,6 +8,8 @@ from bioimageio_chatbot.knowledge_base import load_knowledge_base
 def start_server(args):
     if args.login_required:
         os.environ["BIOIMAGEIO_LOGIN_REQUIRED"] = "true"
+    else:
+        os.environ["BIOIMAGEIO_LOGIN_REQUIRED"] = "false"
     # get current file path so we can get the path of apps under the same directory
     current_dir = os.path.dirname(os.path.abspath(__file__))
     command = [
@@ -27,6 +29,8 @@ def connect_server(args):
     from bioimageio_chatbot.chatbot import connect_server
     if args.login_required:
         os.environ["BIOIMAGEIO_LOGIN_REQUIRED"] = "true"
+    else:
+        os.environ["BIOIMAGEIO_LOGIN_REQUIRED"] = "false"
     server_url = args.server_url
     loop = asyncio.get_event_loop()
     loop.create_task(connect_server(server_url))
