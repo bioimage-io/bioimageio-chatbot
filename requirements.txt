@@ -6,7 +6,9 @@ hypha>=0.15.50
 tqdm
 aiofiles
 serpapi
-langchain>=0.1.10
+langchain>=0.1.11
+langchain-community==0.0.27
+langchain-core==0.1.31
 beautifulsoup4
 pandas
 duckduckgo-search==5.0
