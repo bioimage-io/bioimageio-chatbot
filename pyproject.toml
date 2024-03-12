@@ -3,7 +3,7 @@ requires = ["setuptools", "wheel"]
 
 [project]
 name = "bioimageio-chatbot"
-version = "0.1.75"
+version = "0.1.76"
 readme = "README.md"
 description = "Your Personal Assistant in BioImage Analysis."
 dependencies = [
@@ -20,7 +20,8 @@ dependencies = [
   "duckduckgo-search>=5.0",
   "rank-bm25",
   "langchain-openai",
-  "langchain-community",
+  "langchain-core>=0.1.31",
+  "langchain-community>=0.0.27",
   "html2text",
 ]
 

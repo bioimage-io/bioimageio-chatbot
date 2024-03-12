@@ -27,7 +27,7 @@ def load_docs_store(db_path, collection_name):
 
     # Load from vector store
     embeddings = OpenAIEmbeddings()
-    docs_store = FAISS.load_local(index_name=collection_name, folder_path=db_path, embeddings=embeddings)
+    docs_store = FAISS.load_local(index_name=collection_name, folder_path=db_path, embeddings=embeddings, allow_dangerous_deserialization=True)
     return docs_store
 
 
