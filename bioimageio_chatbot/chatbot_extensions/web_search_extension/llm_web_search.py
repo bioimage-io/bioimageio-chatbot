@@ -15,7 +15,7 @@ async def search_duckduckgo(query: str, langchain_compressor: LangchainCompresso
     async with AsyncDDGS() as ddgs:
         if instant_answers:
             answer_list = []
-            async for answer in ddgs.answers(query):
+            for answer in await ddgs.answers(query):
                 answer_list.append(answer)
             if answer_list:
                 max_results -= 1  # We already have 1 result now
@@ -26,7 +26,7 @@ async def search_duckduckgo(query: str, langchain_compressor: LangchainCompresso
 
         results = []
         result_urls = []
-        async for result in ddgs.text(query, region='wt-wt', safesearch='moderate', timelimit=None,
+        for result in await ddgs.text(query, region='wt-wt', safesearch='moderate', timelimit=None,
                                 max_results=num_results_to_process):
             results.append(result)
             result_urls.append(result["href"])
