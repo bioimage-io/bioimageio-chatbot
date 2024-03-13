@@ -15,7 +15,6 @@ To start a conversation, simply type `Hi`  or `Hello`, and the chatbot will warm
 ![Basic Interaction](./screenshots/chatbot-hi.png)
 
 
-
 ## Asking Questions
 ### Simple Questions
 You can ask the BioImage.IO Chatbot a wide range of general and straightforward questions. The chatbot will promptly retrieve and provide you with the relevant information. For example, you can inquire about a "Community Partner" in the BioImage Model Zoo.
@@ -50,6 +49,7 @@ If you are interested in using specific extensions in the chatbot, you can click
 
 For this example, you can select the `Search Image.cs Forum` extension and ask the chatbot for software issues.
 
+![Select extension](./screenshots/select-extension.png)
 ![Image.sc Forum](./screenshots/search-image-forum.png)
 
 
