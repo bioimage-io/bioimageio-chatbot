@@ -50,7 +50,7 @@ If you are interested in using specific extensions in the chatbot, you can click
 
 For this example, you can select the `Search Image.cs Forum` extension and ask the chatbot for software issues.
 
-TODO: add screenshots.
+![Image.sc Forum](./screenshots/search-image-forum.png)
 
 
 ### Search in Knowledge Base 
