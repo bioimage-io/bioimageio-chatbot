@@ -490,7 +490,7 @@ async def register_chat_service(server):
     server_url = server.config["public_base_url"]
 
     print(
-        f"\nThe BioImage.IO Assistants are available at: {server_url}/{server.config['workspace']}/apps/bioimageio-chatbot-client/index"
+        f"\nThe BioImage.IO Assistants are available at: {server_url}/{server.config['workspace']}/apps/bioimageio-chatbot-client/chat"
     )
 
 

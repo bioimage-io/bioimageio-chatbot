@@ -8,17 +8,9 @@ from pydantic import BaseModel, Field
 from bioimageio_chatbot.utils import ChatbotExtension
 from typing import List, Dict, Any, Optional
 from schema_agents import schema_tool
-class SearchParameters(BaseModel):
-    """Parameters for searching the Image.sc Forum."""
-    query: str = Field(..., description="The search query string.")
-    top_k: int = Field(..., gt=0, description="Maximum number of search results to return.")
-    order: Optional[str] = Field("latest", description="Order of the search results, options: latest, likes, views, latest_topic.")
-    status: Optional[str] = Field(None, description="The status filter for the search results, options: solved, unsolved, open, closed.")
-
 class ReadPostsParameters(BaseModel):
     """Parameters for reading posts or topics from the Image.sc Forum."""
-    type: str = Field(..., description="type: `post` or `topic`")
-    id: int = Field(..., description="topic id")
+    
 
 class DiscourseClient:
     def __init__(self, base_url: str, username: str, api_key: str):
@@ -61,13 +53,17 @@ class DiscourseClient:
         cleaned_results["topics"] = cleaned_results["topics"][:top_k]
         return cleaned_results
 
-    async def search_image_sc(self, req: SearchParameters) -> Dict[str, Any]:
+    async def search_image_sc(self, query: str = Field(..., description="The search query string."),
+            top_k: int = Field(..., gt=0, description="Maximum number of search results to return."),
+            order: Optional[str] = Field("latest", description="Order of the search results, options: latest, likes, views, latest_topic."),
+            status: Optional[str] = Field(None, description="The status filter for the search results, options: solved, unsolved, open, closed."),
+        ) -> Dict[str, Any]:
         """Search the Image.sc Forum(a forum for scientific image software) for posts and topics."""
         # Prepare headers for authentication
         headers = self._get_headers()
 
         # Build the query string
-        query_string = self._build_query_string(req.query, req.order, req.status)
+        query_string = self._build_query_string(query, order, status)
         
         # Construct the full URL
         url = f"{self._base_url}/search.json?{query_string}"
@@ -78,16 +74,19 @@ class DiscourseClient:
 
         # Check if the request was successful
         if response.status_code == 200:
-            return self._cleanup_search_results(response.json(), req.top_k)  # Return the JSON response
+            return self._cleanup_search_results(response.json(), top_k)  # Return the JSON response
         else:
             response.raise_for_status()  # Raise an error for bad responses
 
-    async def read_image_sc_posts(self, req: ReadPostsParameters) -> List[str]:
+    async def read_image_sc_posts(self,
+            type: str = Field(..., description="type: `post` or `topic`"),
+            id: int = Field(..., description="topic id")
+        ) -> List[str]:
         """Read a single or all the posts in a topic from the Image.sc Forum (a discussion forum for scientific image software)."""
-        if req.type == "post":
-            return await self.get_post_content(req.id)
-        elif req.type == "topic":
-            return await self.get_topic_content(req.id)
+        if type == "post":
+            return await self.get_post_content(id)
+        elif type == "topic":
+            return await self.get_topic_content(id)
     
     async def get_topic_content(self, topic_id: int) -> Dict[str, Any]:
         url = f"{self._base_url}/t/{topic_id}.json"
