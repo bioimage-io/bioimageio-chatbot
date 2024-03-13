@@ -35,34 +35,38 @@ The BioImage.IO Chatbot employs diverse methods to generate responses, currently
 ### Search BioImage Docs
 This extension allows the chatbot to search information in a community-driven bioimage related knowledge base. With a specific query, the chatbot extracts essential elements from the user's question to fetch information from the relevant documentation. 
 
-    ![direct-response](./screenshots/direct-response.png)
-    *Figure 6. Direct response example.*
+    ![direct-response](./screenshots/search-bioimage-docs.png)
+    *Figure 6. Search in Bioimage Knolwedge base documentation.*
 
 ### Search BioImage Information Index (biii.eu)
 This extension allows the chatbot to search online software tool in biii.eu.
-    ![retrieval-text](./screenshots/retrieval-text.png)
-    *Figure 7. Document retrieval from knowledge base.*
+    ![search-biii](./screenshots/search-biii.png)
+    *Figure 7. Search in biii.eu.*
 
 The process begins with an initial response based on the user's query (`request`), which serves as a foundation for generating a new `query` for targeted information retrieval. This is combined with user profile data (`user_info`) and the query to produce a comprehensive final response.
 
 ### Search Bioimage Archive
 This extension allows the chatbot to search for dataset index in bioimage archive. 
+![search-bioimage-archive](./screenshots/search-bioimage-archive.png)
+    *Figure 8. Search in bioimage archive.*
 
 ### Search image.sc Forum
 This extension allows the chatbot to search bioimage related topics and software issues in the image.sc forum.
-    TODO: add an example screenshot.
+    ![search-image-sc](./screenshots/search-image-sc.png)
+    *Figure 9. Search in image.sc forum.*
 
 ### Search Web
 This extension allows the chatbot to search for information from the web. This extension is triggered while the chatbot realizes it can not find relevant information from the knowledge base.
 
-    TODO: add an example screenshot.
+    ![search-web](./screenshots/search-web.png)
+    *Figure 10. Search in the web.*
 
 
 ### BioImage Model Zoo
 This mode is designed for queries requiring detailed model information or specific actions, generating and executing Python scripts for tailored solutions.
 
     ![script-gen-exe-retrieval](./screenshots/script-gen-exe-retrieval.png)
-    *Figure 8. Scripting retrieval for complex queries.*
+    *Figure 11. Scripting retrieval for complex queries.*
 
 It involves creating a `ModelZooInfoScript` schema with fields like `request`, `user info`, and `script`, where `script` is Python code for API interactions or data manipulation. The final response is formulated by integrating the script's output with the `request` and `user info`.
 
