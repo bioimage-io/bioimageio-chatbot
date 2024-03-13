@@ -4,13 +4,13 @@ import os
 import urllib.parse
 import asyncio
 import html2text
-from pydantic import BaseModel, Field
+import logging
+from pydantic import Field
 from bioimageio_chatbot.utils import ChatbotExtension
 from typing import List, Dict, Any, Optional
 from schema_agents import schema_tool
-class ReadPostsParameters(BaseModel):
-    """Parameters for reading posts or topics from the Image.sc Forum."""
-    
+
+logger = logging.getLogger(__name__)
 
 class DiscourseClient:
     def __init__(self, base_url: str, username: str, api_key: str):
@@ -22,12 +22,12 @@ class DiscourseClient:
         # Construct the query string with the provided parameters.
         # Note: `urllib.parse.quote` is used to ensure the query is URL encoded.
         query_components = [
-            f"q={urllib.parse.quote(query)}",
+            f"{query}",
             f"order:{order}",
         ]
         if status:
             query_components.append(f"status:{status}")
-        return " ".join(query_components)
+        return "q=" + urllib.parse.quote(" ".join(query_components))
 
     def _get_headers(self) -> Dict[str, str]:
         return {
@@ -67,6 +67,7 @@ class DiscourseClient:
         
         # Construct the full URL
         url = f"{self._base_url}/search.json?{query_string}"
+        logger.info(f"Searching Image.sc Forum for: {query}")
 
         # Perform the asynchronous HTTP GET request
         async with httpx.AsyncClient() as client:
@@ -131,10 +132,11 @@ def get_extension():
     )
 
 if __name__ == "__main__":
+    import json
     async def main():
         discourse_client = DiscourseClient(base_url="https://forum.image.sc", username="oeway", api_key="1b8819f9f95bc7f4eb51d3f9bac6d4dd0245569314a7801f670c1067d06c8268")
-        # results = await discourse_client.search_image_sc("python ", "latest", 5, "open")
-        # print(json.dumps(results))
+        results = await discourse_client.search_image_sc("python", 5, "latest")
+        print(json.dumps(results))
         results = await discourse_client.read_image_sc_posts('topic', 44826)
         print(results)
 
