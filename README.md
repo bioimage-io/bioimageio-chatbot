@@ -114,7 +114,7 @@ export BIOIMAGEIO_KNOWLEDGE_BASE_PATH=./bioimageio-knowledge-base
 export BIOIMAGEIO_CHAT_LOGS_PATH=./chat-logs
 python -m bioimageio_chatbot start-server --host=0.0.0.0 --port=9000
 ```
-This will create a local server, and the BioImage.IO Chatbot is available at: http://127.0.0.1:9000/public/apps/bioimageio-chatbot-client/index or http://127.0.0.1:9000/assistants
+This will create a local server, and the BioImage.IO Chatbot is available at: http://127.0.0.1:9000/public/apps/bioimageio-chatbot-client/chat or http://127.0.0.1:9000/assistants
 
 Open the link in a browser, and you will see the chat interface.
 
@@ -149,7 +149,7 @@ export BIOIMAGEIO_CHAT_LOGS_PATH=./chat-logs
 python -m bioimageio_chatbot connect-server --server-url=https://ai.imjoy.io
 ```
 
-First, you will be asked to log in with a hypha account. Either your GitHub or Google account can be reused. Then, the following message containing a link to the chatbot will be displayed: 'The BioImage.IO Chatbot is available at: https://ai.imjoy.io/github|xxxxxx/apps/bioimageio-chatbot-client/index'
+First, you will be asked to log in with a hypha account. Either your GitHub or Google account can be reused. Then, the following message containing a link to the chatbot will be displayed: 'The BioImage.IO Chatbot is available at: https://ai.imjoy.io/github|xxxxxx/apps/bioimageio-chatbot-client/chat'
 
 Leave your chatbot running to enable users inside or outside your network to access it from this URL.
 
@@ -225,7 +225,7 @@ Optionally, for improved reproducibility, you can change `latest` to a version t
 The BioImage.IO Chatbot is now running in the Docker container. You can access it locally in your web browser by visiting:
 
 ```
-http://localhost:3000/public/apps/bioimageio-chatbot-client/index
+http://localhost:3000/public/apps/bioimageio-chatbot-client/chat
 ```
 
 Make sure to replace `3000` with the host port you specified in the `docker run` command.
