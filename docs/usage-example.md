@@ -25,8 +25,7 @@ You can ask the BioImage.IO Chatbot a wide range of general and straightforward 
 ### Technical Questions
 If you have more technical questions, the chatbot is equipped to assist you effectively. It retrieves the necessary information, summarizes it, and presents it in a simple and understandable manner. For instance, you can ask the chatbot about procedures like "How to segment an image using Fiji" or "How to upload a model to the bioimage.io repository."
 
-![Segment an Image using Fiji](./screenshots/chatbot-technical-question.png)
-![How to upload a model to bioimage.io](./screenshots/chatbot-model-upload.png)
+![Segment an Image using Fiji](./screenshots/search-bioimage-docs.png)
 
 
 ### Personalization: tailored Responses
