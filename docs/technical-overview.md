@@ -11,9 +11,9 @@ Users can input their profiles as depicted in Figure 2.
 ![user-profile](./screenshots/user-profile.png)
 *Figure 2. Users can personalize responses by clicking `Edit Profile` and save their settings for future conversations by clicking `Save`.*
 
-As of today, our chatbot utilizes knowledge bases from the following pivotal communities: bioimage.io [2], Imjoy [3], deepimageJ [4], ImageJ [5], bio.tools [6], and scikit-image [7]. A key feature allows users to specify a preferred channel for information retrieval, as shown in Figure 3. If a channel is designated, the chatbot sources information from that specific community. Otherwise, it uses an intelligent selection process driven by a schema-based agent to choose the most relevant channel based on the user's query.
+As of today, our chatbot integrates 6 extensions including document search in bioimage.io knowledge base, tools search on Bioimage Informatics Index (biii.eu), bioimage topics search in Bioimage Archive and Image.cs Forum, web search, and information search in Bioimage Model Zoo. The document search utilizes knowledge bases from the following pivotal communities: bioimage.io [2], Imjoy [3], deepimageJ [4], ImageJ [5], bio.tools [6], and scikit-image [7]. We also allow users to specify a preferred extension for information retrieval, as shown in Figure 3. If an extension is designated, the chatbot sources information using the specific extension and its corresponding source. Otherwise, it uses an intelligent selection process driven by a schema-based agent to choose the most relevant extension based on the user's query. 
 
-![channels](./screenshots/channels.png)
+![channels](./screenshots/extensions.png)
 *Figure 3. Users can personalize the conversation by selecting a specific channel from the ‘Knowledge Base Channel’.*
 
 ### Building the Knowledge Base
@@ -29,45 +29,42 @@ The schema-based agent operates on the function-call LLM [8], and uses input and
 ![role_create](./screenshots/role_create.png)
 *Figure 4. Creation of a chatbot role class named ‘CustomerServiceRole’ by defining fields of the role class.*
 
-## Response Modes
+## Extensions
 The BioImage.IO Chatbot employs diverse methods to generate responses, currently encompassing five distinct response modes. The response mode is chosen by the schema-based agent based on the user's query and the selected channel.
 
-### Direct Response
-This mode delivers concise, direct answers for straightforward queries, utilizing the chatbot's internal knowledge base without external data retrieval. 
+### Search BioImage Docs
+This extension allows the chatbot to search information in a community-driven bioimage related knowledge base. With a specific query, the chatbot extracts essential elements from the user's question to fetch information from the relevant documentation. 
 
     ![direct-response](./screenshots/direct-response.png)
     *Figure 6. Direct response example.*
 
-### Document Retrieval Response
-Complex or specific queries trigger this mode, where the chatbot extracts essential elements from the user's question to fetch information from the relevant documentation. 
-
+### Search BioImage Information Index (biii.eu)
+This extension allows the chatbot to search online software tool in biii.eu.
     ![retrieval-text](./screenshots/retrieval-text.png)
     *Figure 7. Document retrieval from knowledge base.*
 
-The process begins with an initial response based on the user's query (`request`), which serves as a foundation for generating a new `query` for targeted information retrieval. This is combined with user profile data (`user_info`) and the chosen retrieval channel (`channel_id`) to produce a comprehensive final response.
+The process begins with an initial response based on the user's query (`request`), which serves as a foundation for generating a new `query` for targeted information retrieval. This is combined with user profile data (`user_info`) and the query to produce a comprehensive final response.
 
-### Scripting Retrieval Response
+### Search Bioimage Archive
+This extension allows the chatbot to search for dataset index in bioimage archive. 
+
+### Search image.sc Forum
+This extension allows the chatbot to search bioimage related topics and software issues in the image.sc forum.
+    TODO: add an example screenshot.
+
+### Search Web
+This extension allows the chatbot to search for information from the web. This extension is triggered while the chatbot realizes it can not find relevant information from the knowledge base.
+
+    TODO: add an example screenshot.
+
+
+### BioImage Model Zoo
 This mode is designed for queries requiring detailed model information or specific actions, generating and executing Python scripts for tailored solutions.
 
     ![script-gen-exe-retrieval](./screenshots/script-gen-exe-retrieval.png)
     *Figure 8. Scripting retrieval for complex queries.*
 
 It involves creating a `ModelZooInfoScript` schema with fields like `request`, `user info`, and `script`, where `script` is Python code for API interactions or data manipulation. The final response is formulated by integrating the script's output with the `request` and `user info`.
-
-### API Call Response
-This mode integrates user-provided APIs for data processing, currently implementing Cellpose[9] for image segmentation tasks on user-uploaded images.
-
-    TODO: add an example screenshot.
-
-The chatbot translates analysis requests into a `CellposeTask` schema, detailing the segmentation task per the `TaskChoice` schema. An LLM agent identifies image axes labels using a `LabeledImage` schema, ensuring compatibility with the segmentation process. Incompatible images trigger a `CellposeHelp` schema for guidance.
-
-### Specialized Skill Response
-This mode offers enriched responses for specific user needs, activating specialized modes like `Learning` and `Coding`.
-
-    TODO: add an example screenshot.
-
-The `Learning` mode provides educational responses enriched with key terms and concepts, while the `Coding` mode generates functional code snippets for specific tasks. These specialized responses are contrasted with the more general Direct Response mode and can be extended or chosen as a channel in the channel selection process.
-
 
 ## References
 
