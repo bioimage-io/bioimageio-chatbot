@@ -65,7 +65,7 @@ This extension allows the chatbot to search for information from the web. This e
 ### BioImage Model Zoo
 This mode is designed for queries requiring detailed model information or specific actions, generating and executing Python scripts for tailored solutions.
 
-    ![script-gen-exe-retrieval](./screenshots/script-gen-exe-retrieval.png)
+    ![script-gen-exe-retrieval](./screenshots/search-model-zoo.png)
     *Figure 11. Scripting retrieval for complex queries.*
 
 It involves creating a `ModelZooInfoScript` schema with fields like `request`, `user info`, and `script`, where `script` is Python code for API interactions or data manipulation. The final response is formulated by integrating the script's output with the `request` and `user info`.
