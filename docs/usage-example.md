@@ -15,6 +15,7 @@ To start a conversation, simply type `Hi`  or `Hello`, and the chatbot will warm
 ![Basic Interaction](./screenshots/chatbot-hi.png)
 
 
+
 ## Asking Questions
 ### Simple Questions
 You can ask the BioImage.IO Chatbot a wide range of general and straightforward questions. The chatbot will promptly retrieve and provide you with the relevant information. For example, you can inquire about a "Community Partner" in the BioImage Model Zoo.
@@ -36,26 +37,24 @@ To illustrate this personalized approach, we have two screenshots of the chatbot
 ![Abby, a biologist, willing to analyze biological images.](./screenshots/chatbot-biologist.png)
 ![Abby, a developer, willing to analyze biological images.](./screenshots/chatbot-developer.png)
 
+### How to switch chatbot's mode
+We have three assistants built in the BioImage.IO Chatbot to cater to the different purpose and needs of the users. BioImage Analysis Seeker (BIA Seeker) is designated for users that seek for information about bioimage analysis, it is equiped with 6 extensions including community-driven knowledge base, as well as online source like image.sc forum, web search. BIA Executor is desginated for users that want to execute model using BioEngine such as CellPose. BIA Tutor is designated for users that seek for tutoring in bioimage analysis, it is equiped with Bioimage Books extension combined with web search and Bioimage Model Zoo search. 
+![BIA Executor](./screenshots/bia-executor.png)
+![BIA Tutor](./screenshots/bia-tutor.png)
+
 ## Database Integration
 Our system harnesses knowledge from a variety of valuable sources, including established databases such as [ELIXIR bio.tools](https://bio.tools) and the [ImageJ Wiki](https://imagej.net/software/imagej2/), tool-specific documentation like [deepImageJ](https://deepimagej.github.io), [ilastik](https://www.ilastik.org), and [ImJoy](https://imjoy.io/#/), and structured databases such as the [BioImage Model Zoo repository](https://bioimage.io).
 In the chatbot's user interface, you'll find a list of the available knowledge base channels that the chatbot can access. s. You can choose to select a specific knowledge base channel or opt for the `auto` mode to query information from all integrated databases.
 
-### Knowledge Base Channel Selection
-If you are interested in retrieving information from a specific database, you can ask a question and select the "Knowledge Base Channel" that you are more interested in. This way, the information provided will be exclusively from the channel of information you have selected.
+## Extension Selection
+If you are interested in using specific extensions in the chatbot, you can click 'More Options' and select one or several extensions from the extension list. This way, the information provided will be exclusively by using the specified extensions you have selected.
 
-For this example, you can select the `scikit-image` channel and ask the chatbot for image processing algorithms suitable for image enhancement.
+For this example, you can select the `Search Image.cs Forum` extension and ask the chatbot for software issues.
 
-You will receive a list of image processing algorithms for image enhancement from the `scikit-image` database.
-![scikit-image Integration](./screenshots/chatbot-channel-scikit-image.png)
-
-To see the difference between the channels, you can select the `BioImage Model Zoo` channel and ask the chatbot for models suitable for image classification.
-
-You will receive a list of models for image classification from the `BioImage Model Zoo` database.
-![BioImage Model Zoo Integration](./screenshots/chatbot-channel-bioimageio.png)
+TODO: add screenshots.
 
 
-
-### Knowledge Base Channel: automatic model retrieval
+### Search in Knowledge Base 
 Our system harnesses knowledge from a variety of valuable sources, including established databases such as [ELIXIR bio.tools](https://bio.tools) and the [ImageJ Wiki](https://imagej.net/software/imagej2/), tool-specific documentation like [deepImageJ](https://deepimagej.github.io), [ilastik](https://www.ilastik.org), and [ImJoy](https://imjoy.io/#/), and structured databases such as the [BioImage Model Zoo repository](https://bioimage.io). This comprehensive integration enables our chatbot to not only respond to questions related to each of these individual tools but also tackle complex inquiries that demand information from multiple databases.
 
 To illustrate this capability, consider the following scenario: You have a Whole Slide Image (WSI) that you'd like to open with [QuPath](https://qupath.github.io), apply the Chatty-Frog model ([StarDist H&E Nuclei Segmentation](https://bioimage.io/#/?tags=chatty-frog&id=10.5281%2Fzenodo.6338614)) from BioImage.IO using deepImageJ within Fiji. How can this be accomplished? You can present this intricate question to the BioImage.IO Chatbot.
@@ -64,7 +63,6 @@ The chatbot provides a detailed breakdown of the steps required to complete the 
 
 ![Cross-Database Query](./screenshots/chatbot-wsi-pipeline.png)
 
-## Code generation and execution
 ### Retrieving Models
 The BioImage.IO Chatbot is a versatile tool that can generate and execute code in response to user queries. This means that when a user asks about specific models available in bioimage.io, the chatbot can fetch this information by generating a custom script.
 
