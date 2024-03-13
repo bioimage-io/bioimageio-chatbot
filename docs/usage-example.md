@@ -69,6 +69,12 @@ For instance, if a user inquires about the total number of models in the BioImag
 
 ![Model Queries](./screenshots/search-model-zoo.png)
 
+### Chatbot work trajectories
+In order to check the chatbot working trajectories, with every query, all steps of chatbot's working trajectory are integrated in the response. Click 'More Details' on the bottom of the response, users can see the detail of each step. 
+
+![More details](./screenshots/more-details.png)
+
+
 ### API Calls
 The BioImage.IO Chatbot can also execute functions in external APIs, analysis pipelines, plugins, and user code. Cellpose image segmentation has been added as a Chatbot function calling extension and can be used as a template for additional APIs. Users may currently use the Cellpose API function calling by uploading a file and requesting the Chatbot to segment it either from the `auto` or `cellpose` channels.
 
