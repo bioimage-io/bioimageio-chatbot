@@ -60,14 +60,14 @@ To illustrate this capability, consider the following scenario: You have a Whole
 
 The chatbot provides a detailed breakdown of the steps required to complete the requested pipeline. This example demonstrates how our chatbot excels at efficiently retrieving and summarizing information from various sources, offering a valuable solution for your bioimage analysis needs.
 
-![Cross-Database Query](./screenshots/chatbot-wsi-pipeline.png)
+![Cross-Database Query](./screenshots/search-bioimage-docs.png)
 
 ### Retrieving Models
 The BioImage.IO Chatbot is a versatile tool that can generate and execute code in response to user queries. This means that when a user asks about specific models available in bioimage.io, the chatbot can fetch this information by generating a custom script.
 
 For instance, if a user inquires about the total number of models in the BioImage Model Zoo, the chatbot can effortlessly retrieve this information using a straightforward script. However, the questions can become more intricate. Users might want to know which models in bioimage.io are suitable for a particular tag or task (*i.e., segmentation*)or similar criteria. The chatbot is adept at handling these more complex queries, too.
 
-![Model Queries](./screenshots/script-gen-exe-retrieval.png)
+![Model Queries](./screenshots/search-model-zoo.png)
 
 ### API Calls
 The BioImage.IO Chatbot can also execute functions in external APIs, analysis pipelines, plugins, and user code. Cellpose image segmentation has been added as a Chatbot function calling extension and can be used as a template for additional APIs. Users may currently use the Cellpose API function calling by uploading a file and requesting the Chatbot to segment it either from the `auto` or `cellpose` channels.
