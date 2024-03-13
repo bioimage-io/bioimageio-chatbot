@@ -47,12 +47,12 @@ The process begins with an initial response based on the user's query (`request`
 
 ### Search Bioimage Archive
 This extension allows the chatbot to search for dataset index in bioimage archive. 
-![search-bioimage-archive](./screenshots/search-bioimage-archive.png)
+    ![search-bioimage-archive](./screenshots/search-bioimage-archive.png)
     *Figure 8. Search in bioimage archive.*
 
 ### Search image.sc Forum
 This extension allows the chatbot to search bioimage related topics and software issues in the image.sc forum.
-    ![search-image-sc](./screenshots/search-image-sc.png)
+    ![search-image-sc](./screenshots/search-image-forum.png)
     *Figure 9. Search in image.sc forum.*
 
 ### Search Web
