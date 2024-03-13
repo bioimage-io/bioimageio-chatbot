@@ -52,6 +52,10 @@ For this example, you can select the `Search Image.cs Forum` extension and ask t
 ![Select extension](./screenshots/select-extension.png)
 ![Image.sc Forum](./screenshots/search-image-forum.png)
 
+### Steps details of Chatbot's working trajectory
+In order to check the chatbot working trajectories, with every query, all steps of chatbot's working trajectory are integrated in the response. Click 'More Details' on the bottom of the response, users can see the detail of each step. 
+
+![More details](./screenshots/more-details.png)
 
 ### Search in Knowledge Base 
 Our system harnesses knowledge from a variety of valuable sources, including established databases such as [ELIXIR bio.tools](https://bio.tools) and the [ImageJ Wiki](https://imagej.net/software/imagej2/), tool-specific documentation like [deepImageJ](https://deepimagej.github.io), [ilastik](https://www.ilastik.org), and [ImJoy](https://imjoy.io/#/), and structured databases such as the [BioImage Model Zoo repository](https://bioimage.io). This comprehensive integration enables our chatbot to not only respond to questions related to each of these individual tools but also tackle complex inquiries that demand information from multiple databases.
@@ -68,11 +72,6 @@ The BioImage.IO Chatbot is a versatile tool that can generate and execute code i
 For instance, if a user inquires about the total number of models in the BioImage Model Zoo, the chatbot can effortlessly retrieve this information using a straightforward script. However, the questions can become more intricate. Users might want to know which models in bioimage.io are suitable for a particular tag or task (*i.e., segmentation*)or similar criteria. The chatbot is adept at handling these more complex queries, too.
 
 ![Model Queries](./screenshots/search-model-zoo.png)
-
-### Chatbot work trajectories
-In order to check the chatbot working trajectories, with every query, all steps of chatbot's working trajectory are integrated in the response. Click 'More Details' on the bottom of the response, users can see the detail of each step. 
-
-![More details](./screenshots/more-details.png)
 
 
 ### API Calls
