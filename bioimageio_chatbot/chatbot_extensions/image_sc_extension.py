@@ -57,7 +57,7 @@ class DiscourseClient:
             top_k: int = Field(..., gt=0, description="Maximum number of search results to return."),
             order: Optional[str] = Field("latest", description="Order of the search results, options: latest, likes, views, latest_topic."),
             status: Optional[str] = Field(None, description="The status filter for the search results, options: solved, unsolved, open, closed."),
-        ) -> Dict[str, Any]:
+        ):
         """Search the Image.sc Forum(a forum for scientific image software) for posts and topics."""
         # Prepare headers for authentication
         headers = self._get_headers()
@@ -82,7 +82,7 @@ class DiscourseClient:
     async def read_image_sc_posts(self,
             type: str = Field(..., description="type: `post` or `topic`"),
             id: int = Field(..., description="topic id")
-        ) -> List[str]:
+        ):
         """Read a single or all the posts in a topic from the Image.sc Forum (a discussion forum for scientific image software)."""
         if type == "post":
             return await self.get_post_content(id)
