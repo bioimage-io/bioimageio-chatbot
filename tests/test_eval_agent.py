@@ -1,12 +1,11 @@
 import os
 import numpy as np
-from matplotlib import pyplot as plt
-from bioimageio_chatbot.chatbot import create_customer_service, QuestionWithHistory, UserProfile
+# from matplotlib import pyplot as plt
+from bioimageio_chatbot.chatbot import create_assistants,get_builtin_extensions, QuestionWithHistory, UserProfile
 from pydantic import BaseModel, Field
 from schema_agents.schema import Message
 from typing import Any, Dict, List, Optional, Union
 from schema_agents.role import Role
-from tvalmetrics import RagScoresCalculator
 from itertools import cycle
 from bs4 import BeautifulSoup
 import pandas as pd
@@ -72,10 +71,14 @@ def extract_original_content(input_content):
 
     return original_contents
 
-def load_query_answer(eval_file):
-    # read Knowledge-Retrieval-Evaluation - Hoja 1 csv file
-    query_answer = pd.read_csv(os.path.join(dir_path, eval_file))
-    return query_answer
+def load_query_answer():
+    eval_file = os.path.join(dir_path, "Minimal-Eval-Test-20240111.csv")
+    if os.path.exists(eval_file):
+        query_answer = pd.read_csv(eval_file)
+    else:
+        query_answer = pd.read_csv("https://docs.google.com/spreadsheets/d/e/2PACX-1vTVgE2_eqBiAktHmg13jLrFrQJhbANkByY40f9vxptC6pShcjLzEuHzx93ATo0c0XcSYs9W1RRbaDdu/pub?gid=1280822572&single=true&output=csv")
+        query_answer.to_csv(eval_file)
+    return eval_file
 
 def create_gpt(model="gpt-3.5-turbo-1106"):
     async def respond_direct(question: str, role: Role) -> str:
@@ -92,6 +95,17 @@ def create_gpt(model="gpt-3.5-turbo-1106"):
     )
     return chatgpt
 
+def melman():
+    builtin_extensions = get_builtin_extensions()
+    # create a list of dict of extensions, each dict contains the id of an extension
+    extension_list = []
+    for extension in builtin_extensions:
+        extension_list.append({"id": extension.id})
+    
+    assistants = create_assistants(builtin_extensions)
+    # find an assistant name Melman
+    m = [assistant for assistant in assistants if assistant['name'] == "Melman"][0]
+    return m['agent'], extension_list
 
 async def generate_answers(eval_file, process, anwser_col, question_col='Question', groundtruth_col='GPT-4-turbo Answer (With Context)- GT', target_col='BioImage.IO Chatbot Answer', retrieval_col=None, eval_index=None):
     query_answer = pd.read_csv(eval_file)
@@ -111,10 +125,12 @@ async def generate_answers(eval_file, process, anwser_col, question_col='Questio
     tasks = [process_question(i, query_answer.iloc[i]["Question"]) for i in eval_index]
     # Run tasks concurrently
     await asyncio.gather(*tasks)
+    # for i in eval_index:
+    #     await process_question(i, query_answer.iloc[i]["Question"])
     print(f"Update {eval_file} successfully!")
     
-async def generate_all_anwsers(eval_file, eval_index):
-    customer_service = create_customer_service(KNOWLEDGE_BASE_PATH)
+async def generate_all_anwsers(eval_file, eval_index=None):
+    customer_service, extension_list = melman()
     event_bus = customer_service.get_event_bus()
     event_bus.register_default_events()
     profile = UserProfile(name="Lei", occupation="", background="")
@@ -127,8 +143,9 @@ async def generate_all_anwsers(eval_file, eval_index):
         return anwser,  "NA"
 
     async def process_chatbot(question):
-        m = QuestionWithHistory(question=question, chat_history=chat_history, user_profile=UserProfile.model_validate(profile), channel_id=None)
-        responses = await customer_service.handle(Message(content=m.model_dump_json(), data=m, role="User"))
+        profile = UserProfile(name="lulu", occupation="data scientist", background="machine learning and AI")
+        m = QuestionWithHistory(question=question, chat_history=chat_history, user_profile=UserProfile.model_validate(profile), channel_id=None, chatbot_extensions=extension_list)
+        responses = await customer_service.handle(Message(content="", data=m , role="User"))
         response = responses[-1]
         return response.data.text,  "\n\n".join([str(step.model_dump()) for step in response.data.steps])
 
@@ -258,31 +275,16 @@ if __name__ == "__main__":
     # with open("pyproject.toml", "r") as f:
     #     pyproject = yaml.safe_load(f)
     # version = pyproject["tool"]["poetry"]["version"]
-    
-    # Download csv from https://docs.google.com/spreadsheets/d/1E7kLdlkkEwM1Bkhn1BYWxbQf34W-3i3wujuTotiarzY/edit
-    # Select sheet: function-call-18-12-2023 (version 18-12-2023)
-    file_with_gt = os.path.join(dir_path, "Minimal-Eval-Test-20240111 - Minimal-Eval-Test-20240111.csv")
-   
-    # load query_answer
-    query_answer = load_query_answer(file_with_gt)
-    # remove columns named 'Unnamed: 0'
-    query_answer = query_answer.loc[:, ~query_answer.columns.str.contains('^Unnamed')]
-    # remove rows which 'Question' is NA
-    query_answer = query_answer[query_answer['Question'].notna()]
-    # remove rows which 'Question' is empty
-    query_answer = query_answer[query_answer['Question'] != ""]
-    # save query_answer to a new csv file
-    query_answer.to_csv(os.path.join(dir_path, file_with_gt))
-    print(f"Length of query_answer: {len(query_answer)}")
-    asyncio.run(get_ground_truth(file_with_gt))
+    excel_file = load_query_answer()
+    # asyncio.run(get_ground_truth(excel_file))
     # find the index of questions which 'BioImage.IO Chatbot Answer - Similarity Score' is lower than 3
     # eval_index = query_answer[query_answer['BioImage.IO Chatbot Answer - Similarity Score'] <3].index
     # eval_index=range(60)
     # # find the index of questions which 'BioImage.IO Chatbot Answer - Similarity Score' is NA
     # eval_index = query_answer[query_answer['BioImage.IO Chatbot Answer - Similarity Score'].isna()].index
 
-    # asyncio.run(generate_all_anwsers(file_with_gt, eval_index))
-    # target_cols = ['BioImage.IO Chatbot Answer', 'GPT-3.5-turbo Answer (Without Context)', 'ChatGPT-4 Answer (Without Context)']
+    asyncio.run(generate_all_anwsers(excel_file))
+    target_cols = ['BioImage.IO Chatbot Answer', 'GPT-3.5-turbo Answer (Without Context)', 'ChatGPT-4 Answer (Without Context)']
     # asyncio.run(start_evaluate_paral(file_with_gt, 
     #                                  target_col=target_cols[0], 
     #                                  eval_index=eval_index)
