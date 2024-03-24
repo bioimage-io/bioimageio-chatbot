@@ -22,9 +22,8 @@ Launch the chatbot through the BioImage.IO website [here](https://bioimage.io/ch
 
 ### Scenario (c): Running AI Models for Image Analysis
 
-- **Request a Specific Analysis**: Command the chatbot to segment an image with Cellpose by saying "Segment this image using Cellpose."
-- **Engage with the Model Execution**: Use the BioEngine web client to upload an image, select a model, and run the analysis.
-- **Adjust Parameters if Needed**: Fine-tune the parameters through interaction with the chatbot based on the output.
+- **Open ImageJ.JS**: Open ImageJ.JS with the chatbot loaded at https://ij.imjoy.io/?plugin=https://bioimage-io.github.io/bioengine-web-client/chatbot-extension.imjoy.html, then drag and drop an image in ImageJ.JS or use the menu "File -> Open Samples -> Blobs" to open an example image
+- **Use the chatbot**: In the chatbot window, type "Segment this image using Cellpose."
 
 ### Scenario (d): Developing New Extensions
 
