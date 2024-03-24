@@ -15,8 +15,9 @@ The BioImage.IO Chatbot is a versatile conversational agent designed to assist u
 
 ![screenshot for the chatbot](./docs/screenshots/chatbot-animation.gif)
 
+The following diagram shows how the chatbot works:
 
-Here you can find usage guide and more examples: [Usage guide and example screenshots](docs/usage-example.md).
+<img src="https://docs.google.com/drawings/d/e/2PACX-1vROHmf1aZPMLOMvwjot1laB9wvRsaDkjkYbGNNveqN-Pm_9xWlD48krQMobWT1WrrOrZnwH9gPLsDRw/pub?w=1392&amp;h=1112">
 
 ## Chatbot Features
 
@@ -37,8 +38,9 @@ We are providing a public chatbot service for you to try out. You can access the
 
 Please note that the chatbot is still in beta and is being actively developed, we will log the message you input into the chatbot for further investigation of issues and support our development. See the [Disclaimer for BioImage.IO Chatbot](./docs/DISCLAIMER.md). If you want to to remove your chat logs, please contact us via [this form](https://oeway.typeform.com/to/K3j2tJt7).
 
-If you encounter any issues, please report them via [Github](https://github.com/bioimage-io/bioimageio-chatbot/issues).
+Here you can find usage guide and more examples: [Usage guide and example screenshots](docs/usage-example.md).
 
+If you encounter any issues, please report them via [Github](https://github.com/bioimage-io/bioimageio-chatbot/issues).
 
 ### Asking Questions
 
