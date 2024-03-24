@@ -1,6 +1,11 @@
-# Reproducing Example Usage Scenarios of the BioImage.IO Chatbot if Figure2
+# Reproducing Example Usage Scenarios of the BioImage.IO Chatbot Figure 2
 
-This section provides detailed instructions for reproducing the example usage scenarios of the BioImage.IO Chatbot illustrated in Figure 2 of the main text. These steps will guide users through querying documents, utilizing online services, executing AI models, and developing extensions.
+This section provides detailed instructions for reproducing the example usage scenarios of the BioImage.IO Chatbot illustrated in Figure 2 of the main text:
+
+<img src="https://docs.google.com/drawings/d/e/2PACX-1vTIRwRldQBnTFqz0hvS01znGOEdoeDMJmZC-PlBM-O59u_xo7DfJlUEE9SlRsy6xO1hT2HuSOBrLmUz/pub?w=1324&amp;h=1063">
+
+
+These steps will guide users through querying documents, utilizing online services, executing AI models, and developing extensions.
 
 ## Access the BioImage.IO Chatbot Interface
 Launch the chatbot through the BioImage.IO website [here](https://bioimage.io/chat/) or use the dedicated user interface.
