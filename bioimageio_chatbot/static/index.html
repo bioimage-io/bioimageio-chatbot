@@ -559,11 +559,30 @@
             return result;
         }
     }
+
+    // this function is used to remove the __rpc_object__ attribute from the object
+    // this is important to make sure the function is correctly encoded and send to imjoy_rpc
+    function _removeRpcObj(obj){
+      if(obj && obj.__rpc_object__){
+        delete obj.__rpc_object__
+      }
+      else if(obj && Array.isArray(obj)){
+        for(let i=0; i<obj.length; i++){
+          _removeRpcObj(obj[i])
+        }
+      }
+      else if(obj && typeof obj === 'object'){
+        for(let k in obj){
+          _removeRpcObj(obj[k])
+        }
+      }
+    }
     
     async function _registerExtension(extension) {
       // convert legacy extension to new format
       if(!extension.tools && extension.execute){
         extension.id = extension.name.replace(/\s+/g, '-')
+        extension.type = "bioimageio-chatbot-extension"
         extension.tools = {
           _: extension.execute
         }
@@ -580,6 +599,10 @@
       }
       if(!extension.id || !extension.tools || !extension.get_schema) 
         throw new Error("Invalid extension")
+      if(extension.type != "bioimageio-chatbot-extension")
+        throw new Error(`Invalid extension ${extension.id}, type should be bioimageio-chatbot-extension`)
+      _removeRpcObj(extension)
+
       const schemas = await extension.get_schema()
       for(let k of Object.keys(schemas)){
         const schema = schemas[k]
@@ -857,6 +880,7 @@
           // get service_id from query string
           const service_id = urlParams.get('service_id');
           const server_url = urlParams.get('server_url');
+          const extension_services = urlParams.getAll('extension');
           const server = await hyphaWebsocketClient.connectToServer({
             "server_url": server_url || "https://ai.imjoy.io",
             "token": token,
@@ -874,11 +898,24 @@
           for(let ext of registeredExtensions){
             extensions.push(ext)
           }
-
           builtinExtensions.forEach((ext) => {
             extensions.push(ext)
           });
-
+          for(let ext of extension_services){
+            try{
+              console.log("Getting extension service:", ext)
+              const extSvc = await server.getService(ext)
+              console.log("Got extension service:", ext, extSvc)
+              extSvc._rintf = true
+              extSvc.id = extSvc.id.split(":")[1]
+              await _registerExtension(extSvc)
+              console.log(`Registered extension: ${extSvc.name} (${extSvc.description})`, extSvc)
+            }
+            catch(e){
+              console.error("Failed to connect to extension service:", ext, e)
+              alert(`Failed to connect to extension service: ${ext}, error: ${e}`)
+            }
+          }
           updateDropdownOptions(extensions);
           showReadyStatus();
           appendRobotMessage(shortIntroMessage, "message-0"); // Append robot message to the message container

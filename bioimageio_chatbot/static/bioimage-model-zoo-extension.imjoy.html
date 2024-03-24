@@ -156,6 +156,7 @@ async def register_chatbot_extension(register):
     await register({
         "_rintf": True,
         "id": "bioimage_model_zoo",
+        "type": "bioimageio-chatbot-extension",
         "name": "BioImage Model Zoo",
         "description": "Getting information about models, applications, datasets, etc. in the BioImage Model Zoo. It takes a list of keywords or a python script to query the resources in the BioImage Model Zoo.",
         "get_schema": get_schema,
