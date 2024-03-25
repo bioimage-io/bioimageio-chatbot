@@ -50,6 +50,13 @@ collections:
     description: A collection of algorithms for image processing.
     base_url: https://scikit-image.org/docs/stable/
     format: pdf
+  - name: napari
+    id: napari
+    source: https://github.com/napari/docs/archive/be52ea709193a45ced6359f7f3feb197cc8dbb3a.zip
+    directory: docs
+    description: napari is a fast, interactive, multi-dimensional image viewer for Python. It's designed for browsing, annotating, and analyzing large multi-dimensional images.
+    base_url: https://napari.org/stable/
+    format: markdown
   - name: Introduction to Bioimage Analysis
     id: book-itba
     source: https://github.com/bioimagebook/bioimagebook.github.io/archive/refs/heads/main.zip

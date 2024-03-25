@@ -17,7 +17,7 @@ dependencies = [
   "langchain>=0.1.6",
   "beautifulsoup4",
   "pandas",
-  "duckduckgo-search>=5.0",
+  "duckduckgo-search>=5.1.0",
   "rank-bm25",
   "langchain-openai",
   "langchain-core>=0.1.31",
