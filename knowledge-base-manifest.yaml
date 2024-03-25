@@ -112,14 +112,14 @@ collections:
     base_url: https://docs.itk.org
     format: pdf
   - name: ITK
-    id: itk-docs
+    id: itk
     source: https://github.com/InsightSoftwareConsortium/ITK/archive/refs/heads/master.zip
     directory: Documentation/docs
     description: "ITK builds on a proven, spatially-oriented architecture for processing, segmentation, and registration of scientific images in two, three, or more dimensions"
     base_url: https://docs.itk.org
     format: markdown
   - name: ITK-Wasm
-    id: itkwasm-docs
+    id: itkwasm
     source: https://github.com/InsightSoftwareConsortium/itk-wasm/archive/refs/heads/main.zip
     directory: docs
     description: "High-performance spatial analysis in a web browser, Node.js, and across programming languages and hardware architectures"
