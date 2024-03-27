@@ -11,7 +11,7 @@ collections:
     format: markdown
   - name: BioImage.IO
     id: bioimage.io
-    source: https://github.com/bioimage-io/bioimage.io/archive/refs/heads/main.zip
+    source: https://github.com/bioimage-io/bioimage.io/archive/8ce3559d80f500eb34e1f75d9ea776d6efed5aef.zip
     directory: docs
     description: A platform for sharing and deploying deep learning models in bioimaging.
     base_url: https://bioimage.io/docs/
@@ -25,14 +25,14 @@ collections:
     format: markdown
   - name: bio.tools
     id: bio.tools
-    source: https://github.com/research-software-ecosystem/content/archive/refs/heads/master.zip
+    source: https://github.com/research-software-ecosystem/content/archive/954c3b2da10e951b2fbcf17825013c1c44ceddf6.zip
     directory: data
     description: A repository for research software tools with metadata.
     base_url: https://bio.tools
     format: json 
   - name: ImJoy
     id: imjoy
-    source: https://github.com/imjoy-team/ImJoy/archive/refs/heads/master.zip
+    source: https://github.com/imjoy-team/ImJoy/archive/c255d9cda9dc19d441fb7cf1eaca806e5ec71af8.zip
     directory: docs
     description: A plugin powered hybrid computing platform for deploying deep learning applications such as advanced image analysis tools.
     base_url: https://imjoy.io/docs/#/
@@ -59,7 +59,7 @@ collections:
     format: markdown
   - name: Introduction to Bioimage Analysis
     id: book-itba
-    source: https://github.com/bioimagebook/bioimagebook.github.io/archive/refs/heads/main.zip
+    source: https://github.com/bioimagebook/bioimagebook.github.io/archive/9519fb297cece3a131718a36f642ba463c41b160.zip
     directory: chapters
     description: "A book written by Pete Bankhead about introduction to bioimage analysis, including practical exercises and Jupyter Book content"
     base_url: https://bioimagebook.github.io/
@@ -120,19 +120,18 @@ collections:
     format: pdf
   - name: ITK
     id: itk
-    source: https://github.com/InsightSoftwareConsortium/ITK/archive/refs/heads/master.zip
+    source: https://github.com/InsightSoftwareConsortium/ITK/archive/4d750726d06ba28c601b8a4bfac8780baa395ff1.zip
     directory: Documentation/docs
     description: "ITK builds on a proven, spatially-oriented architecture for processing, segmentation, and registration of scientific images in two, three, or more dimensions"
     base_url: https://docs.itk.org
     format: markdown
   - name: ITK-Wasm
     id: itkwasm
-    source: https://github.com/InsightSoftwareConsortium/itk-wasm/archive/refs/heads/main.zip
+    source: https://github.com/InsightSoftwareConsortium/itk-wasm/archive/169a2e0eed6b30d91c59081643668ef13045bb93.zip
     directory: docs
     description: "High-performance spatial analysis in a web browser, Node.js, and across programming languages and hardware architectures"
     base_url: https://wasm.itk.org
     format: markdown
-
 
 additional_channels:
   - name: "biii.eu"
