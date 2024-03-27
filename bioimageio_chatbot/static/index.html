@@ -713,65 +713,69 @@
           worker = w;
           console.log("Worker created:", worker);
           // await worker.runScript(`print('Hello from worker')`);
-          const prompt = `Utilize the Code Interpreter for executing Python3 code directly in your browser with Pyodide. It returns standard outputs, errors, and stack traces. Ideal for calculations, data visualization, analysis, and more, this tool supports interacting with user files optionally mounted under /mnt. It's particularly useful for questions related to image analysis or data processing using a variety of libraries.
-          The tool's output includes stdout for direct feedback, error messages for debugging, and matplotlib plots for visual data representation. Make sure the results are printed or plotted with matplotlib. Ensure your code interacts appropriately with files in /mnt for image and data processing tasks. If you are not sure which file to use, run "os.listdir" to check the files in the mounted folder before proceeding. If possible, try to fix any errors in the code and run it again.`
-          _registerExtension({
-            name: "CodeInterpreter",
-            description: prompt,
-            async get_schema() {
-              let description = prompt
+         _registerExtension({
+            id: "code_interpreter",
+            name: "Code Interpreter",
+            description: "Use the code interpreter to run Python scripts to help users with request related to their data or code.",
+            type: "bioimageio-chatbot-extension",
+            async get_schema() { 
+              let description = `Run Python scripts with Pyodide in your browser for calculations, data analysis, and visualization. Supports file access under /mnt. Outputs include standard output, errors, and matplotlib visualizations. Keep replies brief, directing users to script outputs. Check files in /mnt with "os.listdir" for data tasks. Address errors by correcting and rerunning code.Use Pyodide in your browser to run Python scripts. It can perform calculations, data visualization, and more, with access to files under /mnt. Outputs include direct feedback, error messages, and matplotlib plots. Keep user responses brief, referring to outputs for details. Ensure interaction with /mnt files for tasks, and use "os.listdir" to check these files. Try to correct and rerun code if errors occur.`
               if(mountedFolder){
                 description += `\n\nUser has mounted files (from ${mountedFolder.name}) under /mnt, you have read and write access to /mnt.`
               }
               return {
-                  type: "object",
-                  title: "CodeInterpreter",
-                  description,
-                  properties: {
-                      script: {
-                          type: "string",
-                          description: "Python script to execute",
-                      }
-                  },
-                  required: ["code"],
-                  allow_additional_properties: false,
+                run_script: {
+                    type: "object",
+                    title: "RunScript",
+                    description,
+                    properties: {
+                        script: {
+                            type: "string",
+                            description: "Python script to execute",
+                        }
+                    },
+                    required: ["script"],
+                    allow_additional_properties: false,
+                }
               };
             },
-            async execute(config) {
-                console.log("CodeInterpreter running script:", config.script)
-                const container = document.getElementById(`output-${currentMessageId}`) // $(`#output-${messageId}`).
-                container.style.display = "block";
-                const result = await worker.runScript(config.script)
-                console.log("CodeInterpreter result:", result)
-                // create a title with emoji for the code interpreter
-                const title = document.createElement("p")
-                title.innerHTML = "🐍 Code Interpreter"
-                container.appendChild(title)
-                worker.render(container)
-                container.scrollIntoView({ behavior: 'smooth', block: 'end' });
-                // result is a list of objects,
-                // filter out the objects
-                // if type=img, then clip the content to 10 characters
-                // if type=audio, then clip the content to 10 characters
-                // remove the attrs from the result
-                const filteredResult = result.map((obj) => {
-                  let content;
-                    if (obj.type === "audio" || obj.type === "img") {
-                      content = obj.type + ": " + obj.content.slice(0, 10) + "..."
-                    }
-                    else if (obj.type === "stdout") {
-                      content = obj.content
-                    }
-                    else if (obj.type === "stderr") {
-                      content = "stderr: " + obj.content
-                    }
-                    else {
-                      content = obj.type + ": " + obj.content
-                    }
-                    return content
-                })
-                return filteredResult;
-            },
+            tools: {
+              async run_script(config) {
+                  console.log("CodeInterpreter running script:", config.script)
+                  const container = document.getElementById(`output-${currentMessageId}`) // $(`#output-${messageId}`).
+                  container.style.display = "block";
+                  // create a title with emoji for the code interpreter
+                  const title = document.createElement("p")
+                  title.innerHTML = "🐍 Code Interpreter"
+                  container.appendChild(title)
+                  const result = await worker.runScript(config.script, container)
+                  console.log("CodeInterpreter result:", result)
+                  // worker.render(container)
+                  container.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                  // result is a list of objects,
+                  // filter out the objects
+                  // if type=img, then clip the content to 10 characters
+                  // if type=audio, then clip the content to 10 characters
+                  // remove the attrs from the result
+                  const filteredResult = result.map((obj) => {
+                    let content;
+                      if (obj.type === "audio" || obj.type === "img") {
+                        content = obj.type + ": " + obj.content.slice(0, 10) + "..."
+                      }
+                      else if (obj.type === "stdout") {
+                        content = obj.content
+                      }
+                      else if (obj.type === "stderr") {
+                        content = "stderr: " + obj.content
+                      }
+                      else {
+                        content = obj.type + ": " + obj.content
+                      }
+                      return content
+                  })
+                  return filteredResult;
+              },
+            }
           })
           
           $('#mount-folder-btn').click(async function () {

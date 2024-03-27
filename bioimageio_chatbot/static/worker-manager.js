@@ -149,11 +149,6 @@ class PyodideWorkerManager {
         outputEl.textContent = record.content
         container.appendChild(outputEl)
       }
-      else{
-        // add <br>
-        const br = document.createElement("br")
-        container.appendChild(br)
-      }
     } else if (record.type === "service") {
       // display service info
       const serviceEl = document.createElement("div")
