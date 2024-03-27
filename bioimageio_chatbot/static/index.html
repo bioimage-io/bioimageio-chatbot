@@ -320,7 +320,7 @@
               style="height: 24px; margin-right: 10px">
             BioImage.IO Chatbot
           </div>
-          <div id="assistant-buttons" class="btn-group d-flex flex-column flex-md-row">
+          <div id="assistant-buttons" class="btn-group flex-column flex-md-row">
             <button type="button" class="btn btn-secondary mb-2 mb-md-0 mr-md-1" data-assistant="Melman">BIA Seeker</button>
             <button type="button" class="btn btn-secondary mb-2 mb-md-0 mx-md-1" data-assistant="Bridget">BIA Executor</button>
             <button type="button" class="btn btn-secondary mb-2 mb-md-0 ml-md-1" data-assistant="Nina">BIA Tutor</button>
@@ -620,9 +620,6 @@
     }
 
     $(document).ready(async function () {
-      if(urlParams.get('disable-assistant-switch') === "true"){
-        document.getElementById('assistant-buttons').style.display = "none"
-      }
       let svc;
       let token = null;
       const spinner = `<div class="spinner"></div>`; // Spinner HTML
@@ -802,6 +799,15 @@
       }
       $('#mount-folder-btn').hide();
       async function initializeService() {
+        // inside iframe
+        if(window.self !== window.top){
+          if(urlParams.get('assistant-switch') !== "true"){
+            document.getElementById('assistant-buttons').style.display = "none"
+          }
+          else{
+            document.getElementById('assistant-buttons').style.display = "block"
+          }
+        }
         $('.message-holder').append(spinner);
         showConnectingStatus();
         if(enableCodeInterpreter){
