@@ -35,6 +35,13 @@
       height: 300px;
     }
     .message-output > pre {
+      font-size: small;
+      font-family: monospace;
+      padding: 10px;
+      border: #90909075;
+      border-style: solid;
+      max-height: 200px;
+      overflow: auto;
       white-space: pre-wrap;
       margin: 0;
     }
@@ -105,14 +112,13 @@
     }
 
     .spinner {
+      display: inline-block;
       border: 4px solid #f3f3f3;
       border-top: 4px solid #3498db;
       border-radius: 50%;
-      width: 20px;
-      height: 20px;
+      width: 18px;
+      height: 18px;
       animation: spin 1s linear infinite;
-      margin-right: 10px;
-      margin-bottom: 10px;
     }
 
     #chat1 textarea {
@@ -274,10 +280,15 @@
       </p>
 
       <p>Note that the chatbot is still in beta and is being actively developed, we will log the message you input into the chatbot for further investigation of issues and support our development. See <a
-          href="https://github.com/bioimage-io/bioimageio-chatbot/blob/main/docs/DISCLAIMER.md" target="_blank">the
-          Disclaimer</a> for more details. If you want to to remove your chat logs, please contact us via <a href="https://oeway.typeform.com/to/K3j2tJt7" target="_blank">this form</a>.</p>
-
-      <button class="feedback-button" onclick="$('.announcement-banner').hide()">OK, got it!</button>
+            href="https://github.com/bioimage-io/bioimageio-chatbot/blob/main/docs/DISCLAIMER.md" target="_blank">the
+            Disclaimer</a> for more details. If you want to to remove your chat logs, please contact us via <a href="https://oeway.typeform.com/to/K3j2tJt7" target="_blank">this form</a>.</p>
+            <button class="feedback-button" onclick="confirmDisclaimer()">OK, got it!</button>
+      <div class="form-check form-check-inline">
+        <input class="form-check-input" type="checkbox" value="" id="dont-ask-again-check">
+        <label class="form-check-label" for="dont-ask-again-check">
+          Don't ask me again
+        </label>
+      </div>      
     </div>
   </div>
 
@@ -320,10 +331,12 @@
               style="height: 24px; margin-right: 10px">
             BioImage.IO Chatbot
           </div>
-          <div id="assistant-buttons" class="btn-group flex-column flex-md-row">
-            <button type="button" class="btn btn-secondary mb-2 mb-md-0 mr-md-1" data-assistant="Melman">BIA Seeker</button>
-            <button type="button" class="btn btn-secondary mb-2 mb-md-0 mx-md-1" data-assistant="Bridget">BIA Executor</button>
-            <button type="button" class="btn btn-secondary mb-2 mb-md-0 ml-md-1" data-assistant="Nina">BIA Tutor</button>
+          <div class="dropdown">
+            <button class="btn dropdown-toggle" type="button" id="assistant-menu-button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              Assistants
+            </button>
+            <div id="assistant-buttons" class="dropdown-menu dropdown-menu-right" aria-labelledby="assistant-menu-button">
+            </div>
           </div>
         </div>
 
@@ -333,18 +346,19 @@
             <pre class="form-label" for="textAreaExample" id="status-text">Ready to chat! Type your message and press
               enter!</pre>
             <div style="position: relative; display: flex; align-items: center; gap: 10px;">
-              <label for="fileUpload" style="cursor: pointer; flex-shrink: 0;">
+              <!-- label for="fileUpload" style="cursor: pointer; flex-shrink: 0;">
                 <i class="fas fa-paperclip" style="font-size: 1.2rem;" id="paperclipIcon"></i>
-                <!-- Adjust the font size as needed -->
               </label>
               <input type="file" id="fileUpload" style="visibility: hidden; position: absolute;"
-                onchange="fileSelected()">
+                onchange="fileSelected()" -->
               <textarea class="form-control message" id="textAreaExample" rows="1"
                 style="flex-grow: 1; border: 1px solid #ced4da; border-radius: .25rem; height: 36px; padding: .375rem .75rem;"></textarea>
             </div>
           </div>
           <button type="button" class="btn btn-primary mt-3 send-btn"><i class="fas fa-paper-plane"></i>Send</button>
-
+          <button type="button" class="btn btn-primary mt-3" id="mount-folder-btn">
+            <i class="fas fa-folder"></i> Mount Folder
+          </button>
           <!-- Add an "Edit Profile" button to toggle the profile options -->
           <button type="button" class="btn btn-info mt-3" id="edit-profile-btn">
             <i class="fas fa-pen"></i>Edit Profile
@@ -356,9 +370,6 @@
           <!-- Add the "Feedback" button -->
           <button type="button" class="btn btn-info mt-3" id="feedback-btn">
             <i class="fas fa-comment"></i> Feedback
-          </button>
-          <button type="button" class="btn btn-info mt-3" id="mount-folder-btn">
-            <i class="fas fa-folder"></i> Mount Folder
           </button>
           <button type="button" class="btn btn-outline-secondary mt-3" id="advanced-options-btn">
             <i class="fas fa-ellipsis-h"></i> More Options
@@ -430,7 +441,8 @@
   <script src="https://www.unpkg.com/imjoy-rpc@0.5.46/dist/hypha-rpc-websocket.min.js"></script>
   <script src="https://lib.imjoy.io/imjoy-loader.js"></script>
   <script src="https://unpkg.com/marked@2.1.3/lib/marked.js"></script>
-  <script src="https://www.unpkg.com/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.12.9/dist/umd/popper.min.js"></script>
+  <script src="https://www.unpkg.com/bootstrap@4.0.0/dist/js/bootstrap.min.js"></script>
   <script src="./worker-manager"></script>
   <script>
     const urlParams = new URLSearchParams(window.location.search);
@@ -440,12 +452,6 @@
     let mountedFolder;
     let extensions = [];
     const registeredExtensions = []
-    const assistantIcons = {
-      "Melman": "https://bioimage.io/static/img/bioimage-io-icon.svg", // "https://raw.githubusercontent.com/bioimage-io/bioimageio-chatbot/main/bioimageio_chatbot/static/melman-bmz.png",
-      "Bridget": "https://bioimage.io/static/img/bioimage-io-icon.svg", // "https://raw.githubusercontent.com/bioimage-io/bioimageio-chatbot/main/bioimageio_chatbot/static/bridget-bmz.png",
-      "Nina": "https://bioimage.io/static/img/bioimage-io-icon.svg", // "https://raw.githubusercontent.com/bioimage-io/bioimageio-chatbot/main/bioimageio_chatbot/static/nina-bmz.png" 
-    };
-
     function fileSelected() {
       var input = document.getElementById('fileUpload');
       var label = document.getElementById('paperclipIcon');
@@ -619,22 +625,26 @@
       updateDropdownOptions(extensions);
     }
 
+    function confirmDisclaimer(){
+      $('.announcement-banner').hide();
+      if(document.getElementById('dont-ask-again-check').checked)
+      localStorage.setItem('do-not-ask-again', 'true')
+      else
+      localStorage.setItem('do-not-ask-again', 'false')
+    }
+
     $(document).ready(async function () {
       let svc;
       let token = null;
       const spinner = `<div class="spinner"></div>`; // Spinner HTML
-      const enableCodeInterpreter = urlParams.get('enable-code-interpreter') === "true";
+      let enableCodeInterpreter = urlParams.get('enable-code-interpreter') === "true";
       let assistantName = urlParams.get('assistant') || "Melman";
-
+      let allAssistants = {};
+      let assistantIcon = "https://bioimage.io/static/img/bioimage-io-icon.svg"
+      let imjoyApi = null;
       // add button class primary to the selected assistant button
       // use assistant-buttons to find the buttons container
-      $('#assistant-buttons button[data-assistant="' + assistantName + '"]')
-        .removeClass('btn-secondary')
-        .addClass('btn-primary');
-  
-      let shortIntroMessage = `Hi there! I'm ${assistantName}, how can I assist you today?`;
-      
-
+      $('#assistant-buttons li > a[data-assistant="' + assistantName + '"]').css('background', '#007bff').css('color', 'white');
       // Function to show the login screen
       function showLoginScreen() {
         $('#loading-container').hide();
@@ -647,8 +657,8 @@
         $('#loading-container').hide();
         $('#login-container').hide();
         $('#app-container').show();
+        if(localStorage.getItem('do-not-ask-again') !== 'true')
         $('.announcement-banner').show();
-
         if(window.self !== window.top){
           const imjoyRPC = await loadImJoyRPC()
           const api = await imjoyRPC.setupRPC({name: 'BioImage.IO Chatbot'});
@@ -661,7 +671,6 @@
                 console.log(`Registered extension: ${ext.name} (${ext.description}) for assistant ${assistantName}`)
               }
             }
-            shortIntroMessage = `Hi there! I'm ${assistantName}, how can I assist you today?`;
           },
           registerExtension: _registerExtension,
           getAllExtensions(){
@@ -675,7 +684,126 @@
             $('#extensions').multipleSelect('setSelects', Array.from(selected))
           },
         });
+        imjoyApi = api;
         }
+        else{
+          loadImJoyCore().then((imjoyCore)=>{
+              const imjoy = new imjoyCore.ImJoy({
+                  imjoy_api: {
+                    async registerExtension(plugin, config){
+                      return await _registerExtension(config)
+                    }
+                  },
+              })
+              imjoy.start({workspace: 'default'}).then(()=>{
+                imjoyApi = imjoy.api;
+              })
+          })
+          
+        }
+      }
+
+      function setupCodeInterpreter(){
+        // show mount button
+        workerManager.createWorker().then(async w => {
+          $('#mount-folder-btn').show();
+          if(mountedFolder){
+            await worker.mount("/mnt", mountedFolder);
+          }
+          worker = w;
+          console.log("Worker created:", worker);
+          // await worker.runScript(`print('Hello from worker')`);
+          const prompt = `Utilize the Code Interpreter for executing Python3 code directly in your browser with Pyodide. It returns standard outputs, errors, and stack traces. Ideal for calculations, data visualization, analysis, and more, this tool supports interacting with user files optionally mounted under /mnt. It's particularly useful for questions related to image analysis or data processing using a variety of libraries.
+          The tool's output includes stdout for direct feedback, error messages for debugging, and matplotlib plots for visual data representation. Make sure the results are printed or plotted with matplotlib. Ensure your code interacts appropriately with files in /mnt for image and data processing tasks. If you are not sure which file to use, run "os.listdir" to check the files in the mounted folder before proceeding. If possible, try to fix any errors in the code and run it again.`
+          _registerExtension({
+            name: "CodeInterpreter",
+            description: prompt,
+            async get_schema() {
+              let description = prompt
+              if(mountedFolder){
+                description += `\n\nUser has mounted files (from ${mountedFolder.name}) under /mnt, you have read and write access to /mnt.`
+              }
+              return {
+                  type: "object",
+                  title: "CodeInterpreter",
+                  description,
+                  properties: {
+                      script: {
+                          type: "string",
+                          description: "Python script to execute",
+                      }
+                  },
+                  required: ["code"],
+                  allow_additional_properties: false,
+              };
+            },
+            async execute(config) {
+                console.log("CodeInterpreter running script:", config.script)
+                const container = document.getElementById(`output-${currentMessageId}`) // $(`#output-${messageId}`).
+                container.style.display = "block";
+                const result = await worker.runScript(config.script)
+                console.log("CodeInterpreter result:", result)
+                // create a title with emoji for the code interpreter
+                const title = document.createElement("p")
+                title.innerHTML = "🐍 Code Interpreter"
+                container.appendChild(title)
+                worker.render(container)
+                container.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                // result is a list of objects,
+                // filter out the objects
+                // if type=img, then clip the content to 10 characters
+                // if type=audio, then clip the content to 10 characters
+                // remove the attrs from the result
+                const filteredResult = result.map((obj) => {
+                  let content;
+                    if (obj.type === "audio" || obj.type === "img") {
+                      content = obj.type + ": " + obj.content.slice(0, 10) + "..."
+                    }
+                    else if (obj.type === "stdout") {
+                      content = obj.content
+                    }
+                    else if (obj.type === "stderr") {
+                      content = "stderr: " + obj.content
+                    }
+                    else {
+                      content = obj.type + ": " + obj.content
+                    }
+                    return content
+                })
+                return filteredResult;
+            },
+          })
+          
+          $('#mount-folder-btn').click(async function () {
+            const dirHandle = await showDirectoryPicker();
+            if ((await dirHandle.queryPermission({ mode: "readwrite" })) !== "granted") {
+                if (
+                    (await dirHandle.requestPermission({ mode: "readwrite" })) !== "granted"
+                ) {
+                    throw Error("Unable to read and write directory");
+                }
+            }
+            // show spinner
+            $('#mount-folder-btn').append(spinner);
+            try{
+              await worker.mount("/mnt", dirHandle);
+              console.log("Mounted folder:", dirHandle);
+              mountedFolder = dirHandle;
+              $('#mount-folder-btn').text(`Mount Folder (${mountedFolder.name})`);
+            }
+            finally{
+              $('.spinner').remove();
+              $('#mount-folder-btn').text(`Data Folder: ${mountedFolder.name}`);
+            }
+          });
+          $('.spinner').remove();
+          $('#mount-folder-btn').show();
+        }).catch((e)=>{
+          console.error("Failed to create worker:", e)
+          $('#mount-folder-btn').hide();
+          alert("Failed to setup code interpreter, error:" + e)
+        })
+        
       }
 
       // Function to handle the login callback
@@ -773,115 +901,11 @@
         $('#profile-options').collapse('toggle');
       });
 
-      // add a button to select a folder from the local file system
-      if(enableCodeInterpreter){
-        $('#mount-folder-btn').click(async function () {
-          const dirHandle = await showDirectoryPicker();
-          if ((await dirHandle.queryPermission({ mode: "readwrite" })) !== "granted") {
-              if (
-                  (await dirHandle.requestPermission({ mode: "readwrite" })) !== "granted"
-              ) {
-                  throw Error("Unable to read and write directory");
-              }
-          }
-          // show spinner
-          $('#mount-folder-btn').append(spinner);
-          try{
-            await worker.mount("/mnt", dirHandle);
-            console.log("Mounted folder:", dirHandle);
-            mountedFolder = dirHandle;
-            $('#mount-folder-btn').text(`Mount Folder (${mountedFolder.name})`);
-          }
-          finally{
-            $('.spinner').remove();
-          }
-        });
-      }
       $('#mount-folder-btn').hide();
       async function initializeService() {
-        // inside iframe
-        if(window.self !== window.top){
-          if(urlParams.get('assistant-switch') !== "true"){
-            document.getElementById('assistant-buttons').style.display = "none"
-          }
-          else{
-            document.getElementById('assistant-buttons').style.display = "block"
-          }
-        }
         $('.message-holder').append(spinner);
         showConnectingStatus();
-        if(enableCodeInterpreter){
-          workerManager.createWorker().then(async w => {
-            if(mountedFolder){
-              await worker.mount("/mnt", mountedFolder);
-            }
-            worker = w;
-            console.log("Worker created:", worker);
-            // await worker.runScript(`print('Hello from worker')`);
-            const prompt = `Utilize the Code Interpreter for executing Python3 code directly in your browser with Pyodide. It returns standard outputs, errors, and stack traces. Ideal for calculations, data visualization, analysis, and more, this tool supports interacting with user files optionally mounted under /mnt. It's particularly useful for questions related to image analysis or data processing using a variety of libraries.
-            The tool's output includes stdout for direct feedback, error messages for debugging, and matplotlib plots for visual data representation. Make sure the results are printed or plotted with matplotlib. Ensure your code interacts appropriately with files in /mnt for image and data processing tasks.`
-            _registerExtension({
-              name: "CodeInterpreter",
-              description: prompt,
-              async get_schema() {
-                let description = prompt
-                if(mountedFolder){
-                  description += `\n\nUser has mounted files (from ${mountedFolder.name}) under /mnt, you have read and write access to /mnt.`
-                }
-                return {
-                    type: "object",
-                    title: "CodeInterpreter",
-                    description,
-                    properties: {
-                        script: {
-                            type: "string",
-                            description: "Python script to execute",
-                        }
-                    },
-                    required: ["code"],
-                    allow_additional_properties: false,
-                };
-              },
-              async execute(config) {
-                  console.log("CodeInterpreter running script:", config.script)
-                  const container = document.getElementById(`output-${currentMessageId}`) // $(`#output-${messageId}`).
-                  container.style.display = "block";
-                  const result = await worker.runScript(config.script)
-                  console.log("CodeInterpreter result:", result)
-                  // create a title with emoji for the code interpreter
-                  const title = document.createElement("p")
-                  title.innerHTML = "🐍 Code Interpreter"
-                  container.appendChild(title)
-                  worker.render(container)
-                  container.scrollIntoView({ behavior: 'smooth', block: 'end' });
-                  // result is a list of objects,
-                  // filter out the objects
-                  // if type=img, then clip the content to 10 characters
-                  // if type=audio, then clip the content to 10 characters
-                  // remove the attrs from the result
-                  const filteredResult = result.map((obj) => {
-                    let content;
-                      if (obj.type === "audio" || obj.type === "img") {
-                        content = obj.type + ": " + obj.content.slice(0, 10) + "..."
-                      }
-                      else if (obj.type === "stdout") {
-                        content = obj.content
-                      }
-                      else if (obj.type === "stderr") {
-                        content = "stderr: " + obj.content
-                      }
-                      else {
-                        content = obj.type + ": " + obj.content
-                      }
-                      return content
-                  })
-                  return filteredResult;
-              },
-            })
-            // show mount button
-            $('#mount-folder-btn').show();
-          })
-        }
+        
         try {
           // get service_id from query string
           const service_id = urlParams.get('service_id');
@@ -893,11 +917,29 @@
           })
           const svc = await server.getService(service_id || "bioimageio-chatbot")
           await svc.ping()
-          const assistants = svc.assistants;
-          const assistant = assistants[assistantName];
+          allAssistants = svc.assistants;
+          const assistant = allAssistants[assistantName];
+          if(assistant.code_interpreter){
+            enableCodeInterpreter = true;
+          }
+          if(enableCodeInterpreter){
+            setupCodeInterpreter();
+          }
+          if(Object.keys(allAssistants).length > 1){
+            const assistantButtons = document.getElementById('assistant-buttons');
+            assistantButtons.innerHTML = Object.values(allAssistants).map((a)=>{
+              // <li><a class="dropdown-item" href="#" data-assistant="Melman">BioImage Seeker (Melman)</a></li>
+              return `<li><a class="dropdown-item" href="#" data-assistant="${a.name}">${a.alias}(${a.name})</a></li>`
+            }).join("\n")
+          }
+          else{
+            $('#assistant-menu-button').hide();
+          }
           if (!assistant) {
             throw new Error(`Assistant ${assistantName} not found`);
           }
+          assistantIcon = assistant.icon || assistantIcon;
+          document.getElementById('assistant-menu-button').innerHTML = `${assistant.alias} (${assistant.name})`;
           const builtinExtensions = assistant.extensions;
           // clear extension except registered from ImJoy
           extensions = [];
@@ -924,7 +966,7 @@
           }
           updateDropdownOptions(extensions);
           showReadyStatus();
-          appendRobotMessage(shortIntroMessage, "message-0"); // Append robot message to the message container
+          appendRobotMessage(allAssistants[assistantName]['welcome_message'], "message-0"); // Append robot message to the message container
           return svc;
         }
         catch (e) {
@@ -939,7 +981,6 @@
       }
       // Reset the chat session and clear chat history
       function resetChat() {
-        shortIntroMessage = `Hi there! I'm ${assistantName}, how can I assist you today?`;
         sessionId = generateSessionID(); // Generate a new session ID
         chat_history.length = 0; // Clear the chat history
         code = ''; // Reset code
@@ -948,7 +989,7 @@
         initializeService();
       }
 
-      $('#assistant-buttons button').click(function() {
+      $('#assistant-buttons li > a').click(function() {
         const assistantName = $(this).data('assistant');
         const url = new URL(document.location.href);
         url.searchParams.set('assistant', assistantName);
@@ -1026,27 +1067,34 @@
 
         // Get the selected file
         const fileInput = document.getElementById('fileUpload');
-        const selectedFile = fileInput.files[0];
+        if(fileInput){
+          const selectedFile = fileInput.files[0];
 
-        // Check if a file is selected
-        if (selectedFile) {
-          // Read the selected file as a data URL (base64)
-          const reader = new FileReader();
-          reader.onloadend = function () {
-            const imageData = reader.result; // Extract base64 data
-            sendChatMessage(message, imageData);
-            removeFileSelected();
-          };
-          reader.readAsDataURL(selectedFile);
-          
-        } else {
-          // No file selected, send only text message
+          // Check if a file is selected
+          if (selectedFile) {
+            // Read the selected file as a data URL (base64)
+            const reader = new FileReader();
+            reader.onloadend = function () {
+              const imageData = reader.result; // Extract base64 data
+              sendChatMessage(message, imageData);
+              removeFileSelected();
+            };
+            reader.readAsDataURL(selectedFile);
+            
+          } else {
+            // No file selected, send only text message
+            sendChatMessage(message, null);
+            fileInput.value = ''; // Clear the file input
+          }
+  
+        }
+        else{
           sendChatMessage(message, null);
         }
-
+       
         // Clear the input fields
         $('.message').val('').focus();
-        fileInput.value = ''; // Clear the file input
+
       }
 
       function completeCodeBlocks(markdownText) {
@@ -1166,7 +1214,7 @@
       }
 
       function appendRobotMessage(htmlMessage, messageId) {
-        const iconUrl = assistantIcons[assistantName];
+        const iconUrl = assistantIcon;
         const messageContainer = `<div class="message-container robot-message" id="container-${messageId}">
           <div class="rounded-icon-container">
             <img src="${iconUrl}" alt="${assistantName}" width="20" height="20">
