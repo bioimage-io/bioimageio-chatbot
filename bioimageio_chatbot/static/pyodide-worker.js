@@ -152,12 +152,32 @@ def show_audio(samples, rate):
 
 # HACK: Prevent 'wave' import from failing because audioop is not included with pyodide.
 import types
+import ast
 embed = types.ModuleType('embed')
 sys.modules['embed'] = embed
 embed.image = show_image
 embed.animation = show_animation
 embed.audio = show_audio
 context = {}  # Persistent execution context
+
+def get_last_expression(script):
+    """
+    This function takes a script as input, parses it into an Abstract Syntax Tree (AST),
+    and returns the last expression in the script if it is a variable.
+    """
+    try:
+        # Parse the script into an AST
+        stmts = list(ast.iter_child_nodes(ast.parse(script)))
+
+        # Check if the last statement is an expression and if it is a variable
+        if stmts and isinstance(stmts[-1], ast.Expr) and isinstance(stmts[-1].value, ast.Name):
+            # If it is, unparse it back into a string and return it
+            return ast.unparse(stmts[-1].value)
+        else:
+            return None
+    except Exception as e:
+        print(f"An error occurred while parsing the script: {e}")
+        return None
 
 async def run(source):
     out = JSOutWriter()
@@ -171,38 +191,48 @@ async def run(source):
             if "embed" in imports:
                 await js.pyodide.loadPackagesFromImports("import numpy, PIL")
             code = compile(source, "<string>", "exec", ast.PyCF_ALLOW_TOP_LEVEL_AWAIT)
-            result = eval(code, context)
-            if result:
-                await result
+            last_expression = get_last_expression(source)
+            eval(code, context)
+            if last_expression:
+                result = eval(last_expression, context)
+                if result is not None:
+                    print(result)
         except:
             traceback.print_exc()
 `
+const mountedFs = {}
 
 self.onmessage = async (event) => {
-    const mountedFs = {}
     if(event.data.source){
         try{
             const { source } = event.data
             self.pyodide.globals.set("source", source)
             outputs = []
             await self.pyodide.runPythonAsync("await run(source)")
-            self.postMessage({ executionDone: true, outputs })
             // synchronize the file system
             for(const mountPoint of Object.keys(mountedFs)){
                 await mountedFs[mountPoint].syncfs()
             }
+            console.log("Execution done")
+            self.postMessage({ executionDone: true, outputs })
             outputs = []
         }
         catch(e){
+            console.error("Execution Error", e)
             self.postMessage({ executionError: e.message })
         }
     }
     if(event.data.mount){
         try{
             const { mountPoint, dirHandle } = event.data.mount
+            if(mountedFs[mountPoint]){
+                console.log("Unmounting native FS:", mountPoint)
+                await self.pyodide.umountNativeFS(mountPoint)
+                delete mountedFs[mountPoint]
+            }
             const nativefs = await self.pyodide.mountNativeFS(mountPoint, dirHandle)
             mountedFs[mountPoint] = nativefs
-            console.log("Native FS mounted:", nativefs)
+            console.log("Native FS mounted:", mountPoint, nativefs)
             self.postMessage({ mounted: mountPoint })
         }
         catch(e){
