@@ -36,9 +36,9 @@ To illustrate this personalized approach, we have two screenshots of the chatbot
 ![Abby, a developer, willing to analyze biological images.](./screenshots/chatbot-developer.png)
 
 ### How to switch chatbot's mode
-We have three assistants built in the BioImage.IO Chatbot to cater to the different purpose and needs of the users. BioImage Analysis Seeker (BIA Seeker) is designated for users that seek for information about bioimage analysis, it is equiped with 6 extensions including community-driven knowledge base, as well as online source like image.sc forum, web search. BIA Executor is desginated for users that want to execute model using BioEngine such as CellPose. BIA Tutor is designated for users that seek for tutoring in bioimage analysis, it is equiped with Bioimage Books extension combined with web search and Bioimage Model Zoo search. 
-![BIA Executor](./screenshots/bia-executor.png)
-![BIA Tutor](./screenshots/bia-tutor.png)
+We have three assistants built in the BioImage.IO Chatbot to cater to the different purpose and needs of the users. BioImage Seeker is designated for users that seek for information about bioimage analysis, it is equiped with 6 extensions including community-driven knowledge base, as well as online source like image.sc forum, web search. BioImage Executor is desginated for users that want to execute model using BioEngine such as CellPose. BioImage Tutor is designated for users that seek for tutoring in bioimage analysis, it is equiped with Bioimage Books extension combined with web search and Bioimage Model Zoo search.
+![BioImage Tutor](./screenshots/bia-tutor.png) 
+![BioImage Executor](./screenshots/bia-executor.png)
 
 ## Database Integration
 Our system harnesses knowledge from a variety of valuable sources, including established databases such as [ELIXIR bio.tools](https://bio.tools) and the [ImageJ Wiki](https://imagej.net/software/imagej2/), tool-specific documentation like [deepImageJ](https://deepimagej.github.io), [ilastik](https://www.ilastik.org), and [ImJoy](https://imjoy.io/#/), and structured databases such as the [BioImage Model Zoo repository](https://bioimage.io).
