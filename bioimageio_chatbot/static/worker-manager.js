@@ -141,12 +141,14 @@ class PyodideWorkerManager {
       scriptEl.textContent = `Script: ${record.content}`
       container.appendChild(scriptEl)
     } else if (record.type === "stdout" || record.type === "stderr") {
-      const outputEl = document.createElement("pre")
-      if (record.type === "stderr") {
-        outputEl.style.color = "red"
+      if(record.content.trim() !== "") {
+        const outputEl = document.createElement("pre")
+        if (record.type === "stderr") {
+          outputEl.style.color = "red"
+        }
+        outputEl.textContent = record.content
+        container.appendChild(outputEl)
       }
-      outputEl.textContent = record.content
-      container.appendChild(outputEl)
     } else if (record.type === "service") {
       // display service info
       const serviceEl = document.createElement("div")
