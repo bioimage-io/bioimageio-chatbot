@@ -357,7 +357,7 @@
           </div>
           <button type="button" class="btn btn-primary mt-3 send-btn"><i class="fas fa-paper-plane"></i>Send</button>
           <button type="button" class="btn btn-primary mt-3" id="mount-folder-btn">
-            <i class="fas fa-folder"></i> Mount Folder
+            <i class="fas fa-folder"></i> Mount Files
           </button>
           <!-- Add an "Edit Profile" button to toggle the profile options -->
           <button type="button" class="btn btn-info mt-3" id="edit-profile-btn">
@@ -723,6 +723,8 @@
               if(mountedFolder){
                 description += `\n\nUser has mounted files (from ${mountedFolder.name}) under /mnt, you have read and write access to /mnt.`
               }
+              else{
+                description += `\n\nUser has not mounted any files yet, use the "Mount Files" button to mount a folder for data access.`}
               return {
                 run_script: {
                     type: "object",
@@ -793,7 +795,7 @@
               await worker.mount("/mnt", dirHandle);
               console.log("Mounted folder:", dirHandle);
               mountedFolder = dirHandle;
-              $('#mount-folder-btn').text(`Mount Folder (${mountedFolder.name})`);
+              $('#mount-folder-btn').text(`Mount Files (${mountedFolder.name})`);
             }
             finally{
               $('.spinner').remove();
