@@ -343,7 +343,7 @@
         <div class="card-body">
           <div class="message-holder"></div>
           <div class="form-outline">
-            <pre class="form-label" for="textAreaExample" id="status-text">Ready to chat! Type your message and press
+            <pre class="form-label" for="textMessageArea" id="status-text">Ready to chat! Type your message and press
               enter!</pre>
             <div style="position: relative; display: flex; align-items: center; gap: 10px;">
               <!-- label for="fileUpload" style="cursor: pointer; flex-shrink: 0;">
@@ -351,7 +351,7 @@
               </label>
               <input type="file" id="fileUpload" style="visibility: hidden; position: absolute;"
                 onchange="fileSelected()" -->
-              <textarea class="form-control message" id="textAreaExample" rows="1"
+              <textarea class="form-control message" id="textMessageArea" rows="1"
                 style="flex-grow: 1; border: 1px solid #ced4da; border-radius: .25rem; height: 36px; padding: .375rem .75rem;"></textarea>
             </div>
           </div>
@@ -716,10 +716,10 @@
          _registerExtension({
             id: "code_interpreter",
             name: "Code Interpreter",
-            description: "Use the code interpreter to run Python scripts to help users with request related to their data or code.",
+            description: `Use the code interpreter to run Python scripts via Pyodide in the browser to help users with request related to their data or code. Supports file access under /mnt. Outputs include standard output, errors, and matplotlib visualizations. Keep replies brief, directing users to script outputs. Check files in /mnt with "os.listdir" for data tasks. Address errors by correcting and rerunning code. It can perform calculations, data visualization, and more, with access to files under /mnt. Outputs include direct feedback, error messages, and matplotlib plots. Users can see full execution outputs, so keep the responses brief, referring to execution outputs for details. Ensure interaction with /mnt files for tasks, and use "os.listdir" to check these files. Try to correct and rerun code if errors occur.`,
             type: "bioimageio-chatbot-extension",
             async get_schema() { 
-              let description = `Run Python scripts with Pyodide in your browser for calculations, data analysis, and visualization. Supports file access under /mnt. Outputs include standard output, errors, and matplotlib visualizations. Keep replies brief, directing users to script outputs. Check files in /mnt with "os.listdir" for data tasks. Address errors by correcting and rerunning code.Use Pyodide in your browser to run Python scripts. It can perform calculations, data visualization, and more, with access to files under /mnt. Outputs include direct feedback, error messages, and matplotlib plots. Keep user responses brief, referring to outputs for details. Ensure interaction with /mnt files for tasks, and use "os.listdir" to check these files. Try to correct and rerun code if errors occur.`
+              let description = `Run Python scripts. `
               if(mountedFolder){
                 description += `\n\nUser has mounted files (from ${mountedFolder.name}) under /mnt, you have read and write access to /mnt.`
               }
@@ -796,6 +796,10 @@
               console.log("Mounted folder:", dirHandle);
               mountedFolder = dirHandle;
               $('#mount-folder-btn').text(`Mount Files (${mountedFolder.name})`);
+              // emulate a message to show the user that the folder has been mounted
+              // set the input and press send
+              $('#textMessageArea').val(`I just mounted my local data folder (original name: "${mountedFolder.name}") as /mnt.`);
+              $('.send-btn').click();
             }
             finally{
               $('.spinner').remove();
@@ -1036,7 +1040,7 @@
       var code;
       var error_message;
       // Add this event listener to automatically resize the textarea based on its content
-      var textarea = document.getElementById('textAreaExample');
+      var textarea = document.getElementById('textMessageArea');
       textarea.addEventListener('input', autoResize, false);
       autoResize.call(textarea);
 
@@ -1320,7 +1324,7 @@
       $('.message-holder').on('click', '.feedback-button', showFeedbackWindow);
 
 
-      $("#textAreaExample").on("keydown", function (event) {
+      $("#textMessageArea").on("keydown", function (event) {
         if (event.key === "Enter") {
           event.preventDefault(); // Prevent the default new line behavior
           if (event.shiftKey) {
