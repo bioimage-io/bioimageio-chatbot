@@ -49,17 +49,20 @@ class PyodideWorkerManager {
       id,
       appInfo: info,
       worker,
-      async runScript(script, outputContainer) {
-        return await self.runScript(id, script, outputContainer)
+      async runScript(script, ioContext) {
+        return await self.runScript(id, script, ioContext)
       },
-      async run_script(script, outputContainer) {
-        return await self.runScript(id, script, outputContainer)
+      async run_script(script, io_context) {
+        return await self.runScript(id, script, io_context)
       },
       async mount(mountPoint, dirHandle) {
         return await self.mountNativeFs(id, mountPoint, dirHandle)
       },
       async render(container) {
         self.render(id, container)
+      },
+      async renderSummary(container) {
+        return self.renderSummary(id, container)
       },
       async close() {
         await self.closeWorker(id)
@@ -135,13 +138,33 @@ class PyodideWorkerManager {
     this.workerRecords[workerId].push(record)
   }
 
+  renderOutputSummary(container, record) {
+    // return a string preview of the output
+    if (record.type === "store") {
+      return `Store: ${record.key}`
+    }
+    else if (record.type === "script") {
+      return `Script>>>:\n\`\`\`python\n${record.content}\n\`\`\`\n`
+    } else if (record.type === "stdout") {
+      if(record.content.trim() === "\n") {
+        return "\n"
+      }
+      return `${record.content}\n`
+    } else if (record.type === "stderr") {
+      if(record.content.trim() === "\n") {
+        return "\n"
+      }
+      return `${record.content}\n`
+    } else if (record.type === "service") {
+      return `Service: ${record.content}`
+    } else if (record.type === "audio" || record.type === "img") {
+      return `Image: <Object>`
+    }
+  }
+
   renderOutput(container, record) {
-    if (record.type === "script") {
-      const scriptEl = document.createElement("pre")
-      scriptEl.textContent = `Script: ${record.content}`
-      container.appendChild(scriptEl)
-    } else if (record.type === "stdout" || record.type === "stderr") {
-      if(record.content.trim() !== "") {
+    if (record.type === "stdout" || record.type === "stderr") {
+      if(record.content.trim() !== "\n" && record.content.trim() !== ""){
         const outputEl = document.createElement("pre")
         if (record.type === "stderr") {
           outputEl.style.color = "red"
@@ -149,6 +172,16 @@ class PyodideWorkerManager {
         outputEl.textContent = record.content
         container.appendChild(outputEl)
       }
+    }
+    else if (record.type === "store") {
+      const storeEl = document.createElement("pre")
+      storeEl.textContent = `Store: ${record.key}`
+      container.appendChild(storeEl)
+    }
+    else if (record.type === "script") {
+      const scriptEl = document.createElement("pre")
+      scriptEl.textContent = `Script: ${record.content}`
+      container.appendChild(scriptEl)
     } else if (record.type === "service") {
       // display service info
       const serviceEl = document.createElement("div")
@@ -169,13 +202,23 @@ class PyodideWorkerManager {
     }
   }
 
-  async runScript(workerId, script, outputContainer) {
+  async readStoreItem(workerId, key) {
+    const records = this.workerRecords[workerId]
+    return records.filter(record => record.type === "store" && (!key || record.key === key))[0]
+  }
+
+  async runScript(workerId, script, ioContext) {
+    const outputContainer = ioContext && ioContext.output_container
+    if(outputContainer) {
+      delete ioContext.output_container
+    }
     const worker = await this.getWorker(workerId)
     return new Promise((resolve, reject) => {
       worker.onerror = e => console.error(e)
       const outputs = []
       const handler = e => {
         if (e.data.type !== undefined) {
+          if(!ioContext || !ioContext.skip_record)
           this.addToRecord(workerId, e.data)
           outputs.push(e.data)
           if (outputContainer) {
@@ -190,12 +233,13 @@ class PyodideWorkerManager {
         } else if (e.data.executionError) {
           console.error("Execution Error", e.data.executionError)
           worker.removeEventListener("message", handler)
-          reject(outputs)
+          reject(e.data.executionError)
         }
       }
       worker.addEventListener("message", handler)
-      worker.postMessage({ source: script })
-      // this.addToRecord(workerId, { type: 'script', content: script });
+      if(!ioContext || !ioContext.skip_record)
+        this.addToRecord(workerId, { type: 'script', content: script });
+      worker.postMessage({ source: script, io_context: ioContext })
     })
   }
 
@@ -206,6 +250,21 @@ class PyodideWorkerManager {
       return
     }
     records.forEach(record => this.renderOutput(container, record))
+  }
+
+  renderSummary(workerId, container) {
+    const records = this.workerRecords[workerId]
+    if (!records) {
+      console.error("No records found for worker:", workerId)
+      return
+    }
+    
+    let outputSummay = ""
+    records.forEach(record => {
+      const summary = this.renderOutputSummary(container, record)
+      outputSummay += summary
+    })
+    return outputSummay
   }
 }
 

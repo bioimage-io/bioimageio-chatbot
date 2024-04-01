@@ -101,14 +101,15 @@ def create_assistants(builtin_extensions):
                 else:
                     extension = ChatbotExtension.model_validate(ext)
 
+            max_length = 4000
             if isinstance(extension, LegacyChatbotExtension):
                 ts = [await legacy_extension_to_tool(extension)]
-                assert len(extension.description) <= 1000, f"Extension description is too long: {extension.description}"
-                tool_prompts[create_tool_name(extension.name)] = extension.description.replace("\n", ";")[:256]
+                assert len(extension.description) <= max_length, f"Extension description is too long: {extension.description}"
+                tool_prompts[create_tool_name(extension.name)] = extension.description.replace("\n", ";")[:max_length]
             else:
                 ts = await extension_to_tools(extension)
-                assert len(extension.description) <= 1000, f"Extension tool prompt is too long: {extension.tool_prompt}"
-                tool_prompts[create_tool_name(extension.id) + "*"] = extension.description.replace("\n", ";")[:256]
+                assert len(extension.description) <= max_length, f"Extension tool prompt is too long: {extension.description}"
+                tool_prompts[create_tool_name(extension.id) + "*"] = extension.description.replace("\n", ";")[:max_length]
             extensions_by_tool_name.update({t.__name__: extension for t in ts})
             tools += ts
             
@@ -129,7 +130,7 @@ def create_assistants(builtin_extensions):
             tools,
             return_metadata=True,
             thoughts_schema=ThoughtsSchema,
-            max_loop_count=10,
+            max_loop_count=20,
             tool_usage_prompt=tool_usage_prompt,
         )
         result_steps = metadata["steps"]
@@ -153,33 +154,12 @@ def create_assistants(builtin_extensions):
     event_bus = melman.get_event_bus()
     event_bus.register_default_events()
 
-    code_interpreter_prompt = """
-Specifically for the CodeInterpreter tool, you can use the following libraries:
-    - **matplotlib**: For plotting graphs and displaying images.
-    - **numpy**: Essential for numerical computing.
-    - **pandas**: Best for data manipulation and analysis.
-    - **scikit-learn**: For applying machine learning algorithms.
-    - **scipy**: Used in scientific computing and technical computing.
-    - **opencv-python**: For computer vision tasks.
-    - **imageio**: To read and write a wide range of image data.
-    - **requests**: For making HTTP requests (Note: external requests may be restricted).
-    - **skimage**: For image processing tasks.
-When to use this tool:
-    - **Internal Calculations**: Quickly perform complex mathematical operations.
-    - **Code Validation**: Test and validate snippets of Python code for accuracy.
-    - **Data Analysis and Visualization**: Use matplotlib to visualize data and leverage pandas for analysis.
-    - **Image Analysis**: Analyze users' images with skimage, scipy, and numpy for detailed insights.
-    - **Machine Learning Prototyping**: Test machine learning models using scikit-learn with your data.
-
-If needed, use the CodeInterpreter to run Python code snippets (in one step or multiple rounds) and provide the output to the user.
-For more complex questions, DO NOT generate lots of code at once, instead, break the problem into steps and in each step, use the CodeInterpreter interactively like a jupyter notebook to run the code and provide the output to the user or refine the code based on the intermediate results.
-"""
     bridget_instructions = (
         "As Bridget, your role is to act as an expert in image analysis, guiding users in utilizing image analysis tools and writing analysis code and scripts effectively, help user to analyse their own data. "
         "Communicate accurately, concisely, and logically, refraining from making up information. "
         "When necessary, seek further details to fully understand the user's request. "
         "Your primary objective is to assist users in applying image analysis techniques to their own data, offering advice on code and script usage, "
-        "and facilitating the use of Python code snippets for image analysis through the code interpreter.\n" + code_interpreter_prompt + "\n"
+        "and generate Python code for image analysis and execute in the Code Interpreter to process their data.\n"
         "Engage with users to grasp their data, requirements, solicit additional information as needed, use the web search and code interpreter, and provide tailored code snippets, instructions, and support."
     )
 
@@ -437,7 +417,7 @@ async def register_chat_service(server):
         ) as f:
             chat_html = f.read()
         chat_html = chat_html.replace(
-            "https://ai.imjoy.io",
+            "HTTPS://AI.IMJOY.IO",
             server.config["public_base_url"]
             or f"http://127.0.0.1:{server.config['port']}",
         )

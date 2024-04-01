@@ -30,6 +30,10 @@ function show(type, url, attrs) {
     self.postMessage({ type, content: url, attrs: attrs?.toJs({dict_converter : Object.fromEntries}) })
 }
 
+function store_put(key, value) {
+    self.postMessage({ type: "store", key, content: `${value}` })
+}
+
 // Stand-in for `time.sleep`, which does not actually sleep.
 // To avoid a busy loop, instead import asyncio and await asyncio.sleep().
 function spin(seconds) {
@@ -109,6 +113,14 @@ def show_image(image, **attrs):
     data = 'data:image/png;base64,' + base64.b64encode(buf.getvalue()).decode('utf-8')
     js.show("img", data, attrs)
 
+_store = {}
+def store_put(key, value):
+    _store[key] = value
+    js.store_put(key, value)
+
+def store_get(key):
+    return _store.get(key)
+
 def show_animation(frames, duration=100, format="apng", loop=0, **attrs):
     from PIL import Image
     buf = io.BytesIO()
@@ -158,30 +170,39 @@ sys.modules['embed'] = embed
 embed.image = show_image
 embed.animation = show_animation
 embed.audio = show_audio
-context = {}  # Persistent execution context
 
-def get_last_expression(script):
-    """
-    This function takes a script as input, parses it into an Abstract Syntax Tree (AST),
-    and returns the last expression in the script if it is a variable.
-    """
-    try:
-        # Parse the script into an AST
-        stmts = list(ast.iter_child_nodes(ast.parse(script)))
+def preprocess_code(source):
+    """Parse the source code and separate it into main code and last expression."""
+    parsed_ast = ast.parse(source)
+    
+    last_node = parsed_ast.body[-1] if parsed_ast.body else None
+    
+    if isinstance(last_node, ast.Expr):
+        # Separate the AST into main body and last expression
+        main_body_ast = ast.Module(body=parsed_ast.body[:-1], type_ignores=parsed_ast.type_ignores)
+        last_expr_ast = last_node
+        
+        # Convert main body AST back to source code for exec
+        main_body_code = ast.unparse(main_body_ast)
+        
+        return main_body_code, last_expr_ast
+    else:
+        # If the last node is not an expression, treat the entire code as the main body
+        return source, None
+    
 
-        # Check if the last statement is an expression and if it is a variable
-        if stmts and isinstance(stmts[-1], ast.Expr) and isinstance(stmts[-1].value, ast.Name):
-            # If it is, unparse it back into a string and return it
-            return ast.unparse(stmts[-1].value)
-        else:
-            return None
-    except Exception as e:
-        print(f"An error occurred while parsing the script: {e}")
-        return None
+context = {"store_put": store_put, "store_get": store_get}
 
-async def run(source):
+async def run(source, io_context):
     out = JSOutWriter()
     err = JSErrWriter()
+    io_context = io_context or {}
+    inputs = io_context.get("inputs") or []
+    outputs = io_context.get("outputs") or []
+    for ip in inputs:
+        if ip not in _store:
+            raise Exception("Error: Input not found in store:", ip)
+        context[ip] = store_get(ip)
     with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
         try:
             imports = pyodide.code.find_imports(source)
@@ -190,30 +211,47 @@ async def run(source):
                 setup_matplotlib()
             if "embed" in imports:
                 await js.pyodide.loadPackagesFromImports("import numpy, PIL")
+            
+            source, last_expression = preprocess_code(source)
             code = compile(source, "<string>", "exec", ast.PyCF_ALLOW_TOP_LEVEL_AWAIT)
-            last_expression = get_last_expression(source)
-            eval(code, context)
+
+            result = eval(code, context)
+            if result is not None:
+                result = await result
             if last_expression:
-                result = eval(last_expression, context)
+                if isinstance(last_expression.value, ast.Await):
+                    # If last expression is an await, compile and execute it as async
+                    last_expr_code = compile(ast.Expression(last_expression.value), "<string>", "eval", flags=ast.PyCF_ALLOW_TOP_LEVEL_AWAIT)
+                    result = await eval(last_expr_code, context)
+                else:
+                    # If last expression is not an await, compile and evaluate it normally
+                    last_expr_code = compile(ast.Expression(last_expression.value), "<string>", "eval")
+                    result = eval(last_expr_code, context)
                 if result is not None:
                     print(result)
+            for op in outputs:
+                if op not in context:
+                    raise Exception("Error: The script did not produce an variable named: " +  op)
+                store_put(op, context[op])
         except:
             traceback.print_exc()
+            raise
 `
 const mountedFs = {}
 
 self.onmessage = async (event) => {
     if(event.data.source){
         try{
-            const { source } = event.data
+            const { source, io_context } = event.data
             self.pyodide.globals.set("source", source)
+            self.pyodide.globals.set("io_context", io_context && self.pyodide.toPy(io_context))
             outputs = []
-            await self.pyodide.runPythonAsync("await run(source)")
+            await self.pyodide.runPythonAsync("await run(source, io_context)")
             // synchronize the file system
             for(const mountPoint of Object.keys(mountedFs)){
                 await mountedFs[mountPoint].syncfs()
             }
-            console.log("Execution done")
+            console.log("Execution done", outputs)
             self.postMessage({ executionDone: true, outputs })
             outputs = []
         }
