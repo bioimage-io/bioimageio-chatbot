@@ -19,6 +19,11 @@
       border-radius: 10px;
       max-width: 90%;
       word-break: break-word;
+      padding: 10px;
+      border: #90909075;
+      border-style: solid;
+      max-height: 200px;
+      overflow: auto;
     }
     .message-output > img {
       max-width: 100%;
@@ -37,11 +42,6 @@
     .message-output > pre {
       font-size: small;
       font-family: monospace;
-      padding: 10px;
-      border: #90909075;
-      border-style: solid;
-      max-height: 200px;
-      overflow: auto;
       white-space: pre-wrap;
       margin: 0;
     }
@@ -359,6 +359,9 @@
           <button type="button" class="btn btn-primary mt-3" id="mount-folder-btn">
             <i class="fas fa-folder"></i> Mount Files
           </button>
+          <button type="button" class="btn btn-primary mt-3" id="console-btn">
+            <i class="fas fa-terminal"></i> Code Console
+          </button>
           <!-- Add an "Edit Profile" button to toggle the profile options -->
           <button type="button" class="btn btn-info mt-3" id="edit-profile-btn">
             <i class="fas fa-pen"></i>Edit Profile
@@ -374,6 +377,10 @@
           <button type="button" class="btn btn-outline-secondary mt-3" id="advanced-options-btn">
             <i class="fas fa-ellipsis-h"></i> Options
           </button>
+          <!-- Console window initially collapsed -->
+          <div id="console-window" style="display: none;" class="collapse">
+            <div id="terminal"></div>
+          </div>
 
           <!-- Profile options initially collapsed -->
           <div id="profile-options" class="collapse">
@@ -429,10 +436,10 @@
       </div>
     </div>
   </div>
-  <div id="window-container" style="height:0px;"></div>
 
   <script src="https://unpkg.com/jquery@3.6.0/dist/jquery.min.js"></script>
-  
+  <script src="https://unpkg.com/jquery.terminal@2.3.0/js/jquery.terminal.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/jquery.terminal@2.3.0/css/jquery.terminal.min.css"/>
   <!-- Latest compiled and minified CSS -->
   <link rel="stylesheet" href="https://unpkg.com/multiple-select@1.7.0/dist/multiple-select.min.css">
 
@@ -451,6 +458,7 @@
     let currentMessageId;
     let mountedFolder;
     let extensions = [];
+    let envPrompt = "";
     const registeredExtensions = []
     function fileSelected() {
       var input = document.getElementById('fileUpload');
@@ -468,6 +476,19 @@
       var label = document.getElementById('paperclipIcon');
       input.value = '';
       label.classList.remove('file-selected');
+    }
+
+    function toggleConsole(){
+      const consoleBtn = document.getElementById('console-btn');
+      const consoleWindow = document.getElementById('console-window');
+      if(consoleWindow.style.display === 'none'){
+        consoleWindow.style.display = 'block';
+        consoleBtn.innerHTML = '<i class="fas fa-terminal"></i> Hide Console'
+      }
+      else{
+        consoleWindow.style.display = 'none';
+        consoleBtn.innerHTML = '<i class="fas fa-terminal"></i> Code Console'
+      }
     }
 
     function updateDropdownOptions(extensions) {
@@ -642,6 +663,7 @@
       let allAssistants = {};
       let assistantIcon = "https://bioimage.io/static/img/bioimage-io-icon.svg"
       let imjoyApi = null;
+      let dataStore = {};
       // add button class primary to the selected assistant button
       // use assistant-buttons to find the buttons container
       $('#assistant-buttons li > a[data-assistant="' + assistantName + '"]').css('background', '#007bff').css('color', 'white');
@@ -704,6 +726,158 @@
       }
 
       function setupCodeInterpreter(){
+const bioengineStartupScript = `
+import sys
+import numpy as np
+from imjoy_rpc.hypha import connect_to_server
+
+class BioEngine():
+    """
+    The BioEngine service allows you to run models and perform inference tasks.
+    Here is a list of async functions:
+     - "list_models" function to list available models.
+     - "get_model_info" function to get detailed input/output information about a specific model.
+     - "run_model" function to run a model with the given input and parameters.
+    For every model in the BioEngine, you can call the "get_model_info" function to get detailed information (input/output formats, etc.) about a specific model, then call the "run_model" function to run the model with the given input and parameters.
+    """
+
+    async def initialize(self):
+        """Initialize the BioEngine service."""
+        server = await connect_to_server(
+            {"server_url": "https://ai.imjoy.io"}
+        )
+        self.triton = await server.get_service("public/workspace-manager:triton-client")
+        assert self.triton, "Triton client not found."
+        print("BioEngine initialized, you can now use it directly to run models.")
+
+    async def list_models(self):
+        """
+        The function returns a list of available models. Returns a list of dictionaries, each containing the model ID, name, and description.
+        """
+        return [
+          {"id": "cellpose", "name": "Cellpose", "description": "Cellpose model for cell segmentation."},
+          {"id": "affable-shark", "name": "Affable Shark", "description": "Affable Shark model for image segmentation."}
+        ]
+    
+    async def get_model_info(self, model_id: str):
+        """
+        get_model_info(model_id: str)
+        The function returns detailed information about a specific model. The input to the "get_model_info" function is the model ID. The model ID is the unique identifier of the model you want to get information about.
+        """
+        if model_id == "cellpose":
+            return """
+            Cellpose model for cell segmentation. You can run this model with "run_model" using the following arguments:
+            - input_image: a float32 numpy array of image dimension, e.g. (channel, W, H).
+            - kwargs: optional parameters for the model, you can specify the estimated object diameter as, e.g. {"diameter": 10} and also the model type as, e.g. {"model_type": "cyto"}.
+            The return value is the segmented mask with shape [channel, W, H].
+            """
+        else:
+            return """
+            You can run the model with "run_model" using the following arguments:
+            - input_image: a float32 numpy array of image dimension, e.g. (batch, channel, W, H).
+            - kwargs: should be None for this model.
+            The return value is the segmented mask with shape (batch, channel, W, H)
+            """
+
+    async def run_model(self, model_id, input_image, kwargs=None):
+        """
+        Run a specified model with the provided input image and optional parameters.
+
+        Parameters:
+          model_id (str): The unique identifier of the model to run. For example, "cellpose" to run the Cellpose model.
+          input_image (np.array): The image data to process. This should be a numpy array. The format required may vary depending on the model.
+          kwargs (dict, optional): Additional arguments to pass to the model. This should be a dictionary for cellpose model, where the possible keys are: "diameter" and "model_type", and other models should be None. 
+
+        Returns:
+          np.array: The output of the model. For the "cellpose" model, this will be the segmented mask. For other models, this will be the result of the model's outputs.
+        """
+        kwargs = kwargs or {}
+        if not hasattr(self, "triton"):
+            await self.initialize()
+        if model_id == "cellpose":
+            # Run cellpose model
+            ret = await self.triton.execute(
+                inputs=[input_image, kwargs],
+                model_name="cellpose-python",
+                decode_json=True,
+            )
+            assert "mask" in ret, "Model execution failed"
+            return ret["mask"]
+        else:
+            # Run inference
+            ret = await self.triton.execute(
+                inputs=[{"inputs": [input_image], "model_id": model_id}],
+                model_name="bioengine-model-runner",
+                serialization="imjoy",
+            )
+            result = ret["result"]
+            assert result.get("success") == True, "Model execution failed: " + result.get("error")
+            mask = result['outputs'][0]
+            return mask
+
+# define the bioengine so you can use it to run models
+bioengine = BioEngine()
+
+sys.modules["bioengine"] = bioengine
+# mask = await bioengine.run_model("cellpose", image[None, ...].astype(np.float32), {"diameter": 10})
+# mask = await bioengine.run_model("affable-shark", image[None, None, ...], {})
+`
+
+codeInterperterPrompt = `
+## Instructions for Code Interpreter
+**Objective**: Assist users in coding for bioimage analysis within a Pyodide environment. 
+
+**Environment Setup**:
+- Function as within a Jupyter notebook environment, supporting asynchronous operations natively. Avoid using \`asyncio.run\`.
+- An event loop is pre-configured, allowing for direct use of \`async/await\` in your code.
+
+**Data Handling**:
+- Facilitate data fetching through "requests" or "imjoy_rpc.hypha" for remote server interaction.
+- Enable file manipulation within the \`/mnt\` directory. Instruct users to use "os.listdir('/mnt')" to explore available files.
+
+**Execution and Visualization**:
+- Outputs can include standard logs, error messages, and notably, matplotlib visualizations for image processing tasks.
+- Emphasize the capability to display images directly in the chat interface using matplotlib, enhancing the visualization of bioimage analysis results.
+- Guide users to keep communications concise, directing them to detailed script outputs for comprehensive insights.
+
+**Image Processing and Visualization**:
+- For image loading and manipulation, instruct users to utilize \`imageio\` for reading and writing images, compatible with a wide range of formats.
+- Use the BioEngine service to run models (cellpose and any other models in the model zoo).
+- When processing images, advise saving and displaying results with matplotlib, ensuring visual feedback is clear and accessible.
+
+**Error Correction & Iteration**:
+- Promote iterative development, encouraging users to correct and rerun code in case of errors.
+- Recommend "store_put" and "store_get" for data handling across different steps of analysis.
+- Highlight the use of "bioengine" for running advanced models and performing inference, particularly for bioimage analysis.
+
+**User Interaction**:
+- Maintain clarity and specificity in your instructions to aid users in forming precise queries.
+- Provide constructive feedback on common bioimage analysis errors, along with troubleshooting tips.
+- Assist users in refining their code based on feedback and execution outputs, fostering a productive learning experience.
+
+**Enhancements**:
+- Offer contextual help and examples specific to bioimage analysis, supporting users in crafting their requests.
+- Share optimization strategies for managing large datasets, vital for bioimage processing.
+- Enable interactive visualizations where possible, to provide a more engaging analysis experience.
+- Implement a feedback mechanism to continually refine the interpreter's effectiveness based on user input.
+- Guide on incorporating custom models into analysis workflows, detailing format requirements and usage protocols.
+
+**Services**:
+- You have access to the following already defined global service objects. Each service object has a set of functions that you can call. Here is a list of services available:
+   1. bioengine: Run models and perform inference tasks.
+To use a service, first import it (e.g. import bioengine), then run a script to print e.g. "bioengine.__doc__" first to obtain the documentation of the service. Then based on the documentation, decide which function(s) to call, the detailed usage of each function can be obtained by printing "service.func.__doc__". 
+
+**Mission**:
+Serve as an invaluable tool for users embarking on bioimage analysis within the Pyodide environment, interactively generate code and execute them in the code interpreter. In case of error, try to fix the error based on the error message and try again until the code runs successfully.
+`
+
+// IDEA:
+// Have a list of services that the chatbot can select from, each with brief description
+// Add a tool to query the usage of each service and its functions
+// Then the chatbot can first select a service, then select a function from that service
+// The chatbot can then run the function with the given parameters
+const servicePrompt = `
+`
         // show mount button
         workerManager.createWorker().then(async w => {
           $('#mount-folder-btn').show();
@@ -712,14 +886,19 @@
           }
           worker = w;
           console.log("Worker created:", worker);
+          await worker.runScript(bioengineStartupScript, {skip_record: true});
+          // await worker.runScript(`print(bioengine.__doc__)`);
+          // let summary = await worker.renderSummary();
+          let summary = codeInterperterPrompt + `\nUser:`
+          envPrompt = summary;
           // await worker.runScript(`print('Hello from worker')`);
          _registerExtension({
             id: "code_interpreter",
             name: "Code Interpreter",
-            description: `Use the code interpreter to run Python scripts via Pyodide in the browser to help users with request related to their data or code. Supports file access under /mnt. Outputs include standard output, errors, and matplotlib visualizations. Keep replies brief, directing users to script outputs. Check files in /mnt with "os.listdir" for data tasks. Address errors by correcting and rerunning code. It can perform calculations, data visualization, and more, with access to files under /mnt. Outputs include direct feedback, error messages, and matplotlib plots. Users can see full execution outputs, so keep the responses brief, referring to execution outputs for details. Ensure interaction with /mnt files for tasks, and use "os.listdir" to check these files. Try to correct and rerun code if errors occur.`,
+            description: `Use the code interpreter to run Python scripts to help users with request related to their data or code.\n`,
             type: "bioimageio-chatbot-extension",
-            async get_schema() { 
-              let description = `Run Python scripts. `
+            async get_schema() {
+              let description = `Run Python scripts.`// In the script, you have access to two defined functions: "store_put" and "store_get" for save and resume variables. You can call "store_put(key, obj) to store object for future use, and in a next step use "store_get(key)" to retrieve it back.
               if(mountedFolder){
                 description += `\n\nUser has mounted files (from ${mountedFolder.name}) under /mnt, you have read and write access to /mnt.`
               }
@@ -727,17 +906,17 @@
                 description += `\n\nUser has not mounted any files yet, use the "Mount Files" button to mount a folder for data access.`}
               return {
                 run_script: {
-                    type: "object",
-                    title: "RunScript",
-                    description,
-                    properties: {
-                        script: {
-                            type: "string",
-                            description: "Python script to execute",
-                        }
-                    },
-                    required: ["script"],
-                    allow_additional_properties: false,
+                  "type": "object",
+                  "title": "RunScript",
+                  "description": description,
+                  "properties": {
+                      "script": {
+                          "type": "string",
+                          "description": "Python script to execute",
+                      },
+                  },
+                  "required": ["script"],
+                  "allow_additional_properties": false,
                 }
               };
             },
@@ -748,34 +927,51 @@
                   container.style.display = "block";
                   // create a title with emoji for the code interpreter
                   const title = document.createElement("p")
-                  title.innerHTML = "🐍 Code Interpreter"
+                  title.innerHTML = spinner + "🐍 Code Interpreter"
+
                   container.appendChild(title)
-                  const result = await worker.runScript(config.script, container)
-                  console.log("CodeInterpreter result:", result)
-                  // worker.render(container)
-                  container.scrollIntoView({ behavior: 'smooth', block: 'end' });
-                  // result is a list of objects,
-                  // filter out the objects
-                  // if type=img, then clip the content to 10 characters
-                  // if type=audio, then clip the content to 10 characters
-                  // remove the attrs from the result
-                  const filteredResult = result.map((obj) => {
-                    let content;
-                      if (obj.type === "audio" || obj.type === "img") {
-                        content = obj.type + ": " + obj.content.slice(0, 10) + "..."
-                      }
-                      else if (obj.type === "stdout") {
-                        content = obj.content
-                      }
-                      else if (obj.type === "stderr") {
-                        content = "stderr: " + obj.content
-                      }
-                      else {
-                        content = obj.type + ": " + obj.content
-                      }
-                      return content
-                  })
-                  return filteredResult;
+                  try{
+                    const result = await worker.runScript(config.script, {output_container: container})
+                    console.log("CodeInterpreter result:", result)
+                    // worker.render(container)
+                    container.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                    // envPrompt = await worker.renderSummary();
+                    let summary = await worker.renderSummary();
+                    summary = servicePrompt + `\nTry to reuse what has been executed and results in the code interpreter, here is the execution history:\n--------------\n${summary}\n--------------\nUser:`
+                    envPrompt = codeInterperterPrompt + summary;
+                    // result is a list of objects,
+                    // filter out the objects
+                    // if type=img, then clip the content to 10 characters
+                    // if type=audio, then clip the content to 10 characters
+                    // remove the attrs from the result
+                    const filteredResult = result.map((obj) => {
+                      let content;
+                        if (obj.type === "audio" || obj.type === "img") {
+                          // create random id
+                          const id = Math.random().toString(36).substring(7);
+                          dataStore[id] = obj
+                          content =  obj.type + ": " + "https://chat.bioimage.io/store/" + id + "/" // obj.type + ": " + obj.content.slice(0, 10) + "..."
+                        }
+                        else if (obj.type === "stdout") {
+                          content = obj.content
+                        }
+                        else if (obj.type === "stderr") {
+                          content = "stderr: " + obj.content
+                        }
+                        else {
+                          content = obj.type + ": " + obj.content
+                        }
+                        return content
+                    })
+                    return filteredResult;
+                  }
+                  catch(e){
+                    console.error("CodeInterpreter error:", e)
+                    return [e.toString()]
+                  }
+                  finally{
+                    $('.spinner').remove();
+                  }
               },
             }
           })
@@ -792,6 +988,8 @@
             // show spinner
             $('#mount-folder-btn').append(spinner);
             try{
+              // disable send message
+              $('#send-btn').prop('disabled', true);
               await worker.mount("/mnt", dirHandle);
               console.log("Mounted folder:", dirHandle);
               mountedFolder = dirHandle;
@@ -803,11 +1001,41 @@
             }
             finally{
               $('.spinner').remove();
+              $('#send-btn').prop('disabled', false);
               $('#mount-folder-btn').text(`Data Folder: ${mountedFolder.name}`);
             }
           });
           $('.spinner').remove();
           $('#mount-folder-btn').show();
+          $('#terminal').terminal(async function(command, term) {
+            if(command.trim() === ""){
+              return;
+            }
+            try{
+              const results = await worker.runScript(command);
+              for(let result of results){
+                if(result.type === 'stdout')
+                  term.echo(result.content)
+                else if(result.type === 'stderr')
+                  term.echo('[[;red;]' + $.terminal.escape_formatting(result.content) + ']')
+                else if(result.type === 'img'){
+                  term.echo(`[[@;;;;${result.content}]]`);
+                }
+                else{
+                  term.echo(result.content)
+                }
+              }
+              console.log("CodeInterpreter Summary:", await worker.renderSummary())
+            }
+            catch(e){
+              term.echo('[[;red;]' + e.toString() + ']')
+            }
+          }, {
+            greetings: 'Welcome to the code interpreter terminal!',
+            name: 'Code Interpreter',
+            height: 200,
+            prompt: 'Code Interpreter> '
+          });
         }).catch((e)=>{
           console.error("Failed to create worker:", e)
           $('#mount-folder-btn').hide();
@@ -840,7 +1068,7 @@
               else{
                 // Call the login function to get the token
                 token = await hyphaWebsocketClient.login({
-                  "server_url": server_url || "https://ai.imjoy.io",
+                  "server_url": server_url || "HTTPS://AI.IMJOY.IO",
                   "login_callback": login_callback,
                 });
                 localStorage.setItem('token', token);
@@ -911,6 +1139,10 @@
         $('#profile-options').collapse('toggle');
       });
 
+      $('#console-btn').click(function () {
+        toggleConsole();
+      });
+
       $('#mount-folder-btn').hide();
       async function initializeService() {
         $('.message-holder').append(spinner);
@@ -922,7 +1154,7 @@
           const server_url = urlParams.get('server_url');
           const extension_services = urlParams.getAll('extension');
           const server = await hyphaWebsocketClient.connectToServer({
-            "server_url": server_url || "https://ai.imjoy.io",
+            "server_url": server_url || "HTTPS://AI.IMJOY.IO",
             "token": token,
           })
           const svc = await server.getService(service_id || "bioimageio-chatbot")
@@ -992,6 +1224,7 @@
       // Reset the chat session and clear chat history
       function resetChat() {
         sessionId = generateSessionID(); // Generate a new session ID
+        envPrompt = "";
         chat_history.length = 0; // Clear the chat history
         code = ''; // Reset code
         error_message = ''; // Reset error message
@@ -1107,6 +1340,17 @@
 
       }
 
+      function restoreStoreObjects(markdownText){
+        // replace https://chat.bioimage.io/store/[id]/ to the actual content
+        markdownText = markdownText.replace(/https:\/\/chat.bioimage.io\/store\/([a-zA-Z0-9_-]+)\//g, function(match, id){
+          if(dataStore[id]){
+            return dataStore[id].content
+          }
+          return match
+        })
+        return markdownText
+      }
+
       function completeCodeBlocks(markdownText) {
         const codeBlockIndicator = '```';
 
@@ -1163,7 +1407,7 @@
               "## Generating response for " + message.name + "...\n\n" +
               args;
             // + "</details>";
-            $(`#content-${currentMessageId}`).html(marked(completeCodeBlocks(content), { renderer: renderer }));
+            $(`#content-${currentMessageId}`).html(marked(restoreStoreObjects(completeCodeBlocks(content)), { renderer: renderer }));
           }
           else if (message.type === 'text') {
             if (message.status === 'in_progress') {
@@ -1172,10 +1416,13 @@
             else{
               accumulatedArgs = message.content
             }
-            $(`#content-${currentMessageId}`).html(marked(completeCodeBlocks(accumulatedArgs), { renderer: renderer }));
+            $(`#content-${currentMessageId}`).html(marked(restoreStoreObjects(completeCodeBlocks(accumulatedArgs)), { renderer: renderer }));
           }
         }
         try {
+          if(envPrompt && envPrompt.length > 0){
+            textMessage = envPrompt + textMessage
+          }
           // Call the chat function with text and image data
           response = await svc.chat(textMessage, chat_history, user_profile, statusCallback, sessionId, getSelectedExtensions(), assistantName);
           // const regex = /!\[.*?\]\(data:.+?\)/g;
@@ -1199,14 +1446,14 @@
           $(`#spinner-${currentMessageId}`).hide();
           // Convert the message to HTML using the marked library
           const steps = response.steps;
-          let message = response.text && marked(response.text, { renderer: renderer }) || "";
+          let message = response.text && marked(restoreStoreObjects(response.text), { renderer: renderer }) || "";
           if(steps && steps.length > 0){
             let details = "<details> <summary>🔍More Details</summary>\n\n"
             for(let step of steps){
               details = details + `<div class="step">${step.name}</div>\n\n\`\`\`\n\n${JSON.stringify(step.details, null, 2)}\n\n\`\`\`\n\n`
             }
             details = details + "\n\n</details>"
-            details = marked(details, { renderer: renderer })
+            details = marked(restoreStoreObjects(details), { renderer: renderer })
             message = message + details
           }
           $(`#content-${currentMessageId}`).html(message);
