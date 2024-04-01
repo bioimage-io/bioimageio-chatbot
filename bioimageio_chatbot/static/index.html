@@ -794,6 +794,7 @@ class BioEngine():
         kwargs = kwargs or {}
         if not hasattr(self, "triton"):
             await self.initialize()
+        input_image = input_image.astype("float32")
         if model_id == "cellpose":
             # Run cellpose model
             ret = await self.triton.execute(
