@@ -259,6 +259,16 @@ If you have any questions, need assistance, or want to contribute to the chatbot
 
 Thanks for your support and helping make the BioImage.IO Chatbot more informative and useful to the community.
 
+## Publication
+
+For detailed description of our work, please read our preprint: **[![arXiv](https://img.shields.io/badge/arXiv-2310.18351-red.svg)](https://arxiv.org/abs/2310.18351) <a href="https://zenodo.org/records/10032228" target="_blank"><img id="record-doi-badge" data-target="[data-modal='10.5281/zenodo.10032228']" src="https://zenodo.org/badge/DOI/10.5281/zenodo.10032228.svg" alt="10.5281/zenodo.10032228"></a>**
+
+
+To reproduce the use cases described in [Figure 2](https://docs.google.com/drawings/d/e/2PACX-1vTIRwRldQBnTFqz0hvS01znGOEdoeDMJmZC-PlBM-O59u_xo7DfJlUEE9SlRsy6xO1hT2HuSOBrLmUz/pub?w=1324&amp;h=1063) in the manuscript, please refer to the [reproducing example usage scenarios](./docs/figure-2-use-cases.md).
+
+<img style="width:300px;" src="https://docs.google.com/drawings/d/e/2PACX-1vTIRwRldQBnTFqz0hvS01znGOEdoeDMJmZC-PlBM-O59u_xo7DfJlUEE9SlRsy6xO1hT2HuSOBrLmUz/pub?w=1324&amp;h=1063">
+
+
 ## Cite Us
 
 If you use the BioImage.IO Chatbot in your research, please cite us:
