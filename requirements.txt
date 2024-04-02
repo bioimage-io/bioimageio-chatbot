@@ -2,6 +2,8 @@ schema-agents>=0.1.45
 imjoy-rpc>=0.5.48.post2
 requests
 pypdf
+pillow
+matplotlib
 hypha>=0.15.50
 tqdm
 aiofiles
