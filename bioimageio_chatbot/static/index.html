@@ -360,7 +360,7 @@
             <i class="fas fa-folder"></i> Mount Files
           </button>
           <button type="button" class="btn btn-primary mt-3" id="console-btn">
-            <i class="fas fa-terminal"></i> Code Console
+            <i class="fas fa-terminal"></i> Code Interpreter
           </button>
           <!-- Add an "Edit Profile" button to toggle the profile options -->
           <button type="button" class="btn btn-info mt-3" id="edit-profile-btn">
@@ -453,6 +453,7 @@
   <script src="https://www.unpkg.com/bootstrap@4.0.0/dist/js/bootstrap.min.js"></script>
   <script src="./worker-manager"></script>
   <script>
+    const fileSecret = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     const urlParams = new URLSearchParams(window.location.search);
     const workerManager = new PyodideWorkerManager()
     let worker;
@@ -499,7 +500,7 @@
       }
       else{
         consoleWindow.style.display = 'none';
-        consoleBtn.innerHTML = '<i class="fas fa-terminal"></i> Code Console'
+        consoleBtn.innerHTML = '<i class="fas fa-terminal"></i> Code Interpreter'
       }
     }
 
@@ -529,7 +530,47 @@
       $select.multipleSelect('checkAll');
     }
 
+    async function getFileHandle(directoryHandle, relPath) {
+      // Remove leading '/' if present
+      if (relPath.startsWith('/')) {
+        relPath = relPath.substring(1);
+      }
+    
+      const pathSegments = relPath.split('/');
+      let currentHandle = directoryHandle;
+      const fileName = pathSegments.pop();
+      for (const segment of pathSegments) {
+        if (segment === '') continue;  // Skip empty segments
+        if ((await currentHandle.queryPermission({mode: 'read'})) === 'granted') {
+          if (currentHandle.kind === 'directory') {
+            currentHandle = await currentHandle.getDirectoryHandle(segment);
+          } else {
+            currentHandle = await currentHandle.getFileHandle(segment);
+          }
+        } else {
+          throw new Error(`Permission denied to read ${segment}`);
+        }
+      }
+      currentHandle = await currentHandle.getFileHandle(fileName);
+      return currentHandle;
+    }
+    
 
+    async function readFileContent(fileHandle) {
+      const file = await fileHandle.getFile();
+      const reader = new FileReader();
+    
+      return new Promise((resolve, reject) => {
+        reader.onloadend = () => {
+          if (reader.error) {
+            reject(reader.error);
+          } else {
+            resolve(new Uint8Array(reader.result));
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      });
+    }
 
     function getSelectedExtensions() {
       var selectedValues = $('#extensions').val(); // Gets the array of selected values
@@ -667,6 +708,15 @@
     }
 
     $(document).ready(async function () {
+      // check if the browser is not Chromium based then tell the user to use Chromium based browser
+      if(!window.showOpenFilePicker){
+        const warning = document.createElement("div")
+        warning.innerHTML = `<br><div class="alert alert-warning" role="alert">
+        <strong>Warning!</strong> The code interpreter is only supported in Chromium based browsers (e.g. Chrome, Edge, Brave, etc.), please use a Chromium based browser to use the code interpreter.
+      </div>`
+      // insert the warning after the chat-dialog-header
+        $('#chat1 .chat-dialog-header').after(warning)
+      }
       let svc;
       let token = null;
       const spinner = `<div class="spinner"></div>`; // Spinner HTML
@@ -676,6 +726,7 @@
       let assistantIcon = "https://bioimage.io/static/img/bioimage-io-icon.svg"
       let imjoyApi = null;
       let dataStore = {};
+      
       // add button class primary to the selected assistant button
       // use assistant-buttons to find the buttons container
       $('#assistant-buttons li > a[data-assistant="' + assistantName + '"]').css('background', '#007bff').css('color', 'white');
@@ -851,6 +902,7 @@ Global variables, functions and results will be maintained across multiple code 
 - For image analysis tasks, you should first inspect the files loaded by the user, then load the image analyse the image type and shape, and process or run the model on the image.
 - For image loading and manipulation, utilize \`imageio\` for reading and writing images, compatible with a wide range of formats.
 - After the analysis, saving the result using imageio and displaying images using matplotlib.
+- If needed, use the Vision Inspector to inspect user's images. It is recommended to use matplotlib to display images or inputs + outputs in a single figure then pass it to the Vision Inspector.  
 - Use the BioEngine service to run AI models (cellpose and any other models in the model zoo).
   To use a service, first import it (e.g. import bioengine), then run a script to print e.g. "bioengine.__doc__" first to obtain the documentation of the service. Then based on the documentation, decide which function(s) to call, the detailed usage of each function can be obtained by printing "service.func.__doc__". 
 
@@ -892,10 +944,11 @@ const servicePrompt = `
             async get_schema() {
               let description = `Run Python scripts.`// In the script, you have access to two defined functions: "store_put" and "store_get" for save and resume variables. You can call "store_put(key, obj) to store object for future use, and in a next step use "store_get(key)" to retrieve it back.
               if(mountedFolder){
-                description += `\n\nUser has mounted files (from ${mountedFolder.name}) under /mnt, you have read and write access to /mnt.`
+                description += `\n\nUser has mounted files (from ${mountedFolder.name}) under /mnt, you have read and write access to /mnt. The download link for the files is ${dataStore.base_url}/file?token=${fileSecret}&path=/mnt/...`
               }
               else{
-                description += `\n\nUser has not mounted any files yet, use the "Mount Files" button to mount a folder for data access.`}
+                description += `\n\nUser has not mounted any files yet, use the "Mount Files" button to mount a folder for data access.`
+              }
               return {
                 run_script: {
                   "type": "object",
@@ -940,9 +993,9 @@ const servicePrompt = `
                       let content;
                         if (obj.type === "audio" || obj.type === "img") {
                           // create random id
-                          const id = Math.random().toString(36).substring(7);
+                          const id = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15) + (obj.type === "audio" ? ".wav" : ".png")
                           dataStore[id] = obj
-                          content =  obj.type + ": " + dataStore.base_url + "/get?id=" + id
+                          content = `${obj.type}: ${dataStore.base_url}/file?token=${fileSecret}&id=${id}`
                         }
                         else if (obj.type === "stdout") {
                           content = obj.content
@@ -984,6 +1037,7 @@ const servicePrompt = `
               $('#send-btn').prop('disabled', true);
               await worker.mount("/mnt", dirHandle);
               console.log("Mounted folder:", dirHandle);
+              console.log(`Files are also available at ${dataStore.base_url}/file?token=${fileSecret}&path=/mnt/...`)
               mountedFolder = dirHandle;
               $('#mount-folder-btn').text(`Mount Files (${mountedFolder.name})`);
               // emulate a message to show the user that the folder has been mounted
@@ -1158,10 +1212,39 @@ const servicePrompt = `
                 "visibility": "public",
                 "require_context": true
             },
-            "get": async function(event, context) {
-                const query_string = event.query_string // e.g. id=123
+            "file": async function(event, context) {
+                const query_string = event.query_string
                 // parse query string
                 const params = new URLSearchParams(query_string);
+                const path = params.get('path');
+                const fileToken = params.get('token');
+                if(fileToken !== fileSecret){
+                  return {
+                    status: 403,
+                    body: "Permission denied"
+                  }
+                }
+                if(path){
+                  if(!path.startsWith("/mnt")){
+                    return {
+                      status: 403,
+                      body: "Permission denied"
+                    }
+                  }
+                  // extract the path after /mnt
+                  // and read it from mountedFolder
+                  const relPath = path.substring(4)
+                  const fileHandle = await getFileHandle(mountedFolder, relPath);
+                  const fileContent = await readFileContent(fileHandle);
+                  const size = fileContent.length;
+                  // get the mime types for all the image types, otherwise return application/octet-stream
+                  const mimeType = relPath.endsWith('.png') ? 'image/png' : relPath.endsWith('.jpg') ? 'image/jpeg' : relPath.endsWith('.jpeg') ? 'image/jpeg' : relPath.endsWith('.gif') ? 'image/gif' : relPath.endsWith('.wav') ? 'audio/wav' : 'application/octet-stream';
+                  return {
+                    status: 200,
+                    headers: {'Content-Type': mimeType, 'Content-Length': `${size}`, 'Content-Disposition': `inline; filename="${relPath.split('/').pop()}"`},
+                    body: fileContent
+                  };
+                }
                 const key = params.get('id');
                 if(!dataStore[key]){
                   return {
