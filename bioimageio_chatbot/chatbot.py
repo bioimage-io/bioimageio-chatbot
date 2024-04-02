@@ -408,8 +408,9 @@ async def register_chat_service(server):
     await serve_actions(server, server_info.public_base_url, builtin_extensions)
     server_url = server.config["public_base_url"]
 
+    service_id = hypha_service_info["id"]
     print(
-        f"\nThe BioImage.IO Assistants are available at: https://bioimage.io/chat?server={server_url}"
+        f"\nThe BioImage.IO Assistants are available at: https://bioimage.io/chat?server={server_url}&service_id={service_id}\n"
     )
 
 
