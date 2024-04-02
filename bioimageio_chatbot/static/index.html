@@ -472,6 +472,17 @@
       }
     }
 
+    function base64ToArrayBuffer(base64) {
+      // Decode the base64 string into a binary string
+      let binary_string = window.atob(base64.split(',')[1]);
+      let len = binary_string.length;
+      let bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+          bytes[i] = binary_string.charCodeAt(i);
+      }
+      return bytes; // This is the ArrayBuffer
+    }
+
     function removeFileSelected() {
       var input = document.getElementById('fileUpload');
       var label = document.getElementById('paperclipIcon');
@@ -931,7 +942,7 @@ const servicePrompt = `
                           // create random id
                           const id = Math.random().toString(36).substring(7);
                           dataStore[id] = obj
-                          content =  obj.type + ": " + "https://chat.bioimage.io/store/" + id + "/" // obj.type + ": " + obj.content.slice(0, 10) + "..."
+                          content =  obj.type + ": " + dataStore.base_url + "/get?id=" + id
                         }
                         else if (obj.type === "stdout") {
                           content = obj.content
@@ -1140,6 +1151,54 @@ const servicePrompt = `
           })
           const svc = await server.getService(service_id || "bioimageio-chatbot")
           await svc.ping()
+          const storeSvc = await server.registerService({
+            "id": "bioimageio-chatbot-store-" + Math.random().toString(36).substring(7),
+            "type": "functions",
+            "config": {
+                "visibility": "public",
+                "require_context": true
+            },
+            "get": async function(event, context) {
+                const query_string = event.query_string // e.g. id=123
+                // parse query string
+                const params = new URLSearchParams(query_string);
+                const key = params.get('id');
+                if(!dataStore[key]){
+                  return {
+                    status: 404,
+                    body: "Not found"
+                  }
+                }
+                else{
+                  const obj = dataStore[key]
+                  if(obj.type === "img" || obj.type === "audio"){
+                    return {
+                      status: 200,
+                      headers: {'Content-Type': obj.type === "img" ? 'image/png' : 'audio/wav'},
+                      // obj.content will be something like data:image/png;base64,...
+                      // lets convert the base64 encoded string to arraybuffer
+                      body: base64ToArrayBuffer(obj.content)
+                    };
+                  }
+                  else{
+                    return {
+                      status: 200,
+                      headers: {'Content-Type': 'application/json'},
+                      body: JSON.stringify(obj)
+                    };
+                  }
+                }
+            },
+            "list": async function(event, context) {
+                return {
+                  status: 200,
+                  headers: {'Content-Type': 'application/json'},
+                  body: JSON.stringify(Object.keys(dataStore))
+                };
+            }
+        })
+        dataStore.base_url = `${server.config.public_base_url}/${server.config.workspace}/apps/${storeSvc.id.split(':')[1]}`;
+        console.log("Store service registered, you can access it via:", `${dataStore.base_url}/list`)
           allAssistants = svc.assistants;
           const assistant = allAssistants[assistantName];
           if(assistant.code_interpreter){
@@ -1321,17 +1380,6 @@ const servicePrompt = `
 
       }
 
-      function restoreStoreObjects(markdownText){
-        // replace https://chat.bioimage.io/store/[id]/ to the actual content
-        markdownText = markdownText.replace(/https:\/\/chat.bioimage.io\/store\/([a-zA-Z0-9_-]+)\//g, function(match, id){
-          if(dataStore[id]){
-            return dataStore[id].content
-          }
-          return match
-        })
-        return markdownText
-      }
-
       function completeCodeBlocks(markdownText) {
         const codeBlockIndicator = '```';
 
@@ -1388,7 +1436,7 @@ const servicePrompt = `
               "## Generating response for " + message.name + "...\n\n" +
               args;
             // + "</details>";
-            $(`#content-${currentMessageId}`).html(marked(restoreStoreObjects(completeCodeBlocks(content)), { renderer: renderer }));
+            $(`#content-${currentMessageId}`).html(marked(completeCodeBlocks(content), { renderer: renderer }));
           }
           else if (message.type === 'text') {
             if (message.status === 'in_progress') {
@@ -1397,7 +1445,7 @@ const servicePrompt = `
             else{
               accumulatedArgs = message.content
             }
-            $(`#content-${currentMessageId}`).html(marked(restoreStoreObjects(completeCodeBlocks(accumulatedArgs)), { renderer: renderer }));
+            $(`#content-${currentMessageId}`).html(marked(completeCodeBlocks(accumulatedArgs), { renderer: renderer }));
           }
         }
         try {
@@ -1427,14 +1475,14 @@ const servicePrompt = `
           $(`#spinner-${currentMessageId}`).hide();
           // Convert the message to HTML using the marked library
           const steps = response.steps;
-          let message = response.text && marked(restoreStoreObjects(response.text), { renderer: renderer }) || "";
+          let message = response.text && marked(response.text, { renderer: renderer }) || "";
           if(steps && steps.length > 0){
             let details = "<details> <summary>🔍More Details</summary>\n\n"
             for(let step of steps){
               details = details + `<div class="step">${step.name}</div>\n\n\`\`\`\n\n${JSON.stringify(step.details, null, 2)}\n\n\`\`\`\n\n`
             }
             details = details + "\n\n</details>"
-            details = marked(restoreStoreObjects(details), { renderer: renderer })
+            details = marked(details, { renderer: renderer })
             message = message + details
           }
           $(`#content-${currentMessageId}`).html(message);
