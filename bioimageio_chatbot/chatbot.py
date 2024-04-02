@@ -388,11 +388,13 @@ async def register_chat_service(server):
         return "pong"
 
     assistant_keys = ["name", "extensions", "alias", "icon", "welcome_message", "code_interpreter"]
+    version = pkg_resources.get_distribution("bioimageio-chatbot").version
     hypha_service_info = await server.register_service(
         {
             "name": "BioImage.IO Chatbot",
             "id": "bioimageio-chatbot",
             "config": {"visibility": "public", "require_context": True},
+            "version": version,
             "ping": ping,
             "chat": chat,
             "report": report,
