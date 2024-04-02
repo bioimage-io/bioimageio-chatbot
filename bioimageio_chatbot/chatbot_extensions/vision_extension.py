@@ -74,6 +74,10 @@ async def aask(images, messages, max_tokens=1024):
         model="gpt-4-1106-vision-preview",
         messages=[
             {
+                "role": "system",
+                "content": "You are a helpful AI assistant that help user to inspect the provided images visually based on the context, make insightful comments and answer questions about the provided images."
+            },
+            {
                 "role": "user",
                 "content": user_message
             }
