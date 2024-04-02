@@ -740,6 +740,7 @@ class BioEngine():
      - "get_model_info" function to get detailed input/output information about a specific model.
      - "run_model" function to run a model with the given input and parameters.
     For every model in the BioEngine, you can call the "get_model_info" function to get detailed information (input/output formats, etc.) about a specific model, then call the "run_model" function to run the model with the given input and parameters.
+    Importantly, you need to reshape the input image to the correct format to match the exact dimensions required by the model.
     """
 
     async def initialize(self):
@@ -768,21 +769,21 @@ class BioEngine():
         if model_id == "cellpose":
             return """
             Cellpose model for cell segmentation. You can run this model with "run_model" using the following arguments:
-            - input_image: a float32 numpy array of image dimension, e.g. (channel, W, H).
-            - kwargs: optional parameters for the model, you can specify the estimated object diameter as, e.g. {"diameter": 10} and also the model type as, e.g. {"model_type": "cyto"}.
+            - input_image (float32 numpy array): an image with required dimension: (channel, W, H).
+            - kwargs (dict): optional parameters for the model, you can specify the estimated object diameter as, e.g. {"diameter": 10} and also the model type as, e.g. {"model_type": "cyto"}.
             The return value is the segmented mask with shape [channel, W, H].
             """
         else:
             return """
             You can run the model with "run_model" using the following arguments:
-            - input_image: a float32 numpy array of image dimension, e.g. (batch, channel, W, H).
+            - input_image (float32 numpy array): an image with required dimension: (batch, channel, W, H).
             - kwargs: should be None for this model.
             The return value is the segmented mask with shape (batch, channel, W, H)
             """
 
     async def run_model(self, model_id, input_image, kwargs=None):
         """
-        Run a specified model with the provided input image and optional parameters.
+        Run a specified model with the provided input image and optional parameters. The input image should be a numpy array with the required dimensions.
 
         Parameters:
           model_id (str): The unique identifier of the model to run. For example, "cellpose" to run the Cellpose model.
@@ -827,50 +828,29 @@ sys.modules["bioengine"] = bioengine
 
 codeInterperterPrompt = `
 ## Instructions for Code Interpreter
-**Objective**: Assist users in coding for bioimage analysis within a Pyodide environment. 
-
-**Environment Setup**:
-- Function as within a Jupyter notebook environment, supporting asynchronous operations natively. Avoid using \`asyncio.run\`.
-- An event loop is pre-configured, allowing for direct use of \`async/await\` in your code.
-
-**Data Handling**:
-- Facilitate data fetching through "requests" or "imjoy_rpc.hypha" for remote server interaction.
-- Enable file manipulation within the \`/mnt\` directory. Instruct users to use "os.listdir('/mnt')" to explore available files.
-
-**Execution and Visualization**:
-- Outputs can include standard logs, error messages, and notably, matplotlib visualizations for image processing tasks.
-- Emphasize the capability to display images directly in the chat interface using matplotlib, enhancing the visualization of bioimage analysis results.
-- Guide users to keep communications concise, directing them to detailed script outputs for comprehensive insights.
+Assist users in bioimage analysis within a Pyodide environment.
+You will generate and run script in the code interpreter to help users analyze their data.
+The code interperter is a Jupyter notebook-like environment, it support top-level await operations and the asyncio event loop is already running, so you can call "await func()" directly without wrapping in a async function or using asyncio.run.
+The environment has access to remote servers, so you can fetch remote data by using python modules "requests" or "imjoy_rpc.hypha" for connect to the Hypha/BioEngine server.
+User data will be mounted to the \`/mnt\` directory. Use "os.listdir('/mnt')" to explore available files before processing.
+The code interpreter can produce outputs such as stdout or stderr, matplotlib plots, and image/audio displays which is rendered in the user interface.
+Global variables, functions and results will be maintained across multiple code interpreter executions, so you can reuse them in the next steps.
 
 **Image Processing and Visualization**:
-- For image loading and manipulation, instruct users to utilize \`imageio\` for reading and writing images, compatible with a wide range of formats.
-- Use the BioEngine service to run models (cellpose and any other models in the model zoo).
-- When processing images, advise saving and displaying results with matplotlib, ensuring visual feedback is clear and accessible.
+- For image analysis tasks, you should first inspect the files loaded by the user, then load the image analyse the image type and shape, and process or run the model on the image.
+- For image loading and manipulation, utilize \`imageio\` for reading and writing images, compatible with a wide range of formats.
+- After the analysis, saving the result using imageio and displaying images using matplotlib.
+- Use the BioEngine service to run AI models (cellpose and any other models in the model zoo).
+  To use a service, first import it (e.g. import bioengine), then run a script to print e.g. "bioengine.__doc__" first to obtain the documentation of the service. Then based on the documentation, decide which function(s) to call, the detailed usage of each function can be obtained by printing "service.func.__doc__". 
 
-**Error Correction & Iteration**:
-- Promote iterative development, encouraging users to correct and rerun code in case of errors.
-- Recommend "store_put" and "store_get" for data handling across different steps of analysis.
-- Highlight the use of "bioengine" for running advanced models and performing inference, particularly for bioimage analysis.
-
-**User Interaction**:
-- Maintain clarity and specificity in your instructions to aid users in forming precise queries.
-- Provide constructive feedback on common bioimage analysis errors, along with troubleshooting tips.
-- Assist users in refining their code based on feedback and execution outputs, fostering a productive learning experience.
-
-**Enhancements**:
-- Offer contextual help and examples specific to bioimage analysis, supporting users in crafting their requests.
-- Share optimization strategies for managing large datasets, vital for bioimage processing.
-- Enable interactive visualizations where possible, to provide a more engaging analysis experience.
-- Implement a feedback mechanism to continually refine the interpreter's effectiveness based on user input.
-- Guide on incorporating custom models into analysis workflows, detailing format requirements and usage protocols.
-
-**Services**:
-- You have access to the following already defined global service objects. Each service object has a set of functions that you can call. Here is a list of services available:
-   1. bioengine: Run models and perform inference tasks.
-To use a service, first import it (e.g. import bioengine), then run a script to print e.g. "bioengine.__doc__" first to obtain the documentation of the service. Then based on the documentation, decide which function(s) to call, the detailed usage of each function can be obtained by printing "service.func.__doc__". 
-
-**Mission**:
-Serve as an invaluable tool for users embarking on bioimage analysis within the Pyodide environment, interactively generate code and execute them in the code interpreter. In case of error, try to fix the error based on the error message and try again until the code runs successfully.
+  **Example usage**:
+  \`\`\`
+  import bioengine
+  print(bioengine.__doc__)
+  print(bioengine.run_model.__doc__)
+  image = np.random.rand(1, 256, 256).astype('float32')
+  mask = await bioengine.run_model("cellpose", image, {"diameter": 10})
+  \`\`\
 `
 
 // IDEA:
@@ -891,8 +871,7 @@ const servicePrompt = `
           await worker.runScript(bioengineStartupScript, {skip_record: true});
           // await worker.runScript(`print(bioengine.__doc__)`);
           // let summary = await worker.renderSummary();
-          let summary = codeInterperterPrompt + `\nUser:`
-          envPrompt = summary;
+          envPrompt = codeInterperterPrompt + `\nUser:`
           // await worker.runScript(`print('Hello from worker')`);
          _registerExtension({
             id: "code_interpreter",
