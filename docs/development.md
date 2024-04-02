@@ -94,7 +94,7 @@ You can try them here: https://imjoy.io/lite?plugin=https://if.imjoy.io
 
 ```javascript
 const chatbot = await api.createWindow({
-    src: "https://chat.bioimage.io/public/apps/bioimageio-chatbot-client/chat",
+    src: "https://bioimage.io/chat",
     name:"BioImage.IO Chatbot",
 });
 chatbotExtension._rintf = true; // make the chatbot extension as an interface
@@ -107,7 +107,7 @@ chatbot.registerExtension(chatbotExtension);
 from imjoy_rpc import api
 
 chatbot = await api.createWindow(
-    src="https://chat.bioimage.io/public/apps/bioimageio-chatbot-client/chat",
+    src="https://bioimage.io/chat",
     name="BioImage.IO Chatbot",
 )
 chatbotExtension._rintf = True # make the chatbot extension as an interface
@@ -126,7 +126,7 @@ Below are examples demonstrating how to serve an extension with Hypha using both
 const token = await login({server_url: "https://chat.bioimage.io"})
 const server = await connectToServer({server_url: "https://chat.bioimage.io", token});
 const svc = await server.registerService(chatbotExtension);
-console.log(`Extension service registered with id: ${svc.id}, you can visit the service at: https://chat.bioimage.io/public/apps/bioimageio-chatbot-client/chat?extension=${svc.id}`);
+console.log(`Extension service registered with id: ${svc.id}, you can visit the service at: https://bioimage.io/chat?server=${server_url}&extension=${svc.id}`);
 ```
 
 **IMPORTANT: The above hypha service can only be accessed by the same user who registered the service, below you will find a section about making it public**
@@ -140,10 +140,10 @@ server_url = "https://chat.bioimage.io"
 token = await login({"server_url": server_url})
 server = await connect_to_server({"server_url": server_url, "token": token})
 svc = await server.register_service(chatbot_extension)
-print(f"Extension service registered with id: {svc.id}, you can visit the service at: {server_url}/public/apps/bioimageio-chatbot-client/chat?extension={svc.id}")
+print(f"Extension service registered with id: {svc.id}, you can visit the service at: https://bioimage.io/chat?server={server_url}&extension={svc.id}")
 ```
 
-After registering the extension with Hypha, you can access the chatbot with the extension by visiting the following URL: `https://chat.bioimage.io/public/apps/bioimageio-chatbot-client/chat?extension=<extension_id>`, where `<extension_id>` is the ID of the registered extension service.
+After registering the extension with Hypha, you can access the chatbot with the extension by visiting the following URL: `https://bioimage.io/chat?server=https://chat.bioimage.io&extension=<extension_id>`, where `<extension_id>` is the ID of the registered extension service.
 
 **IMPORTANT: The above hypha service can only be accessed by the same user who registered the service, below you will find a section about making it public**
 
@@ -162,7 +162,7 @@ server = await connect_to_server({"server_url": server_url, "token": token})
 # Below, we set the visibility to public
 chatbot_extension['config'] = {"visibility": "public"}
 svc = await server.register_service(chatbot_extension)
-print(f"Extension service registered with id: {svc.id}, you can visit the service at: {server_url}/public/apps/bioimageio-chatbot-client/chat?extension={svc.id}")
+print(f"Extension service registered with id: {svc.id}, you can visit the service at: https://bioimage.io/chat?server={server_url}&extension={svc.id}")
 ```
 
 You can also implement authorization logic in the tool function, see [hypha service authorization](https://ha.amun.ai/#/?id=service-authorization).

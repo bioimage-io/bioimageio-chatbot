@@ -406,80 +406,10 @@ async def register_chat_service(server):
     server_info = await server.get_connection_info()
 
     await serve_actions(server, server_info.public_base_url, builtin_extensions)
-
-    version = pkg_resources.get_distribution("bioimageio-chatbot").version
-
-    def reload_index():
-        with open(
-            os.path.join(os.path.dirname(__file__), "static/index.html"),
-            "r",
-            encoding="utf-8",
-        ) as f:
-            chat_html = f.read()
-        chat_html = chat_html.replace(
-            "HTTPS://AI.IMJOY.IO",
-            server.config["public_base_url"]
-            or f"http://127.0.0.1:{server.config['port']}",
-        )
-        chat_html = chat_html.replace(
-            '"bioimageio-chatbot"', f'"{hypha_service_info["id"]}"'
-        )
-        chat_html = chat_html.replace("v0.1.0", f"v{version}")
-        chat_html = chat_html.replace(
-            "LOGIN_REQUIRED", "true" if login_required else "false"
-        )
-        return chat_html
-
-    chat_html = reload_index()
-
-    async def chat(event, context=None):
-        return {
-            "status": 200,
-            "headers": {"Content-Type": "text/html"},
-            "body": reload_index() if debug else chat_html,
-        }
-
-    with open(
-        os.path.join(os.path.dirname(__file__), "apps/assistants/index.html"),
-        "r",
-        encoding="utf-8",
-    ) as f:
-        assistants_html = f.read()
-
-    async def index(event, context=None):
-        return {
-            "status": 200,
-            "headers": {"Content-Type": "text/html"},
-            "body": assistants_html,
-        }
-    
-    async def serve_js_file(file_path, event, context=None):
-        file_path = file_path.split("/")[-1]
-        with open(
-            os.path.join(os.path.dirname(__file__), "static", file_path), "rb"
-        ) as f:
-            content = f.read()
-        return {
-            "status": 200,
-            "headers": {"Content-Type": "application/javascript"},
-            "body": content,
-        }
-
-    await server.register_service(
-        {
-            "id": "bioimageio-chatbot-client",
-            "type": "functions",
-            "config": {"visibility": "public", "require_context": False},
-            "chat": chat,
-            "index": index,
-            "pyodide-worker": partial(serve_js_file, "pyodide-worker.js"),
-            "worker-manager": partial(serve_js_file, "worker-manager.js"),
-        }
-    )
     server_url = server.config["public_base_url"]
 
     print(
-        f"\nThe BioImage.IO Assistants are available at: {server_url}/{server.config['workspace']}/apps/bioimageio-chatbot-client/chat"
+        f"\nThe BioImage.IO Assistants are available at: https://bioimage.io/chat?server={server_url}"
     )
 
 

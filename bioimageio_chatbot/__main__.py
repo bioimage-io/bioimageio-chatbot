@@ -19,8 +19,6 @@ def start_server(args):
         f"--host={args.host}",
         f"--port={args.port}",
         f"--public-base-url={args.public_base_url}",
-        f"--static-mounts=/assistants:{current_dir}/apps/assistants/",
-        f"--static-mounts=/assets:{current_dir}/static/",
         "--startup-functions=bioimageio_chatbot.chatbot:register_chat_service"
     ]
     subprocess.run(command)
