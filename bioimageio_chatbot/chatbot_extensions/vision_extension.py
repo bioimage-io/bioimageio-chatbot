@@ -28,20 +28,22 @@ async def aask(images, messages, max_tokens=1024):
         try:
             img = Image.open(BytesIO(response.content))
         except Exception as e:
-            raise ValueError(f"Failed to read image `{image.title}` from {image.url}. Error: {e}")
+            raise ValueError(f"Failed to read image {image.title or ''} from {image.url}. Error: {e}")
         img_objs.append(img)
     
     if len(img_objs) == 1:
         # plot the image with matplotlib
         plt.imshow(img_objs[0])
-        plt.title(images[0].title)
+        if images[0].title:
+            plt.title(images[0].title)
         fig = plt.gcf()
     else:
         # plot them in subplots with matplotlib in a row
         fig, ax = plt.subplots(1, len(img_objs), figsize=(15, 5))
         for i, img in enumerate(img_objs):
             ax[i].imshow(img)
-            ax[i].set_title(images[i].title)
+            if images[0].title:
+                ax[i].set_title(images[i].title)
     # save the plot to a buffer as png format and convert to base64
     buffer = BytesIO()
     fig.tight_layout()
@@ -83,7 +85,7 @@ async def aask(images, messages, max_tokens=1024):
 class ImageInfo(BaseModel):
     """Image information."""
     url: str=Field(..., description="The URL of the image.")
-    title: str=Field(..., description="The title of the image.")
+    title: Optional[str]=Field(None, description="The title of the image.")
 
 @schema_tool
 async def inspect_tool(images: List[ImageInfo]=Field(..., description="A list of images to be inspected, each with a http url and title"), query: str=Field(..., description="user query about the image"),  context_description: str=Field(..., description="describe the context for the visual inspection task")) -> str:
