@@ -831,14 +831,14 @@ class BioEngine():
         if model_id == "cellpose":
             return """
             Cellpose model for cell segmentation. You can run this model with "run_model" using the following arguments:
-            - input_image (float32 numpy array): an image with required dimension: (channel, W, H).
+            - input_image (float32 numpy array): an image with required input dimensions is: (channel, W, H).
             - kwargs (dict): optional parameters for the model, you can specify the estimated object diameter as, e.g. {"diameter": 10} and also the model type as, e.g. {"model_type": "cyto"}.
             The return value is the segmented mask with shape [channel, W, H].
             """
         else:
             return """
             You can run the model with "run_model" using the following arguments:
-            - input_image (float32 numpy array): an image with required dimension: (batch, channel, W, H).
+            - input_image (float32 numpy array): an image with required input dimensions is: (batch, channel, W, H).
             - kwargs: should be None for this model.
             The return value is the segmented mask with shape (batch, channel, W, H)
             """
@@ -860,6 +860,8 @@ class BioEngine():
             await self.initialize()
         input_image = input_image.astype("float32")
         if model_id == "cellpose":
+            assert input_image.ndim == 3, "Input image should have shape (channel, W, H)"
+            assert input_image.shape[0] == 1, "Input image should have a single channel"
             # Run cellpose model
             ret = await self.triton.execute(
                 inputs=[input_image, kwargs],
@@ -895,14 +897,14 @@ You will generate and run script in the code interpreter to help users analyze t
 The code interperter is a Jupyter notebook-like environment, it support top-level await operations and the asyncio event loop is already running, so you can call "await func()" directly without wrapping in a async function or using asyncio.run.
 The environment has access to remote servers, so you can fetch remote data by using python modules "requests" or "imjoy_rpc.hypha" for connect to the Hypha/BioEngine server.
 User data will be mounted to the \`/mnt\` directory. Use "os.listdir('/mnt')" to explore available files before processing.
-The code interpreter can produce outputs such as stdout or stderr, matplotlib plots, and image/audio displays which is rendered in the user interface.
+The code interpreter can produce outputs such as stdout or stderr, matplotlib plots, and image/audio displays which is rendered in the user interface. For key results (e.g. result images), display them in the final response to the user.
 Global variables, functions and results will be maintained across multiple code interpreter executions, so you can reuse them in the next steps.
 
 **Image Processing and Visualization**:
 - For image analysis tasks, you should first inspect the files loaded by the user, then load the image analyse the image type and shape, and process or run the model on the image.
 - For image loading and manipulation, utilize \`imageio\` for reading and writing images, compatible with a wide range of formats.
 - After the analysis, saving the result using imageio and displaying images using matplotlib.
-- If needed, use the Vision Inspector to inspect user's images. It is recommended to use matplotlib to display images or inputs + outputs in a single figure then pass it to the Vision Inspector.  
+- If needed, use the Vision Inspector to inspect user's images, result images and plots. To inspect the analysis results, pass inputs and outputs together to the vision inspector.  
 - Use the BioEngine service to run AI models (cellpose and any other models in the model zoo).
   To use a service, first import it (e.g. import bioengine), then run a script to print e.g. "bioengine.__doc__" first to obtain the documentation of the service. Then based on the documentation, decide which function(s) to call, the detailed usage of each function can be obtained by printing "service.func.__doc__". 
 

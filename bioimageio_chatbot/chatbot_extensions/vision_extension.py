@@ -3,9 +3,13 @@ from openai import AsyncOpenAI
 from schema_agents import schema_tool
 import base64
 from pydantic import Field, BaseModel
+from typing import Optional, List
 import httpx
 from PIL import Image
 from io import BytesIO
+import matplotlib.pyplot as plt
+# make sure matplotlib is operating headless (no GUI)
+plt.switch_backend("agg")
 
 # Function to encode the image
 def encode_image(image_path):
@@ -24,21 +28,33 @@ async def aask(images, messages, max_tokens=1024):
         try:
             img = Image.open(BytesIO(response.content))
         except Exception as e:
-            raise ValueError(f"Failed to read image: {e}")
+            raise ValueError(f"Failed to read image `{image.title}` from {image.url}. Error: {e}")
         img_objs.append(img)
     
-    # plot them in subplots with matplotlib in a row
-    fig, ax = plt.subplots(1, len(img_objs), figsize=(15, 5))
-    for i, img in enumerate(img_objs):
-        ax[i].imshow(img)
-        ax[i].set_title(images[i].title)
-        ax[i].axis("off")
+    if len(img_objs) == 1:
+        # plot the image with matplotlib
+        plt.imshow(img_objs[0])
+        plt.title(images[0].title)
+        fig = plt.gcf()
+    else:
+        # plot them in subplots with matplotlib in a row
+        fig, ax = plt.subplots(1, len(img_objs), figsize=(15, 5))
+        for i, img in enumerate(img_objs):
+            ax[i].imshow(img)
+            ax[i].set_title(images[i].title)
     # save the plot to a buffer as png format and convert to base64
     buffer = BytesIO()
-    plt.savefig(buffer, format="png")
+    fig.tight_layout()
+    # if the image size (width or height) is smaller than 512, use the original size and aspect ratio
+    # otherwise set the maximun width of the image to n*512 pixels, where n is the number of images; the maximum total width is 1024 pixels
+    fig_width = min(1024, len(img_objs)*512, fig.get_figwidth()*fig.dpi)
+    # make sure the pixel size (not inches)
+    fig.set_size_inches(fig_width/fig.dpi, fig.get_figheight(), forward=True)
+    
+    # save fig
+    fig.savefig(buffer, format="png")
     buffer.seek(0)
     base64_image = base64.b64encode(buffer.read()).decode("utf-8")
-    plt.close()
     # append the image to the user message
     user_message.append({
         "type": "image_url",
@@ -47,41 +63,10 @@ async def aask(images, messages, max_tokens=1024):
         }
     })
     
+    
     for message in messages:
         assert isinstance(message, str), "Message must be a string."
-        if message.startswith("http"):
-            # # download the image and encode it to base64
-            # async with httpx.AsyncClient() as client:
-            #     response = await client.get(message)
-            #     response.raise_for_status()
-            # # read the image and resize it to make sure the maximum size is 512
-            # try:
-            #     img = Image.open(BytesIO(response.content))
-            # except Exception as e:
-            #     raise ValueError(f"Failed to read image: {e}")
-            # if max(img.size) > 512:
-            #     scale = 512 / max(img.size)
-            #     # resize the image
-            #     resized = img.resize((int(img.size[0] * scale), int(img.size[1] * scale)))
-            #     # save the image to a buffer
-            #     buffer = BytesIO()
-            #     resized.save(buffer, format="PNG")
-            #     buffer.seek(0)
-            #     base64_image = base64.b64encode(buffer.read()).decode("utf-8")
-            #     mime = "image/png"
-            # else:
-            #     base64_image = base64.b64encode(response.content).decode("utf-8")
-            # # base64_image = f"data:image/...;base64,{base64_image}"
-            #     mime = response.headers.get("Content-Type", "image/png")
-            # base64_image = f"data:{mime};base64,{base64_image}"
-            user_message.append({
-                "type": "image_url",
-                "image_url": {
-                    "url": base64_image
-                }
-            })
-        else:
-            user_message.append({"type": "text", "text": message})
+        user_message.append({"type": "text", "text": message})
 
     response = await aclient.chat.completions.create(
         model="gpt-4-1106-vision-preview",
@@ -101,7 +86,7 @@ class ImageInfo(BaseModel):
     title: str=Field(..., description="The title of the image.")
 
 @schema_tool
-async def inspect_tool(images: list[ImageInfo]=Field(..., description="A list of images to be inspected, each with a http url and title"), query: str=Field(..., description="user query about the image"),  context_description: str=Field(..., description="describe the context for the visual inspection task")) -> str:
+async def inspect_tool(images: List[ImageInfo]=Field(..., description="A list of images to be inspected, each with a http url and title"), query: str=Field(..., description="user query about the image"),  context_description: str=Field(..., description="describe the context for the visual inspection task")) -> str:
     """Inspect an image using GPT4-Vision."""
     # assert image_url.startswith("http"), "Image URL must start with http."
     for image in images:
@@ -114,7 +99,7 @@ def get_extension():
     return ChatbotExtension(
         id="vision",
         name="Vision Inspector",
-        description="Inspect an image using GPT4-Vision, used for inspect the details or ask questions about the image.",
+        description="Perform visual inspection on images using GPT4-Vision model, used for describing images and answer image related questions. The images will be plotted using matplotlib and then sent to the GPT4-Vision model for inspection.",
         tools=dict(
             inspect=inspect_tool
         )
@@ -124,8 +109,8 @@ if __name__ == "__main__":
     import asyncio
     async def main():
         extension = get_extension()
-        # print(await extension.tools["inspect"](image_url="https://bioimage.io/static/img/bioimage-io-icon.png", query="What is this?"))
-        print(await extension.tools["inspect"](image_url="https://bioimage.io/static/img/bioimage-io-logo.png", query="What is this?"))
-
+        print(await extension.tools["inspect"](images=[ImageInfo(url="https://bioimage.io/static/img/bioimage-io-icon.png", title="BioImage.io Icon"), ImageInfo(url="https://bioimage.io/static/img/bioimage-io-logo.png", title="BioImage.io Logo")], query="What are these?", context_description="Inspect the BioImage.io icon and logo."))
+        # test only one image
+        # print(await extension.tools["inspect"](images=[ImageInfo(url="https://bioimage.io/static/img/bioimage-io-icon.png", title="BioImage.io Icon")], query="What is this?", context_description="Inspect the BioImage.io icon."))
     # Run the async function
     asyncio.run(main())
