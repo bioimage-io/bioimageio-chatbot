@@ -21,11 +21,10 @@ Launch the chatbot through the BioImage.IO website [here](https://bioimage.io/ch
 - **Interpret the Results**: The chatbot will respond with relevant studies, such as the one titled "DeepCycle: Deep learning reconstruction of the closed cell cycle trajectory from single-cell unsegmented microscopy images."
 
 ### Scenario (c): Running AI Models for Image Analysis
-
-- **Download Image Data**: Begin by creating a new folder on your computer named test-image. Download the image data file from [this link](https://raw.githubusercontent.com/bioimage-io/bioimageio-chatbot/bioengine-support/docs/example-data/nuclei.tif) and save it into the test-image folder.
-- **Initiate Bioimage Analyst**: Navigate to the BioImage.IO chatbot interface at [this page](https://bioimage.io/chat/). Activate the Bioimage Analyst chatbot, known as "Bioimage Analyst(Bridget)", by selecting it from the chatbot menu on the right side of the page.
-- **Mount your Data Folder**: Within the chat interface, click on the "Mount Files" button located below the dialog window. This action will allow you to mount the test-image folder that contains your downloaded image data. The chatbot will confirm the successful mounting of the folder and will list the files contained within, ensuring that your data is ready for analysis.
-- **Run CellPose Model**: Type "Segment the image `/mnt/nuclei.tif` using Cellpose" to run the Cellpose model on the image data. Upon successful execution of the model, the chatbot will notify you that the segmentation process is complete and will display the analyzed results.
+- **Download Image Data**: Begin by creating a new folder on your computer named `test-images`. Download the image data file from [this link](https://raw.githubusercontent.com/bioimage-io/bioimageio-chatbot/main/docs/example-data/nuclei.tif) and save it into the `test-images` folder.
+- **Initiate Bioimage Analyst**: Navigate to the BioImage.IO chatbot interface at [this page](https://bioimage.io/chat/). Note that only Chrome or Chromium-based browser is supported at the moment. Select "Bioimage Analyst(Bridget)" located in the upper righ corner of the chatbot interface.
+- **Mount your Data Folder**: Within the chat interface, click on the "Mount Files" button located below the dialog window. This action will allow you to mount the test-image folder that contains your downloaded image data. The chatbot will confirm the successful mounting of the folder, you can now ask it to list the files contained within, and ensuring that your data is ready for analysis.
+- **Run CellPose Model**: Type "Segment the image `/mnt/nuclei.tif` using Cellpose" to run the Cellpose model on the image data. Upon successful execution of the model, the chatbot will notify you that the segmentation process is complete and will display the analyzed results. Optionally, you can ask it for perform a visual inspection of the results.
 
 ### Scenario (d): Developing New Extensions
 
