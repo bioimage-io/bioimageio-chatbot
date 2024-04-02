@@ -11,7 +11,7 @@ def get_builtin_extensions():
     for module in pkgutil.walk_packages(__path__, __name__ + '.'):
         if module.name.endswith('_extension'):
             ext_module = module.module_finder.find_module(module.name).load_module(module.name)
-            exts = ext_module.get_extension()
+            exts = ext_module.get_extension() or []
             if isinstance(exts, ChatbotExtension):
                 exts = [exts]
             for ext in exts:
