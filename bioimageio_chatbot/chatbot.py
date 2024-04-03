@@ -101,14 +101,15 @@ def create_assistants(builtin_extensions):
                 else:
                     extension = ChatbotExtension.model_validate(ext)
 
+            max_length = 4000
             if isinstance(extension, LegacyChatbotExtension):
                 ts = [await legacy_extension_to_tool(extension)]
-                assert len(extension.description) <= 1000, f"Extension description is too long: {extension.description}"
-                tool_prompts[create_tool_name(extension.name)] = extension.description.replace("\n", ";")[:256]
+                assert len(extension.description) <= max_length, f"Extension description is too long: {extension.description}"
+                tool_prompts[create_tool_name(extension.name)] = extension.description.replace("\n", ";")[:max_length]
             else:
                 ts = await extension_to_tools(extension)
-                assert len(extension.description) <= 1000, f"Extension tool prompt is too long: {extension.tool_prompt}"
-                tool_prompts[create_tool_name(extension.id) + "*"] = extension.description.replace("\n", ";")[:256]
+                assert len(extension.description) <= max_length, f"Extension tool prompt is too long: {extension.description}"
+                tool_prompts[create_tool_name(extension.id) + "*"] = extension.description.replace("\n", ";")[:max_length]
             extensions_by_tool_name.update({t.__name__: extension for t in ts})
             tools += ts
             
@@ -129,7 +130,7 @@ def create_assistants(builtin_extensions):
             tools,
             return_metadata=True,
             thoughts_schema=ThoughtsSchema,
-            max_loop_count=10,
+            max_loop_count=20,
             tool_usage_prompt=tool_usage_prompt,
         )
         result_steps = metadata["steps"]
@@ -153,58 +154,45 @@ def create_assistants(builtin_extensions):
     event_bus = melman.get_event_bus()
     event_bus.register_default_events()
 
-    code_interpreter_prompt = """
-Specifically for the CodeInterpreter tool, you can use the following libraries:
-    - **matplotlib**: For plotting graphs and displaying images.
-    - **numpy**: Essential for numerical computing.
-    - **pandas**: Best for data manipulation and analysis.
-    - **scikit-learn**: For applying machine learning algorithms.
-    - **scipy**: Used in scientific computing and technical computing.
-    - **opencv-python**: For computer vision tasks.
-    - **imageio**: To read and write a wide range of image data.
-    - **requests**: For making HTTP requests (Note: external requests may be restricted).
-    - **skimage**: For image processing tasks.
-When to use this tool:
-    - **Internal Calculations**: Quickly perform complex mathematical operations.
-    - **Code Validation**: Test and validate snippets of Python code for accuracy.
-    - **Data Analysis and Visualization**: Use matplotlib to visualize data and leverage pandas for analysis.
-    - **Image Analysis**: Analyze users' images with skimage, scipy, and numpy for detailed insights.
-    - **Machine Learning Prototyping**: Test machine learning models using scikit-learn with your data.
+    bridget_instructions = (
+        "As Bridget, your role is to act as an expert in image analysis, guiding users in utilizing image analysis tools and writing analysis code and scripts effectively, help user to analyse their own data. "
+        "Communicate accurately, concisely, and logically, refraining from making up information. "
+        "When necessary, seek further details to fully understand the user's request. "
+        "Your primary objective is to assist users with actual image analysis task by running code in the Code Interpreter.\n"
+        "Engage with users to grasp their data, requirements, solicit additional information as needed, use the web search and code interpreter, loading and preprocess user's data into formats that fit the needs of the tools, break down complex task into executable steps, troubleshooting issues, and addressing user's needs as much as you can."
+        "NOTE: You are targeting naive users who are not familiar with programming, so unless requested by the user, don't provide code snippets, only concise explanations and guidance."
+    )
 
-If needed, use the CodeInterpreter to run Python code snippets (in one step or multiple rounds) and provide the output to the user.
-For more complex questions, DO NOT generate lots of code at once, instead, break the problem into steps and in each step, use the CodeInterpreter interactively like a jupyter notebook to run the code and provide the output to the user or refine the code based on the intermediate results.
-"""
+    nina_instructions = (
+        "As Nina, your focus is on serving as a professional trainer specialized in bioimage analysis. "
+        "Address only inquiries related to bioimage analysis, ensuring your responses are not only accurate, concise, and logical, but also educational and engaging. "
+        "Your mission is to decipher the user's needs through clarifying questions, impart fundamental knowledge of bioimage analysis, search the associated documentation and books to obtain additional information,"
+        "and guide users through the principles and tools of the field, provide concrete examples and suggestions to their question. Offer educational resources, including materials and tutorials, to enhance the user's learning experience."
+    )
+
     bridget = Role(
-        instructions="You are Bridget from Madagascar, you serve the bioimaging community as an image analysis expert."
-        # "You ONLY respond to user's queries related to bioimage analysis."
-        "Your communications should be accurate, concise, logical and avoid fabricating information, "
-        "and if necessary, request additional clarification."
-        "Your goal is to guide users to use image analysis tools, provide code and scripts, "
-        "answer any question related to running software tools and programming for image analysis." + code_interpreter_prompt,
+        instructions=bridget_instructions,
         actions=[respond_to_user],
         model="gpt-4-0125-preview",
     )
-    
+
     nina = Role(
-        instructions="You are King Julien from Madagascar, you serve the bioimaging community as a professional trainer."
-        "You ONLY respond to user's queries related to educational materials and tutorials in bioimaging."
-        "You communications should be accurate, concise, logical and most importantly, educational and enjoyable."
-        "Your goal is to educate users about bioimage analysis, provide educational materials and tutorials. ",
+        instructions=nina_instructions,
         actions=[respond_to_user],
         model="gpt-4-0125-preview",
     )
-    # return {"Melman": melman, "Bridget": bridget}
+
     # convert to a list
     all_extensions = [
         {"id": ext.id, "name": ext.name, "description": ext.description} for ext in builtin_extensions
     ]
     # remove item with 'book' in all_extensions
     melman_extensions = [
-        ext for ext in all_extensions if ext["id"] != "books"
+        ext for ext in all_extensions if ext["id"] != "books" and ext["id"] != "vision"
     ]
     
-    kowalski_extensions = [
-        ext for ext in all_extensions if ext["id"] == "web"
+    bridget_extensions = [
+        ext for ext in all_extensions if ext["id"] == "web" or ext["id"] == "vision"
     ]
 
     # only keep the item with 'book' in all_extensions
@@ -215,9 +203,9 @@ For more complex questions, DO NOT generate lots of code at once, instead, break
     ]
 
     return [
-        {"name": "Melman", "agent": melman, "extensions": melman_extensions},
-        {"name": "Bridget", "agent": bridget, "extensions": kowalski_extensions},
-        {"name": "Nina", "agent": nina, "extensions": nina_extensions},
+        {"name": "Melman", "agent": melman, "extensions": melman_extensions, "code_interpreter": False, "alias": "BioImage Seeker", "icon": "https://bioimage.io/static/img/bioimage-io-icon.svg", "welcome_message": "Hi there! I'm Melman. I am help you navigate the bioimage analysis tools and provide information about bioimage analysis. How can I help you today?"},
+        {"name": "Nina", "agent": nina, "extensions": nina_extensions, "code_interpreter": False, "alias": "BioImage Tutor", "icon": "https://bioimage.io/static/img/bioimage-io-icon.svg", "welcome_message": "Hi there! I'm Nina, I can help with your learning journey in bioimage analysis. How can I help you today?"},
+        {"name": "Bridget", "agent": bridget, "extensions": bridget_extensions, "code_interpreter": True, "alias": "BioImage Analyst", "icon": "https://bioimage.io/static/img/bioimage-io-icon.svg", "welcome_message": "Hi there! I'm Bridget, I can help you with your image analysis tasks. Please mount your data folder and let me know how I can assist you today."},
     ]
 
 
@@ -399,16 +387,19 @@ async def register_chat_service(server):
             ), "You don't have permission to use the chatbot, please sign up and wait for approval"
         return "pong"
 
+    assistant_keys = ["name", "extensions", "alias", "icon", "welcome_message", "code_interpreter"]
+    version = pkg_resources.get_distribution("bioimageio-chatbot").version
     hypha_service_info = await server.register_service(
         {
             "name": "BioImage.IO Chatbot",
             "id": "bioimageio-chatbot",
             "config": {"visibility": "public", "require_context": True},
+            "version": version,
             "ping": ping,
             "chat": chat,
             "report": report,
             "assistants": {
-                a["name"]: {"name": a["name"], "extensions": a["extensions"]}
+                a["name"]: {k: a[k] for k in assistant_keys}
                 for a in assistants
             },
         }
@@ -417,80 +408,11 @@ async def register_chat_service(server):
     server_info = await server.get_connection_info()
 
     await serve_actions(server, server_info.public_base_url, builtin_extensions)
-
-    version = pkg_resources.get_distribution("bioimageio-chatbot").version
-
-    def reload_index():
-        with open(
-            os.path.join(os.path.dirname(__file__), "static/index.html"),
-            "r",
-            encoding="utf-8",
-        ) as f:
-            chat_html = f.read()
-        chat_html = chat_html.replace(
-            "https://ai.imjoy.io",
-            server.config["public_base_url"]
-            or f"http://127.0.0.1:{server.config['port']}",
-        )
-        chat_html = chat_html.replace(
-            '"bioimageio-chatbot"', f'"{hypha_service_info["id"]}"'
-        )
-        chat_html = chat_html.replace("v0.1.0", f"v{version}")
-        chat_html = chat_html.replace(
-            "LOGIN_REQUIRED", "true" if login_required else "false"
-        )
-        return chat_html
-
-    chat_html = reload_index()
-
-    async def chat(event, context=None):
-        return {
-            "status": 200,
-            "headers": {"Content-Type": "text/html"},
-            "body": reload_index() if debug else chat_html,
-        }
-
-    with open(
-        os.path.join(os.path.dirname(__file__), "apps/assistants/index.html"),
-        "r",
-        encoding="utf-8",
-    ) as f:
-        assistants_html = f.read()
-
-    async def index(event, context=None):
-        return {
-            "status": 200,
-            "headers": {"Content-Type": "text/html"},
-            "body": assistants_html,
-        }
-    
-    async def serve_js_file(file_path, event, context=None):
-        file_path = file_path.split("/")[-1]
-        with open(
-            os.path.join(os.path.dirname(__file__), "static", file_path), "rb"
-        ) as f:
-            content = f.read()
-        return {
-            "status": 200,
-            "headers": {"Content-Type": "application/javascript"},
-            "body": content,
-        }
-
-    await server.register_service(
-        {
-            "id": "bioimageio-chatbot-client",
-            "type": "functions",
-            "config": {"visibility": "public", "require_context": False},
-            "chat": chat,
-            "index": index,
-            "pyodide-worker": partial(serve_js_file, "pyodide-worker.js"),
-            "worker-manager": partial(serve_js_file, "worker-manager.js"),
-        }
-    )
     server_url = server.config["public_base_url"]
 
+    service_id = hypha_service_info["id"]
     print(
-        f"\nThe BioImage.IO Assistants are available at: {server_url}/{server.config['workspace']}/apps/bioimageio-chatbot-client/chat"
+        f"\nThe BioImage.IO Assistants are available at: https://bioimage.io/chat?server={server_url}&service_id={service_id}\n"
     )
 
 

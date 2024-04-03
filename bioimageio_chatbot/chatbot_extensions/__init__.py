@@ -11,7 +11,7 @@ def get_builtin_extensions():
     for module in pkgutil.walk_packages(__path__, __name__ + '.'):
         if module.name.endswith('_extension'):
             ext_module = module.module_finder.find_module(module.name).load_module(module.name)
-            exts = ext_module.get_extension()
+            exts = ext_module.get_extension() or []
             if isinstance(exts, ChatbotExtension):
                 exts = [exts]
             for ext in exts:
@@ -73,4 +73,46 @@ async def main():
     print(tools)
 
 if __name__ == "__main__":
+    import json
+
+    schema = {
+        "type": "object",
+        "title": "RunScript",
+        "description": "description",
+        "properties": {
+            "script": {
+                "type": "string",
+                "description": "Python script to execute",
+            },
+            "inputs": {
+                "type": "array",
+                "description": "Input objects to be restored into the script",
+                "items": {
+                    "type": "string",
+                    "properties": {
+                        "key": {
+                            "type": "string",
+                            "description": "Key of the object from the store to be restored",
+                        },
+                        "name": {
+                            "type": "string",
+                            "description": "Variable name of the object",
+                        }
+                    }
+                }
+            },
+            "outputs": {
+                "type": "array",
+                "description": "Objects produced by the script as outputs or for further use",
+                "items": {
+                    "type": "string"
+                }
+            }
+        },
+        "required": ["script", "outputs"],
+        "allow_additional_properties": False,
+    }
+
+    model = json_schema_to_pydantic_model(schema)
+    print(model)
     asyncio.run(main())

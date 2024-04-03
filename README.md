@@ -1,6 +1,6 @@
 # 🦒 BioImage.IO Chatbot 🤖
 
-**📣New Preprint: [![arXiv](https://img.shields.io/badge/arXiv-2310.18351-red.svg)](https://arxiv.org/abs/2310.18351) <a href="https://zenodo.org/records/10032228" target="_blank"><img id="record-doi-badge" data-target="[data-modal='10.5281/zenodo.10032228']" src="https://zenodo.org/badge/DOI/10.5281/zenodo.10032228.svg" alt="10.5281/zenodo.10032228"></a>**
+**📣New Preprint: [![arXiv](https://img.shields.io/badge/arXiv-2310.18351-red.svg)](https://arxiv.org/abs/2310.18351) <a href="https://zenodo.org/records/10032227" target="_blank"><img id="record-doi-badge" data-target="[data-modal='10.5281/zenodo.10032228']" src="https://zenodo.org/badge/DOI/10.5281/zenodo.10032228.svg" alt="10.5281/zenodo.10032228"></a>**
 
 **👇 Want to Try the Chatbot? [Visit here!](https://bioimage.io/chat)**
 
@@ -15,8 +15,9 @@ The BioImage.IO Chatbot is a versatile conversational agent designed to assist u
 
 ![screenshot for the chatbot](./docs/screenshots/chatbot-animation.gif)
 
+The following diagram shows how the chatbot works:
 
-Here you can find usage guide and more examples: [Usage guide and example screenshots](docs/usage-example.md).
+<img src="https://docs.google.com/drawings/d/e/2PACX-1vROHmf1aZPMLOMvwjot1laB9wvRsaDkjkYbGNNveqN-Pm_9xWlD48krQMobWT1WrrOrZnwH9gPLsDRw/pub?w=1392&amp;h=1112">
 
 ## Chatbot Features
 
@@ -37,8 +38,9 @@ We are providing a public chatbot service for you to try out. You can access the
 
 Please note that the chatbot is still in beta and is being actively developed, we will log the message you input into the chatbot for further investigation of issues and support our development. See the [Disclaimer for BioImage.IO Chatbot](./docs/DISCLAIMER.md). If you want to to remove your chat logs, please contact us via [this form](https://oeway.typeform.com/to/K3j2tJt7).
 
-If you encounter any issues, please report them via [Github](https://github.com/bioimage-io/bioimageio-chatbot/issues).
+Here you can find usage guide and more examples: [Usage guide and example screenshots](docs/usage-example.md).
 
+If you encounter any issues, please report them via [Github](https://github.com/bioimage-io/bioimageio-chatbot/issues).
 
 ### Asking Questions
 
@@ -114,7 +116,7 @@ export BIOIMAGEIO_KNOWLEDGE_BASE_PATH=./bioimageio-knowledge-base
 export BIOIMAGEIO_CHAT_LOGS_PATH=./chat-logs
 python -m bioimageio_chatbot start-server --host=0.0.0.0 --port=9000
 ```
-This will create a local server, and the BioImage.IO Chatbot is available at: http://127.0.0.1:9000/public/apps/bioimageio-chatbot-client/chat or http://127.0.0.1:9000/assistants
+This will create a local server, and the BioImage.IO Chatbot is available at: https://bioimage.io/chat?server=http://127.0.0.1:9000
 
 Open the link in a browser, and you will see the chat interface.
 
@@ -149,7 +151,7 @@ export BIOIMAGEIO_CHAT_LOGS_PATH=./chat-logs
 python -m bioimageio_chatbot connect-server --server-url=https://ai.imjoy.io
 ```
 
-First, you will be asked to log in with a hypha account. Either your GitHub or Google account can be reused. Then, the following message containing a link to the chatbot will be displayed: 'The BioImage.IO Chatbot is available at: https://ai.imjoy.io/github|xxxxxx/apps/bioimageio-chatbot-client/chat'
+First, you will be asked to log in with a hypha account. Either your GitHub or Google account can be reused. Then, the following message containing a link to the chatbot will be displayed: 'The BioImage.IO Chatbot is available at: https://bioimage.io/chat?server=https://ai.imjoy.io'
 
 Leave your chatbot running to enable users inside or outside your network to access it from this URL.
 
@@ -225,7 +227,7 @@ Optionally, for improved reproducibility, you can change `latest` to a version t
 The BioImage.IO Chatbot is now running in the Docker container. You can access it locally in your web browser by visiting:
 
 ```
-http://localhost:3000/public/apps/bioimageio-chatbot-client/chat
+https://bioimage.io/chat?server=http://localhost:3000
 ```
 
 Make sure to replace `3000` with the host port you specified in the `docker run` command.
@@ -256,6 +258,16 @@ If you are a tool developer or a database maintainer related to bioimage analysi
 If you have any questions, need assistance, or want to contribute to the chatbot's knowledge base, please do not hesitate to contact us via [Github issues](https://github.com/bioimage-io/bioimageio-chatbot/issues). Our team is here to help you get started and make valuable contributions.
 
 Thanks for your support and helping make the BioImage.IO Chatbot more informative and useful to the community.
+
+## Publication
+
+For detailed description of our work, please read our preprint: **[![arXiv](https://img.shields.io/badge/arXiv-2310.18351-red.svg)](https://arxiv.org/abs/2310.18351) <a href="https://zenodo.org/records/10032227" target="_blank"><img id="record-doi-badge" data-target="[data-modal='10.5281/zenodo.10032227']" src="https://zenodo.org/badge/DOI/10.5281/zenodo.10032227.svg" alt="10.5281/zenodo.10032227"></a>**
+
+
+To reproduce the use cases described in [Figure 2](https://docs.google.com/drawings/d/e/2PACX-1vTIRwRldQBnTFqz0hvS01znGOEdoeDMJmZC-PlBM-O59u_xo7DfJlUEE9SlRsy6xO1hT2HuSOBrLmUz/pub?w=1324&amp;h=1063) in the manuscript, please refer to the [reproducing example usage scenarios](./docs/figure-2-use-cases.md).
+
+<img style="width:300px;" src="https://docs.google.com/drawings/d/e/2PACX-1vTIRwRldQBnTFqz0hvS01znGOEdoeDMJmZC-PlBM-O59u_xo7DfJlUEE9SlRsy6xO1hT2HuSOBrLmUz/pub?w=1324&amp;h=1063">
+
 
 ## Cite Us
 
