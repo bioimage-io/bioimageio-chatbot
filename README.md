@@ -21,16 +21,25 @@ The following diagram shows how the chatbot works:
 
 ## Chatbot Features
 
-The BioImage.IO Chatbot offers the following features:
+The BioImage.IO Chatbot is equipped with an array of capabilities designed to enhance the bioimaging experience:
 
-* **Contextual Understanding**: The chatbot can understand the context of your questions, ensuring responses are relevant and informative.
+* **Contextual Understanding**: Interprets the context of inquiries to deliver relevant and accurate responses.
 
-* **Personalization**: By incorporating your background information, the chatbot tailors responses to meet your specific requirements.
+* **Personalization**: Adapts interactions based on user-specific background information to provide customized advice.
 
-* **Document Retrieval**: It can search through extensive documentation to provide detailed information on models, applications, datasets, and more. For example, the Chatbot is able to retrieve information from the [bio.tools](https://bio.tools), [ImageJ.net](https://imagej.net/), [deepImageJ](https://deepimagej.github.io), [ImJoy](https://imjoy.io/#/) and [bioimage.io](https://bioimage.io). The full list of supported databases can be found in the [`knowledge-base-manifest.yaml`](knowledge-base-manifest.yaml) file.
+* **Comprehensive Data Source Integration**: Accesses a broad range of databases and documentation for bioimaging, including [bio.tools](https://bio.tools), [ImageJ.net](https://imagej.net/), [deepImageJ](https://deepimagej.github.io/deepimagej/), [ImJoy](https://imjoy.io/#/), and [bioimage.io](https://bioimage.io). Details on the supported sources are maintained in the [`knowledge-base-manifest.yaml`](knowledge-base-manifest.yaml) file.
 
-* **Query Structured Database by Script Execution**: The chatbot can generate Python scripts for complex queries in structured databases (e.g., csv, json file, SQL databases), helping you perform advanced tasks such as specific questions about the available models at [bioimage.io](https://bioimage.io).
+* **Advanced Query Capabilities**: Generates and executes Python scripts for detailed queries within structured databases such as CSV, JSON files, or SQL databases, facilitating complex data retrievals.
 
+* **AI-Powered Analysis and Code Interpretation**: Directly runs complex image analysis tasks using advanced AI models like Cellpose, via an embedded code interpreter.
+
+* **Performance Enhancements with ReAct and RAG**: Utilizes a Retrieval Augmented Generation system with a ReAct loop for dynamic, iterative reasoning and tool engagement, improving response quality.
+
+* **Extension Mechanism for Developers**: Allows for the development of custom extensions using ImJoy plugins or hypha services within Jupyter notebooks, enhancing flexibility and integration possibilities.
+
+* **Vision Inspection and Hardware Control**: Features a Vision Inspector extension powered by GPT-4 for visual feedback on image content and analysis outcomes, and demonstrates potential for controlling microscopy hardware in smart microscopy setups.
+
+* **Interactive User Interface and Documentation**: Offers a user-friendly interface with comprehensive support documents, ensuring easy access to its features and maximizing user engagement.
 
 ## Using the Chatbot
 
