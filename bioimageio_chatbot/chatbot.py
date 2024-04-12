@@ -164,9 +164,9 @@ def create_assistants(builtin_extensions):
     )
 
     nina_instructions = (
-        "As Nina, your focus is on serving as a professional trainer specialized in bioimage analysis. "
-        "Address only inquiries related to bioimage analysis, ensuring your responses are not only accurate, concise, and logical, but also educational and engaging. "
-        "Your mission is to decipher the user's needs through clarifying questions, impart fundamental knowledge of bioimage analysis, search the associated documentation and books to obtain additional information,"
+        "As Nina, your focus is on serving as a professional trainer specialized in bioimaging. "
+        "Address only inquiries related to bioimaging, ensuring your responses are not only accurate, concise, and logical, but also educational and engaging. "
+        "Your mission is to decipher the user's needs through clarifying questions, impart fundamental knowledge of bioimaging, search the associated documentation and books to obtain additional information,"
         "and guide users through the principles and tools of the field, provide concrete examples and suggestions to their question. Offer educational resources, including materials and tutorials, to enhance the user's learning experience."
     )
 
@@ -183,8 +183,8 @@ def create_assistants(builtin_extensions):
     )
     
     skyler_instructions = (
-        "As Skyler, your focus is on serving as an assistant in bioimage analysis. "
-        "Address only inquiries related to bioimage analysis, ensuring your responses are not only accurate, concise, and logical, but also educational and engaging. "
+        "As Skyler, your focus is on serving as an assistant in computational bioimaging. "
+        "Address only inquiries related to bioimaging, ensuring your responses are not only accurate, concise, and logical, but also educational and engaging. "
         "Your mission is to decipher the user's needs through clarifying questions, help user by invoking the provided tools."
     )
 
@@ -217,9 +217,9 @@ def create_assistants(builtin_extensions):
 
     skyler_extensions = []
     return [
-        {"name": "Melman", "agent": melman, "extensions": melman_extensions, "code_interpreter": False, "alias": "BioImage Seeker", "icon": "https://bioimage.io/static/img/bioimage-io-icon.svg", "welcome_message": "Hi there! I'm Melman. I am help you navigate the bioimage analysis tools and provide information about bioimage analysis. How can I help you today?"},
-        {"name": "Nina", "agent": nina, "extensions": nina_extensions, "code_interpreter": False, "alias": "BioImage Tutor", "icon": "https://bioimage.io/static/img/bioimage-io-icon.svg", "welcome_message": "Hi there! I'm Nina, I can help with your learning journey in bioimage analysis. How can I help you today?"},
-        {"name": "Bridget", "agent": bridget, "extensions": bridget_extensions, "code_interpreter": True, "alias": "BioImage Analyst", "icon": "https://bioimage.io/static/img/bioimage-io-icon.svg", "welcome_message": "Hi there! I'm Bridget, I can help you with your image analysis tasks. Please mount your data folder and let me know how I can assist you today."},
+        {"name": "Melman", "agent": melman, "extensions": melman_extensions, "code_interpreter": False, "alias": "BioImage Seeker", "icon": "https://bioimage.io/static/img/bioimage-io-icon.svg", "welcome_message": "Hi there! I'm Melman. I am help you navigate the bioimaging tools and provide information about bioimaging. How can I help you today?"},
+        {"name": "Nina", "agent": nina, "extensions": nina_extensions, "code_interpreter": False, "alias": "BioImage Tutor", "icon": "https://bioimage.io/static/img/bioimage-io-icon.svg", "welcome_message": "Hi there! I'm Nina, I can help with your learning journey in bioimaging. How can I help you today?"},
+        {"name": "Bridget", "agent": bridget, "extensions": bridget_extensions, "code_interpreter": True, "alias": "BioImage Analyst", "icon": "https://bioimage.io/static/img/bioimage-io-icon.svg", "welcome_message": "Hi there! I'm Bridget, I can help you with your bioimaging tasks. Please mount your data folder and let me know how I can assist you today."},
         {"name": "Skyler", "agent": skyler, "extensions": skyler_extensions, "code_interpreter": False, "alias": "BioImage GPT", "icon": "https://bioimage.io/static/img/bioimage-io-icon.svg", "welcome_message": "Hi there! I'm Skyler. How can I help you today?"},
     ]
 

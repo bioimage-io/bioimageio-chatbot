@@ -4,13 +4,13 @@
 
 **👇 Want to Try the Chatbot? [Visit here!](https://bioimage.io/chat)**
 
-## Your Personal Assistant in BioImage Analysis
+## Your Personal Assistant in Computational Bioimaging
 
-Welcome to the BioImage.IO Chatbot user guide. This guide will help you get the most out of the chatbot, providing detailed information on how to interact with it and retrieve valuable insights related to bioimage analysis.
+Welcome to the BioImage.IO Chatbot user guide. This guide will help you get the most out of the chatbot, providing detailed information on how to interact with it and retrieve valuable insights related to computational bioimaging.
 
 ## Introduction
 
-The BioImage.IO Chatbot is a versatile conversational agent designed to assist users in accessing information related to bioimage analysis. It leverages the power of Large Language Models (LLMs) and integrates user-specific data to provide contextually accurate and personalized responses. Whether you're a researcher, developer, or scientist, the chatbot is here to make your bioimage analysis journey smoother and more informative.
+The BioImage.IO Chatbot is a versatile conversational agent designed to assist users in accessing information related to computational bioimaging. It leverages the power of Large Language Models (LLMs) and integrates user-specific data to provide contextually accurate and personalized responses. Whether you're a researcher, developer, or scientist, the chatbot is here to make your bioimaging journey smoother and more informative.
 
 
 ![screenshot for the chatbot](./docs/screenshots/chatbot-animation.gif)
@@ -44,7 +44,7 @@ If you encounter any issues, please report them via [Github](https://github.com/
 
 ### Asking Questions
 
-To ask the chatbot a question, type your query and send it. The chatbot will analyze your question and provide a relevant response. You can ask questions related to bioimage analysis, software tools, models, and more.
+To ask the chatbot a question, type your query and send it. The chatbot will analyze your question and provide a relevant response. You can ask questions related to bioimaging, software tools, models, and more.
 
 ### Personalized Responses
 
@@ -251,7 +251,7 @@ The BioImage.IO Chatbot is a community-driven project. We welcome contributions 
 
 For more information, please visit the [contribution guidelines](docs/CONTRIBUTING.md).
 
-If you are a tool developer or a database maintainer related to bioimage analysis, you can join us as a community partner. Please get in touch with us via [Github issues](https://github.com/bioimage-io/bioimageio-chatbot/issues).
+If you are a tool developer or a database maintainer related to bioimaging, you can join us as a community partner. Please get in touch with us via [Github issues](https://github.com/bioimage-io/bioimageio-chatbot/issues).
 
 ## Contact Us
 
