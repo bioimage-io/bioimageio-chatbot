@@ -3,7 +3,7 @@
 ## Introduction
 Welcome to the world of BioImage.IO Chatbot, a revolutionary conversational assistant designed exclusively for the bioimage community. Our chatbot is more than just a virtual conversationalist; it's a sophisticated AI-powered tool that offers personalized, context-aware responses by drawing from a diverse array of databases, tool-specific documentation, and structured data sources.
 
-The BioImage.IO Chatbot is all about efficiency, knowledge enrichment, and accessibility. In this guide, we will walk you through various aspects of its functionality, so you can harness its capabilities to enhance your bioimage analysis experience. Whether you're a biologist, bioimage analyst, or developer, this guide is your key to unlocking the full potential of the BioImage.IO Chatbot.
+The BioImage.IO Chatbot is all about efficiency, knowledge enrichment, and accessibility. In this guide, we will walk you through various aspects of its functionality, so you can harness its capabilities to enhance your computational bioimaging experience. Whether you're a biologist, bioimage analyst, or developer, this guide is your key to unlocking the full potential of the BioImage.IO Chatbot.
 
 
 ## Basic Interaction
@@ -35,8 +35,8 @@ To illustrate this personalized approach, we have two screenshots of the chatbot
 ![Abby, a biologist, willing to analyze biological images.](./screenshots/chatbot-biologist.png)
 ![Abby, a developer, willing to analyze biological images.](./screenshots/chatbot-developer.png)
 
-### How to switch chatbot's mode
-We have three assistants built in the BioImage.IO Chatbot to cater to the different purpose and needs of the users. BioImage Seeker is designated for users that seek for information about bioimage analysis, it is equiped with 6 extensions including community-driven knowledge base, as well as online source like image.sc forum, web search. BioImage Executor is desginated for users that want to execute model using BioEngine such as CellPose. BioImage Tutor is designated for users that seek for tutoring in bioimage analysis, it is equiped with Bioimage Books extension combined with web search and Bioimage Model Zoo search.
+### How to switch chatbot's assistants
+We have three assistants built in the BioImage.IO Chatbot to cater to the different purpose and needs of the users. BioImage Seeker is designated for users that seek for information about bioimaging, it is equiped with 6+ extensions including community-driven knowledge base, as well as online source like image.sc forum, web search. BioImage Executor is desginated for users that want to execute model using BioEngine such as CellPose. BioImage Tutor is designated for users that seek for tutoring in bioimaging, it is equiped with Bioimage Books extension combined with web search and Bioimage Model Zoo search.
 ![BioImage Tutor](./screenshots/bia-tutor.png) 
 ![BioImage Executor](./screenshots/bia-executor.png)
 
@@ -45,6 +45,7 @@ Our system harnesses knowledge from a variety of valuable sources, including est
 In the chatbot's user interface, you'll find a list of the available knowledge base channels that the chatbot can access. s. You can choose to select a specific knowledge base channel or opt for the `auto` mode to query information from all integrated databases.
 
 ## Extension Selection
+
 If you are interested in using specific extensions in the chatbot, you can click 'More Options' and select one or several extensions from the extension list. This way, the information provided will be exclusively by using the specified extensions you have selected.
 
 For this example, you can select the `Search Image.cs Forum` extension and ask the chatbot for software issues.
@@ -62,7 +63,7 @@ Our system harnesses knowledge from a variety of valuable sources, including est
 
 To illustrate this capability, consider the following scenario: You have a Whole Slide Image (WSI) that you'd like to open with [QuPath](https://qupath.github.io), apply the Chatty-Frog model ([StarDist H&E Nuclei Segmentation](https://bioimage.io/#/?tags=chatty-frog&id=10.5281%2Fzenodo.6338614)) from BioImage.IO using deepImageJ within Fiji. How can this be accomplished? You can present this intricate question to the BioImage.IO Chatbot.
 
-The chatbot provides a detailed breakdown of the steps required to complete the requested pipeline. This example demonstrates how our chatbot excels at efficiently retrieving and summarizing information from various sources, offering a valuable solution for your bioimage analysis needs.
+The chatbot provides a detailed breakdown of the steps required to complete the requested pipeline. This example demonstrates how our chatbot excels at efficiently retrieving and summarizing information from various sources, offering a valuable solution for your bioimaging needs.
 
 ![Cross-Database Query](./screenshots/search-bioimage-docs.png)
 

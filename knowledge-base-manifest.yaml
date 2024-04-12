@@ -1,5 +1,5 @@
 name: "BioImage.IO Knowledge Base"
-description: "A knowledge base for bioimage analysis models, tools, workflows etc."
+description: "A knowledge base for models, tools, workflows etc. for computational bioimaging"
 format_version: "0.1.0"
 collections:
   - name: ilastik
