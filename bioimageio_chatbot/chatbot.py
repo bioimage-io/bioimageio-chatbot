@@ -149,7 +149,7 @@ def create_assistants(builtin_extensions):
         "and if necessary, request additional clarification."
         "Your goal is to deliver an accurate, complete, and transparent response efficiently.",
         actions=[respond_to_user],
-        model="gpt-4-0125-preview",
+        model="gpt-4-turbo-2024-04-09",
     )
     event_bus = melman.get_event_bus()
     event_bus.register_default_events()
