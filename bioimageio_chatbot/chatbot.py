@@ -74,7 +74,7 @@ def create_assistants(builtin_extensions):
     async def respond_to_user(
         question_with_history: QuestionWithHistory = None, role: Role = None
     ) -> RichResponse:
-        """Answer the user's question directly or retrieve relevant documents from the documentation, or create a Python Script to get information about details of models."""
+        """Response to the user's query."""
         steps = []
         inputs = (
             [question_with_history.user_profile]
