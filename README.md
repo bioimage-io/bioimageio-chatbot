@@ -72,6 +72,8 @@ export BIOIMAGEIO_KNOWLEDGE_BASE_PATH=/path/to/bioimageio-knowledge-base  # Opti
 export BIOIMAGEIO_CHAT_LOGS_PATH=./chat-logs # Optional, default to ./chat-logs
 ```
 
+The chatbot server backend has been tested on Ubuntu and MacOS, it should work on Windows as well.
+
 ## Command-line Interface
 
 BioImage.IO Chatbot comes with a command-line interface to facilitate server management, connection to external servers, and knowledge base creation.
