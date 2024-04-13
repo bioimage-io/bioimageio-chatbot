@@ -14,7 +14,7 @@ class BioImageArchiveClient:
         page: int = Field(1, description="Page number of the search results."),
         sortOrder: Optional[str] = Field("descending", description="Sort order: ascending or descending.")
     ) -> Dict[str, Any]:
-        """Search the BioImage Archive for studies, returning simplified search results.  The link format to each study in the results is: https://www.ebi.ac.uk/biostudies/bioimages/studies/{accession}."""
+        """Search the BioImage Archive for studies and image datasets, returning a list of studies.  The link format to each study in the results is: https://www.ebi.ac.uk/biostudies/bioimages/studies/{accession}."""
         url = f"{self._base_url}/bioimages/search"
         params = {
             "query": query,
@@ -92,7 +92,7 @@ def get_extension():
     return ChatbotExtension(
         id="bioimage_archive",
         name="Search BioImage Archive",
-        description="A service to search and read studies from the BioImage Archive.",
+        description="Search for biological images related studies in the BioImage Archive, it provide studies and image datasets related to microscopy images and other imaging modalities.",
         get_schema=get_schema, # This is optional, exists only for testing purposes
         tools=dict(
             search=search_tool,
