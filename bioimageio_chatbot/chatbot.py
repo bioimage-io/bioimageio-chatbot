@@ -19,6 +19,7 @@ from bioimageio_chatbot.chatbot_extensions import (
 )
 from bioimageio_chatbot.utils import ChatbotExtension, LegacyChatbotExtension, legacy_extension_to_tool
 from bioimageio_chatbot.gpts_action import serve_actions
+from bioimageio_chatbot.quota import QuotaManager
 import logging
 
 
@@ -66,6 +67,7 @@ class RichResponse(BaseModel):
 
     text: str = Field(description="Response text")
     steps: List[ResponseStep] = Field(description="Intermediate steps")
+    remaining_quota: Optional[float] = Field(None, description="Remaining quota")
 
 
 def create_assistants(builtin_extensions):
@@ -252,6 +254,10 @@ async def register_chat_service(server):
     builtin_extensions = get_builtin_extensions()
     login_required = os.environ.get("BIOIMAGEIO_LOGIN_REQUIRED") == "true"
     chat_logs_path = os.environ.get("BIOIMAGEIO_CHAT_LOGS_PATH", "./chat_logs")
+    default_quota = float(os.environ.get("BIOIMAGEIO_DEFAULT_QUOTA", "inf"))
+    reset_period = os.environ.get("BIOIMAGEIO_DEFAULT_RESET_PERIOD", "hourly")
+    quota_database_path = os.environ.get("BIOIMAGEIO_QUOTA_DATABASE_PATH", ':memory:')
+    quota_manager = QuotaManager(db_file=quota_database_path, vip_list=[], default_quota=default_quota, default_reset_period=reset_period)
     assert (
         chat_logs_path is not None
     ), "Please set the BIOIMAGEIO_CHAT_LOGS_PATH environment variable to the path of the chat logs folder."
@@ -315,8 +321,12 @@ async def register_chat_service(server):
         print(f"User report saved to {filename}")
 
     async def talk_to_assistant(
-        assistant_name, session_id, user_message: QuestionWithHistory, status_callback
+        assistant_name, session_id, user_message: QuestionWithHistory, status_callback, user
     ):
+        user = user or {}
+        if quota_manager.check_quota(user.get("email")) <= 0:
+            raise PermissionError("You have exceeded the quota limit. Please wait for the quota to reset.")
+        
         assistant_names = [a["name"] for a in assistants]
         assert (
             assistant_name in assistant_names
@@ -342,12 +352,15 @@ async def register_chat_service(server):
         except Exception as e:
             event_bus.off("stream", stream_callback)
             raise e
-
+        
+        quota_manager.use_quota(user.get("email"), 1.0)
         event_bus.off("stream", stream_callback)
         # get the content of the last response
         response = response[-1].data  # type: RichResponse
+        assert isinstance(response, RichResponse)
+        response.remaining_quota = quota_manager.check_quota(user.get("email"))
         print(
-            f"\nUser: {user_message.question}\nAssistant({assistant_name}): {response.text}"
+            f"\nUser: {user_message.question}\nAssistant({assistant_name}): {response.text}\nRemaining quota: {response.remaining_quota}\n"
         )
 
         if session_id:
@@ -386,6 +399,7 @@ async def register_chat_service(server):
             assert check_permission(
                 context.get("user")
             ), "You don't have permission to use the chatbot, please sign up and wait for approval"
+
         m = QuestionWithHistory(
             question=text,
             chat_history=chat_history,
@@ -393,7 +407,7 @@ async def register_chat_service(server):
             chatbot_extensions=extensions,
             context=context,
         )
-        return await talk_to_assistant(assistant_name, session_id, m, status_callback)
+        return await talk_to_assistant(assistant_name, session_id, m, status_callback, context.get("user"))
 
     async def ping(context=None):
         if login_required and context and context.get("user"):
