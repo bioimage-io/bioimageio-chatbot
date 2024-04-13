@@ -12,9 +12,11 @@ from bioimageio_chatbot.utils import download_file
 class HPAClient:
     def __init__(self):
         self._base_url = 'https://www.proteinatlas.org/download/proteinatlas.tsv.zip'
-        file_path = Path('./data/proteinatlas.tsv.zip')
+        folder = Path('./data')
+        file_path = os.path.join(folder, 'proteinatlas.tsv.zip')
         # firstly check if the data is already downloaded in the /data folder
         if not os.path.exists(file_path):
+            os.makedirs(folder, exist_ok=True)
             # download the data
             download_file(self._base_url, file_path)
         # Load and preprocess data at startup
@@ -91,7 +93,7 @@ def get_extension():
     return ChatbotExtension(
         id="hpa",
         name="Human Protein Atlas",
-        description="Search the Human Protein Atlas to find detailed protein information, including gene expressions, functions, locations, and disease associations. Get concise, relevant results tailored to your query.",
+        description="Search the Human Protein Atlas to find human protein-related information, including gene expressions, functions, locations, disease associations, and cell images etc.",
         tools=dict(
             search=search_tool,
             read=read_tool,
