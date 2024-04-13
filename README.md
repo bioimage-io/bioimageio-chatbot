@@ -23,9 +23,7 @@ The following diagram shows how the chatbot works:
 
 The BioImage.IO Chatbot is equipped with an array of capabilities designed to enhance the bioimaging experience:
 
-* **Contextual Understanding**: Interprets the context of inquiries to deliver relevant and accurate responses.
-
-* **Personalization**: Adapts interactions based on user-specific background information to provide customized advice.
+* **Contextual and Personalized Response**: Interprets the context of inquiries to deliver relevant and accurate responses. Adapts interactions based on user-specific background information to provide customized advice.
 
 * **Comprehensive Data Source Integration**: Accesses a broad range of databases and documentation for bioimaging, including [bio.tools](https://bio.tools), [ImageJ.net](https://imagej.net/), [deepImageJ](https://deepimagej.github.io/deepimagej/), [ImJoy](https://imjoy.io/#/), and [bioimage.io](https://bioimage.io). Details on the supported sources are maintained in the [`knowledge-base-manifest.yaml`](knowledge-base-manifest.yaml) file.
 
