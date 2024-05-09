@@ -8,10 +8,20 @@
 
 Welcome to the BioImage.IO Chatbot user guide. This guide will help you get the most out of the chatbot, providing detailed information on how to interact with it and retrieve valuable insights related to computational bioimaging.
 
+## Contents
+- [Introduction](#introduction)
+- [Chatbot Features](#chatbot-features)
+- [Using the Chatbot](#using-the-chatbot)
+- [Assistants](#assistants)
+- [Example Use cases](#example-use-cases)
+- [Accessing the Chatbot (GPTs)](#accessing-the-chatbot-gpts)
+- [Contact Us](#contact-us)
+- [Cite Us](#cite-us)
+- [Disclaimer](#disclaimer)
+
 ## Introduction
 
 The BioImage.IO Chatbot is a versatile conversational agent designed to assist users in accessing information related to computational bioimaging. It leverages the power of Large Language Models (LLMs) and integrates user-specific data to provide contextually accurate and personalized responses. Whether you're a researcher, developer, or scientist, the chatbot is here to make your bioimaging journey smoother and more informative.
-
 
 ![screenshot for the chatbot](./docs/screenshots/chatbot-animation.gif)
 
@@ -23,21 +33,21 @@ The following diagram shows how the chatbot works:
 
 The BioImage.IO Chatbot is equipped with an array of capabilities designed to enhance the bioimaging experience:
 
-* **Contextual and Personalized Response**: Interprets the context of inquiries to deliver relevant and accurate responses. Adapts interactions based on user-specific background information to provide customized advice.
+- **Contextual and Personalized Response**: Interprets the context of inquiries to deliver relevant and accurate responses. Adapts interactions based on user-specific background information to provide customized advice.
 
-* **Comprehensive Data Source Integration**: Accesses a broad range of databases and documentation for bioimaging, including [bio.tools](https://bio.tools), [ImageJ.net](https://imagej.net/), [deepImageJ](https://deepimagej.github.io/deepimagej/), [ImJoy](https://imjoy.io/#/), and [bioimage.io](https://bioimage.io). Details on the supported sources are maintained in the [`knowledge-base-manifest.yaml`](knowledge-base-manifest.yaml) file.
+- **Comprehensive Data Source Integration**: Accesses a broad range of databases and documentation for bioimaging, including [bio.tools](https://bio.tools), [ImageJ.net](https://imagej.net/), [deepImageJ](https://deepimagej.github.io/deepimagej/), [ImJoy](https://imjoy.io/#/), and [bioimage.io](https://bioimage.io). Details on the supported sources are maintained in the [`knowledge-base-manifest.yaml`](knowledge-base-manifest.yaml) file.
 
-* **Advanced Query Capabilities**: Generates and executes Python scripts for detailed queries within structured databases such as CSV, JSON files, or SQL databases, facilitating complex data retrievals.
+- **Advanced Query Capabilities**: Generates and executes Python scripts for detailed queries within structured databases such as CSV, JSON files, or SQL databases, facilitating complex data retrievals.
 
-* **AI-Powered Analysis and Code Interpretation**: Directly runs complex image analysis tasks using advanced AI models like Cellpose, via an embedded code interpreter.
+- **AI-Powered Analysis and Code Interpretation**: Directly runs complex image analysis tasks using advanced AI models like Cellpose, via an embedded code interpreter.
 
-* **Performance Enhancements with ReAct and RAG**: Utilizes a Retrieval Augmented Generation system with a ReAct loop for dynamic, iterative reasoning and tool engagement, improving response quality.
+- **Performance Enhancements with ReAct and RAG**: Utilizes a Retrieval Augmented Generation system with a ReAct loop for dynamic, iterative reasoning and tool engagement, improving response quality.
 
-* **Extension Mechanism for Developers**: Allows for the development of custom extensions using ImJoy plugins or hypha services within Jupyter notebooks, enhancing flexibility and integration possibilities.
+- **Extension Mechanism for Developers**: Allows for the development of custom extensions using ImJoy plugins or hypha services within Jupyter notebooks, enhancing flexibility and integration possibilities.
 
-* **Vision Inspection and Hardware Control**: Features a Vision Inspector extension powered by GPT-4 for visual feedback on image content and analysis outcomes, and demonstrates potential for controlling microscopy hardware in smart microscopy setups.
+- **Vision Inspection and Hardware Control**: Features a Vision Inspector extension powered by GPT-4 for visual feedback on image content and analysis outcomes, and demonstrates potential for controlling microscopy hardware in smart microscopy setups.
 
-* **Interactive User Interface and Documentation**: Offers a user-friendly interface with comprehensive support documents, ensuring easy access to its features and maximizing user engagement.
+- **Interactive User Interface and Documentation**: Offers a user-friendly interface with comprehensive support documents, ensuring easy access to its features and maximizing user engagement.
 
 ## Using the Chatbot
 
@@ -45,251 +55,115 @@ We are providing a public chatbot service for you to try out. You can access the
 
 Please note that the chatbot is still in beta and is being actively developed, we will log the message you input into the chatbot for further investigation of issues and support our development. See the [Disclaimer for BioImage.IO Chatbot](./docs/DISCLAIMER.md). If you want to to remove your chat logs, please contact us via [this form](https://oeway.typeform.com/to/K3j2tJt7).
 
-Here you can find usage guide and more examples: [Usage guide and example screenshots](docs/usage-example.md).
+### Assistants
+- **Melman**: An assistant specializing in searching through bioimage analysis tools, including the BioImage Model Zoo, the BioImage Archive, biii.eu, and others, to provide comprehensive support in bioimaging.
+- **Nina**: Your tutor for learning about bioimage analysis and AI. Nina is the perfect guide, offering detailed explanations and support throughout your learning journey.
+- **Bridget**: Offers tools to analyze your images directly or helps you construct a Python pipeline for advanced image processing tasks.
+- **Skyler**: Facilitates the integration of bioimaging tools and workflows and extensions, making it easier to apply advanced analysis techniques in your research.
 
-If you encounter any issues, please report them via [Github](https://github.com/bioimage-io/bioimageio-chatbot/issues).
+### Example Use cases
 
-### Asking Questions
+#### Melman: querying bioimage analysis documentation
+Querying the BioImage Model Zoo:
+- **Initiate a Query**: Type a question related to bioimage analysis, e.g., "What are the best practices for optimizing model performance on bioimage.io?"
+- **Review the Chatbot's Response**: The chatbot will provide an answer that includes information extracted from the BioImage Model Zoo documentation.
 
-To ask the chatbot a question, type your query and send it. The chatbot will analyze your question and provide a relevant response. You can ask questions related to bioimaging, software tools, models, and more.
+Exploring the Human Protein Atlas:
+- **Initiate a Query**: Ask the chatbot to find protein information in the Human Protein Atlas by typing "Tell me about PML protein and show me the cell images"
+- **Interpret the Results**: The chatbot will respond by constructing an API call to the Protein Atlas database and displaying the relevant information about the PML protein, including cell images.
 
-### Personalized Responses
+Querying the BioImage Archive
+- **Initiate a Query**: Ask the chatbot to find cell images at the G1 phase by typing "Please, find datasets of cell images at G1 phase."
+- **Interpret the Results**: The chatbot will initiate an API call to the BioImage Archive server, and return results such as a study titled "DeepCycle: Deep learning reconstruction of the closed cell cycle trajectory from single-cell unsegmented microscopy images."
 
-The chatbot uses your user profile information, such as your name, occupation, and background, to personalize its responses. This ensures that the information you receive is tailored to your specific needs.
+#### Nina: Learning about Bioimage Analysis and AI
+- **Initiate a Query**: Ask the chatbot to explain the concept of "image segmentation" or "deep learning in bioimage analysis".
+- **Interpret the Results**: The chatbot will provide detailed explanations and examples to help you understand the concepts better.
 
+#### Bridget: Running AI Models for Image Analysis
 
-## Setup the Chatbot locally
+- **Prereqsitues**: Ensure you have Chrome or a Chromium-based browser installed on your computer.
+- **Download Image Data**: Begin by creating a new folder on your computer named `test-images`. Download the image data file from [this link](https://raw.githubusercontent.com/bioimage-io/bioimageio-chatbot/main/docs/example-data/nuclei.tif) and save it into the `test-images` folder.
+- **Initiate Bioimage Analyst**: Navigate to the BioImage.IO chatbot interface at https://bioimage.io/chat/. Note that only Chrome or Chromium-based browser is supported at the moment. Select "Bioimage Analyst(Bridget)" located in the upper right corner of the chatbot interface.
+- **Mount your Data Folder**: Within the chat interface, click on the "Mount Files" button located below the dialog window. This action will allow you to mount the test-image folder that contains your downloaded image data. The chatbot will confirm the successful mounting of the folder, you can now ask it to list the files contained within, and ensuring that your data is ready for analysis.
+- **Perform segmentation using Cellpose model**: Type "Segment the image `/mnt/nuclei.tif` using Cellpose" to run the Cellpose model on the image data. Upon successful execution of the model, the chatbot will notify you that the segmentation process is complete and will display the analyzed results. Optionally, you can ask it to "count the number of nuclei in the image" if successfully segmented, "plot the size distribution of nuclei", or you can tell it to "use the visual inspection tool to analyze the figure and create a report about the size distribution".
 
-If you want to run the chatbot server locally, you need to have an OpenAI API key. You can get one by signing up at [OpenAI](https://beta.openai.com/). Once you have your API key, you can install the chatbot package via pip and set the environment variables:
+#### Skyler: Developing New Extensions
 
-```bash
-pip install bioimageio-chatbot
-```
+One extension example is to develop a new extension for controlling a Microscope Stage and Capturing Images.
 
-```bash
-export OPENAI_API_KEY=sk-xxxxxxxx # Required
-export BIOIMAGEIO_KNOWLEDGE_BASE_PATH=/path/to/bioimageio-knowledge-base  # Optional, default to ./bioimageio-knowledge-base 
-export BIOIMAGEIO_CHAT_LOGS_PATH=./chat-logs # Optional, default to ./chat-logs
-```
+- **Pre-requisites**: You will need a microscope and the squid control software
+- **Create microscope extension**: Following the example in the above [chatbot extension example notebook](https://imjoy-notebook.netlify.app/lab/index.html?load=https://raw.githubusercontent.com/bioimage-io/bioimageio-chatbot/main/docs/bioimage-chatbot-extension-tutorial.ipynb&open=1), create a hypha service extension for controlling the microscope:
+    1. **Setup the Developer Environment**: Open a Jupyter Notebook. Install and import the `imjoy_rpc` and `pydantic` packages.
+    2. **Define Input Schemas**: Create classes for `MoveStageInput` and `SnapImageInput` to structure the user input. (Note: To help the chatbot understand the "center", you will need to tell the chatbot about the boundaries of the stage via the docstring of the `MoveStageInput` class)
+    3. **Implement Control Functions**: Write asynchronous functions `move_stage` and `snap_image`.
+    4. **Setup Extension Interface**: Develop the extension interface and define a schema getter function.
+    5. **Register the Extension**: Register the extension as hypha server and connect to the the chatbot.
+- **Initiate a Query**: Ask the chatbot to "Please move to the center and snap an image".
+- **Interpret the Results**: The chatbot will execute the `move_stage` function to move the microscope stage to the center and then capture an image using the `snap_image` function. The chatbot will confirm the successful completion of the tasks.
 
-The chatbot server backend has been tested on Ubuntu and MacOS, it should work on Windows as well.
+More details on how to develop new extensions can be found in the developers documentation. 
 
-## Command-line Interface
+## Accessing the Chatbot (GPTs)
+In addition to standalone usage, the BioImage.IO Chatbot supports porting extensions to OpenAI custom [GPTs](https://chat.openai.com/gpts) for users with OpenAI accounts. Chatbot extensions following the development model specified in the [development guidelines](./development.md) and [notebook tutorial](./bioimage-chatbot-extension-tutorial.ipynb) are automatically converted to `openapi` schema which can be used to create OpenAI GPTs using the online GPT creator. 
 
-BioImage.IO Chatbot comes with a command-line interface to facilitate server management, connection to external servers, and knowledge base creation.
+`openapi` schemas for extensions are generated on Chatbot server startup via the `register_service` function in  [gpts_action.py](../bioimageio_chatbot/gpts_action.py). These schemas are then made available for OpenAI GPT creator import directly via url. This process for creating a custom GPT from the public BioImage.IO Chatbot instance extensions is shown below. Users are encouraged to submit their extensions to the BioImage.IO team for incorporation into the public Chatbot instance. 
 
-You can access the command-line interface by running `python -m bioimageio_chatbot` or the `bioimageio-chatbot` command.
+Note that GPT actions are run through the hosted server instance (chat.bioimage.io in the case of the public Chatbot instance). Also note that the creation of custom OpenAI GPTs requires a paid OpenAI account. 
 
-Below are the available commands and options:
+### Creating a Custom GPT from the public Chatbot Instance
+The public Chatbot instance's `openapi` extension schema are available at the following link: `https://chat.bioimage.io/public/services/bioimageio-chatbot-extensions-api/get_openapi_schema`
 
-### Initialize Knowledge Base
+After logging in to their OpenAI accounts, users can navigate to the GPTs [page](https://chat.openai.com/gpts) and click `Create` as shown below:
 
-To initialize the knowledge base, use the `init` command:
+![gpt_landing_page](./docs/screenshots/gpts_landing_page.png)
 
-```bash
-python -m bioimageio_chatbot init
-```
+To add GPT actions from Chatbot extensions, navigate to the `Configure` tab and select `Create new action`:
 
-This will load the knowledge base from the location specified by the `BIOIMAGEIO_KNOWLEDGE_BASE_PATH` environment variable, or use the default path `./bioimageio-knowledge-base`. If the knowledge base is not found, it will be downloaded from the predefined URL (by default, it uses https://uk1s3.embassy.ebi.ac.uk/public-datasets/bioimageio-knowledge-base. It can be overridden with `BIOIMAGEIO_KNOWLEDGE_BASE_URL`).
+![configure_gpt](./docs/screenshots/configure_gpt.png)
 
-NOTE: It may take some time to download the knowledge base depending on your internet connection. 
-**Example:**
+The Chatbot-generated `openapi` schema can then be imported direct by selecting `Import from URL` and inputting the public Chatbot's extension schema `https://chat.bioimage.io/public/services/bioimageio-chatbot-extensions-api/get_openapi_schema`
 
-```bash
-export BIOIMAGEIO_KNOWLEDGE_BASE_PATH="./my_knowledge_base"
-python -m bioimageio_chatbot init
-```
+Users can edit the JSON content to select individual actions from the Chatbot extensions if desired:
 
-After running the `init` command, it will list the databases loaded into the knowledge base.
+![gpts_json](./docs/screenshots/gpts_json.png)
 
-#### Start Server
+## Contact Us
+If you have any questions, need assistance, or want to contribute to the chatbot's knowledge base, please don't hesitate to contact us via [Github issues](https://github.com/bioimage-io/bioimageio-chatbot/issues). Our team is here to help you get started and make valuable contributions.
 
-To start your own server entirely, use the `start-server` command:
+## Cite Us
+If you find the BioImage.IO Chatbot useful for your research or work, please consider citing our work:
 
-```bash
-python -m bioimageio_chatbot start-server [--host HOST] [--port PORT] [--public-base-url PUBLIC_BASE_URL]
-```
-
-**Options:**
-
-- `--host`: The host address to run the server on (default: `0.0.0.0`)
-- `--port`: The port number to run the server on (default: `9000`)
-- `--public-base-url`: The public base URL of the server (default: `http://127.0.0.1:9000`)
-- `--login-required`: Whether to require users to log in before accessing the chatbot (default to not require login)
-
-**Example:**
-
-```bash
-export OPENAI_API_KEY=sk-xxxxxxxx
-export BIOIMAGEIO_KNOWLEDGE_BASE_PATH=./bioimageio-knowledge-base
-export BIOIMAGEIO_CHAT_LOGS_PATH=./chat-logs
-python -m bioimageio_chatbot start-server --host=0.0.0.0 --port=9000
-```
-This will create a local server, and the BioImage.IO Chatbot is available at: https://bioimage.io/chat?server=http://127.0.0.1:9000
-
-Open the link in a browser, and you will see the chat interface.
-
-Please note that the chatbot server may not be accessible to users outside your local network.
-
-A user guide and technical overview can be found [here](./docs/technical-overview.md).
-
-To be able to share your chatbot service over the internet (especially for users outside your local network), you will need to expose your server publicly. Please, see [Connect to Server](#connect-to-server)
-
-
-#### Connect to Server
-
-To help you share your chatbot with users external to your local network, you can use our public [BioEngine](https://aicell.io/project/bioengine/) server as a proxy.
-
-To connect to an external BioEngine server, use the `connect-server` command:
-
-```bash
-python -m bioimageio_chatbot connect-server [--server-url SERVER_URL]
-```
-
-**Options:**
-
-- `--server-url`: The URL of the external BioEngine server to connect to (default: `https://ai.imjoy.io`)
-- `--login-required`: Whether to require users to log in before accessing the chatbot (default to not require login)
-
-**Example:**
-
-```bash
-export OPENAI_API_KEY=sk-xxxxxxxx
-export BIOIMAGEIO_KNOWLEDGE_BASE_PATH=./bioimageio-knowledge-base
-export BIOIMAGEIO_CHAT_LOGS_PATH=./chat-logs
-python -m bioimageio_chatbot connect-server --server-url=https://ai.imjoy.io
-```
-
-First, you will be asked to log in with a hypha account. Either your GitHub or Google account can be reused. Then, the following message containing a link to the chatbot will be displayed: 'The BioImage.IO Chatbot is available at: https://bioimage.io/chat?server=https://ai.imjoy.io'
-
-Leave your chatbot running to enable users inside or outside your network to access it from this URL.
-
-#### User Management
-
-If you set `--login-required` when running `start-server` or `connect-server`, users will be required to log in before accessing the chatbot. The chatbot will then collect the user's GitHub or Google account information and store it its logs for future analysis.
-
-You can also provide an optional environment variable `BIOIMAGEIO_AUTHORIZED_USERS_PATH` for the chatbot to load a list of authorized users. The file should be a JSON file containing a list of GitHub or Google account names. For example:
-
-```json
-{
-    "users": [
-        {"email": "user1@email.org"}
-    ]
+```bibtex
+@article{lei2023bioimage,
+  title={BioImage. IO Chatbot: A Personalized Assistant for BioImage Analysis Augmented by Community Knowledge Base},
+  author={Lei, Wanlu and Fuster-Barcel{\'o}, Caterina and Mu{\~n}oz-Barrutia, Arrate and Ouyang, Wei},
+  journal={arXiv preprint arXiv:2310.18351},
+  year={2023}
 }
 ```
 
-#### Create Knowledge Base
+## Disclaimer
+### General Usage
+The BioImage.IO Chatbot ("Chatbot") is intended for informational purposes only and aims to assist users in navigating the resources, tools, and workflows related to bioimage analysis. While we strive for accuracy, the Chatbot is not a substitute for professional advice, consultation, diagnosis, or any kind of formal scientific interpretation.
 
-To create a new knowledge base, use the `create-knowledge-base` command:
+### No Warranties
+The Chatbot service is provided "as is" and "as available" without any warranties of any kind, either express or implied, including but not limited to the implied warranties of merchantability, fitness for a particular purpose, or non-infringement. We make no warranty that the service will meet your requirements or be available on an uninterrupted, secure, or error-free basis.
 
-```bash
-python -m bioimageio_chatbot create-knowledge-base [--output-dir OUTPUT_DIR]
-```
+### Liability
+Under no circumstances will we be liable for any loss or damage incurred as a result of the use of this Chatbot, including but not limited to any errors or omissions in the content, any unauthorized access to or use of our servers, or any loss of data or profits.
 
-**Options:**
+### User Responsibility
+The user assumes all responsibility and risk for the use of this Chatbot. It is the user's responsibility to evaluate the accuracy, completeness, or usefulness of any information, opinion, or content available through the Chatbot service.
 
-- `--output-dir`: The directory where the knowledge base will be created (default: `./bioimageio-knowledge-base`)
+### Third-Party Links
+The Chatbot may provide links to external websites or resources for your convenience. We have no control over these sites and resources, and we are not responsible for their availability, reliability, or the content provided.
 
-**Example:**
+### Data Privacy
+User interactions with the Chatbot may be stored for analysis and improvement of the service. All data will be handled in accordance with our Privacy Policy.
 
-```bash
-export OPENAI_API_KEY=sk-xxxxxxxx
-export BIOIMAGEIO_KNOWLEDGE_BASE_PATH=./bioimageio-knowledge-base
-python -m bioimageio_chatbot create-knowledge-base --output-dir=./bioimageio-knowledge-base
-```
+### Privacy Policy
+The personal data you may provide will be used to disseminate information pertaining to the execution of the Horizon Europe Funded AI4Life project (Grant number: 101057970). In accordance with the Grant Agreement, your data will be retained during the project and deleted when it has ended as soon as the retention period established by the EC is over. If you would like to update or delete your data during the course of the project, please contact us using [this form](https://oeway.typeform.com/to/K3j2tJt7?typeform-source=bioimage.io).
 
-
-### Running the BioImage.IO Chatbot in a Docker Container
-
-#### Step 1: Build the Docker Image
-
-To run the BioImage.IO Chatbot using a Docker container, follow these steps. First, build the Docker image by running the following command in your terminal:
-
-```bash
-docker build -t bioimageio-chatbot:latest .
-```
-
-If you prefer to use a pre-built Docker image from Docker Hub, you can pull the image using the following command:
-
-```bash
-docker pull alalulu/bioimageio-chatbot:latest
-```
-
-
-#### Step 2: Start the Chatbot Server
-
-After building the Docker image, you can start the chatbot server with the following command:
-
-```bash
-docker run -e OPENAI_API_KEY=sk-xxxxxxxxxxxxx -e BIOIMAGEIO_KNOWLEDGE_BASE_PATH=/knowledge-base -p 3000:9000 -v /path/to/local/knowledge-base:/knowledge-base bioimageio-chatbot:latest python -m bioimageio_chatbot start-server --host=0.0.0.0 --port=9000 --public-base-url=http://localhost:3000
-```
-
-Replace the placeholders in the command with the following values:
-
-- `sk-xxxxxxxxxxxxx`: Your OpenAI API key.
-- `/path/to/local/knowledge-base`: The local path to your knowledge base folder.
-
-Optionally, for improved reproducibility, you can change `latest` to a version tag such as `v0.1.18`.
-
-#### Step 3: Access the Chatbot
-
-The BioImage.IO Chatbot is now running in the Docker container. You can access it locally in your web browser by visiting:
-
-```
-https://bioimage.io/chat?server=http://localhost:3000
-```
-
-Make sure to replace `3000` with the host port you specified in the `docker run` command.
-
-
-Enjoy using the BioImage.IO Chatbot!
-
-
-
-## Technical Overview
-
-Please read the [technical overview](./docs/technical-overview.md) for more details about the chatbot's design and implementation.
-
-## Develop Chatbot Extensions
-
-The BioImage.IO Chatbot is designed to be extensible, allowing developers to create custom extensions to add new functionalities to the chatbot. You can create extensions to integrate new tools, databases, and services into the chatbot, making it more powerful and versatile. See the [development guide](./docs/development.md) for more details.
-
-## Join Us as a Community Partner
-
-The BioImage.IO Chatbot is a community-driven project. We welcome contributions from the community to help improve the chatbot's knowledge base and make it more informative and useful to the community.
-
-For more information, please visit the [contribution guidelines](docs/CONTRIBUTING.md).
-
-If you are a tool developer or a database maintainer related to bioimaging, you can join us as a community partner. Please get in touch with us via [Github issues](https://github.com/bioimage-io/bioimageio-chatbot/issues).
-
-## Contact Us
-
-If you have any questions, need assistance, or want to contribute to the chatbot's knowledge base, please do not hesitate to contact us via [Github issues](https://github.com/bioimage-io/bioimageio-chatbot/issues). Our team is here to help you get started and make valuable contributions.
-
-Thanks for your support and helping make the BioImage.IO Chatbot more informative and useful to the community.
-
-## Publication
-
-For detailed description of our work, please read our preprint: **[![arXiv](https://img.shields.io/badge/arXiv-2310.18351-red.svg)](https://arxiv.org/abs/2310.18351) <a href="https://zenodo.org/records/10032227" target="_blank"><img id="record-doi-badge" data-target="[data-modal='10.5281/zenodo.10032227']" src="https://zenodo.org/badge/DOI/10.5281/zenodo.10032227.svg" alt="10.5281/zenodo.10032227"></a>**
-
-
-To reproduce the use cases described in [Figure 2](https://docs.google.com/drawings/d/e/2PACX-1vTIRwRldQBnTFqz0hvS01znGOEdoeDMJmZC-PlBM-O59u_xo7DfJlUEE9SlRsy6xO1hT2HuSOBrLmUz/pub?w=1324&amp;h=1063) in the manuscript, please refer to the [reproducing example usage scenarios](./docs/figure-2-use-cases.md).
-
-<img style="width:300px;" src="https://docs.google.com/drawings/d/e/2PACX-1vTIRwRldQBnTFqz0hvS01znGOEdoeDMJmZC-PlBM-O59u_xo7DfJlUEE9SlRsy6xO1hT2HuSOBrLmUz/pub?w=1324&amp;h=1063">
-
-
-## Cite Us
-
-If you use the BioImage.IO Chatbot in your research, please cite us:
-
-```
-Lei, W., Fuster-Barceló, C., Muñoz-Barrutia, A., & Ouyang, W. (2023). 🦒BioImage.IO Chatbot: A Personalized Assistant for BioImage Analysis Augmented by Community Knowledge Base (0.1.0). Zenodo. https://doi.org/10.5281/zenodo.10032228
-```
-
-## Acknowledgements
-
-We thank [AI4Life consortium](https://ai4life.eurobioimaging.eu/) for its crucial support in the development of the BioImage.IO Chatbot.
-
-![AI4Life](https://ai4life.eurobioimaging.eu/wp-content/uploads/2022/09/AI4Life-logo_giraffe-nodes-2048x946.png)
-
-AI4Life has received funding from the European Union’s Horizon Europe research and innovation programme under grant agreement number 101057970. Views and opinions expressed are, however those of the author(s) only and do not necessarily reflect those of the European Union or the European Research Council Executive Agency. Neither the European Union nor the granting authority can be held responsible for them.
+### Modifications
+We reserve the right to modify this disclaimer at any time, effective upon posting of an updated version on this website. Continued use of the Chatbot after any such changes shall constitute your consent to such changes.
