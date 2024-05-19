@@ -196,7 +196,16 @@ def create_assistants(builtin_extensions):
         model="gpt-4-0125-preview",
     )
 
-
+    elara_instructions = (
+        "As Elara, your focus is on serving as an assistant for helping users accessing the services and technologies within the EuroBioImaging network."
+        "Address only inquiries related to euro-bioimaging, ensuring your responses are not only accurate, concise, and logical, but also educational and engaging. "
+    )
+    
+    elara = Role(
+        instructions=elara_instructions,
+        actions=[respond_to_user],
+        model="gpt-4o",
+    )
     # convert to a list
     all_extensions = [
         {"id": ext.id, "name": ext.name, "description": ext.description} for ext in builtin_extensions
@@ -218,11 +227,16 @@ def create_assistants(builtin_extensions):
     ]
 
     skyler_extensions = []
+    
+    elara_extensions = [
+        ext for ext in all_extensions if ext["id"] == "eurobioimaging"
+    ]
     return [
         {"name": "Melman", "agent": melman, "extensions": melman_extensions, "code_interpreter": False, "alias": "BioImage Seeker", "icon": "https://bioimage.io/static/img/bioimage-io-icon.svg", "welcome_message": "Hi there! I'm Melman. I am help you navigate the bioimaging tools and provide information about bioimaging. How can I help you today?"},
         {"name": "Nina", "agent": nina, "extensions": nina_extensions, "code_interpreter": False, "alias": "BioImage Tutor", "icon": "https://bioimage.io/static/img/bioimage-io-icon.svg", "welcome_message": "Hi there! I'm Nina, I can help with your learning journey in bioimaging. How can I help you today?"},
         {"name": "Bridget", "agent": bridget, "extensions": bridget_extensions, "code_interpreter": True, "alias": "BioImage Analyst", "icon": "https://bioimage.io/static/img/bioimage-io-icon.svg", "welcome_message": "Hi there! I'm Bridget, I can help you with your bioimaging tasks. Please mount your data folder and let me know how I can assist you today."},
         {"name": "Skyler", "agent": skyler, "extensions": skyler_extensions, "code_interpreter": False, "alias": "BioImage GPT", "icon": "https://bioimage.io/static/img/bioimage-io-icon.svg", "welcome_message": "Hi there! I'm Skyler. How can I help you today?"},
+        {"name": "Elara", "agent": elara, "extensions": elara_extensions, "code_interpreter": False, "alias": "EuroBioImaging Assistant", "icon": "https://bioimage.io/static/img/bioimage-io-icon.svg", "welcome_message": "Hi there! I'm Elara. I can help you with EuroBioImaging services and technologies. How can I help you today?"}
     ]
 
 
