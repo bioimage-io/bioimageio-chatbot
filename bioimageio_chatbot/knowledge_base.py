@@ -35,13 +35,14 @@ def load_knowledge_base(db_path):
     collections = get_manifest()['collections']
     docs_store_dict = {}
     
+    print(f"Loading knowledge base from {db_path}")
     for collection in collections:
         channel_id = collection['id']
         try:
             docs_store = load_docs_store(db_path, channel_id)
             length = len(docs_store.docstore._dict.keys())
             assert length > 0, f"Please make sure the docs store {channel_id} is not empty."
-            print(f"Loaded {length} documents from {channel_id}")
+            print(f"- Loaded {length} documents from {channel_id}")
             docs_store_dict[channel_id] = docs_store
         except Exception as e:
             print(f"Failed to load docs store for {channel_id}. Error: {e}")

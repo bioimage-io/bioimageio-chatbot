@@ -236,7 +236,7 @@ def create_assistants(builtin_extensions):
         {"name": "Nina", "agent": nina, "extensions": nina_extensions, "code_interpreter": False, "alias": "BioImage Tutor", "icon": "https://bioimage.io/static/img/bioimage-io-icon.svg", "welcome_message": "Hi there! I'm Nina, I can help with your learning journey in bioimaging. How can I help you today?"},
         {"name": "Bridget", "agent": bridget, "extensions": bridget_extensions, "code_interpreter": True, "alias": "BioImage Analyst", "icon": "https://bioimage.io/static/img/bioimage-io-icon.svg", "welcome_message": "Hi there! I'm Bridget, I can help you with your bioimaging tasks. Please mount your data folder and let me know how I can assist you today."},
         {"name": "Skyler", "agent": skyler, "extensions": skyler_extensions, "code_interpreter": False, "alias": "BioImage GPT", "icon": "https://bioimage.io/static/img/bioimage-io-icon.svg", "welcome_message": "Hi there! I'm Skyler. How can I help you today?"},
-        {"name": "Elara", "agent": elara, "extensions": elara_extensions, "code_interpreter": False, "alias": "EuroBioImaging Assistant", "icon": "https://bioimage.io/static/img/bioimage-io-icon.svg", "welcome_message": "Hi there! I'm Elara. I can help you with EuroBioImaging services and technologies. How can I help you today?"}
+        {"name": "Elara", "agent": elara, "extensions": elara_extensions, "code_interpreter": False, "alias": "EuroBioImaging", "icon": "https://bioimage.io/static/img/bioimage-io-icon.svg", "welcome_message": "Hi there! I'm Elara. I can help you with EuroBioImaging services and technologies. How can I help you today?"}
     ]
 
 

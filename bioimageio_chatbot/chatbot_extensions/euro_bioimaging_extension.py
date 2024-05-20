@@ -10,11 +10,7 @@ import requests
 from markdownify import markdownify as md
 import re
 import os
-import urllib3
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-
-EUROBIOIMAGING_TOKEN = os.getenv("EUROBIOIMAGING_TOKEN")
 
 class DocWithScore(BaseModel):
     """A document with an associated relevance score."""
@@ -25,30 +21,36 @@ class DocWithScore(BaseModel):
 
 def load_eurobioimaging_base(db_path):
     docs_store_dict = {}
-    
+    print(f"Loading EuroBioImaging docs store from {db_path}")
     for collection in ['technologies', 'nodes']:
-        channel_id = collection
         try:
-            docs_store = load_docs_store(db_path, channel_id)
+            docs_store = load_docs_store(db_path, f"eurobioimaging-{collection}")
             length = len(docs_store.docstore._dict.keys())
-            assert length > 0, f"Please make sure the docs store {channel_id} is not empty."
-            print(f"Loaded {length} documents from {channel_id}")
-            docs_store_dict[channel_id] = docs_store
+            assert length > 0, f"Please make sure the docs store {collection} is not empty."
+            print(f"- Loaded {length} documents from {collection}")
+            docs_store_dict[collection] = docs_store
         except Exception as e:
-            print(f"Failed to load docs store for {channel_id}. Error: {e}")
+            print(f"Failed to load docs store for {collection}. Error: {e}")
 
     if len(docs_store_dict) == 0:
         raise Exception("No docs store is loaded, please make sure the docs store is not empty.")
     # load the node index
-    with open(os.path.join(db_path, "eurobioimaging_node_index.json"), "r") as f:
+    with open(os.path.join(db_path, "eurobioimaging-node-index.json"), "r") as f:
         node_index = json.load(f)
     return docs_store_dict, node_index
 
+def chunkify(lst, n):
+    """Yield successive n-sized chunks from lst."""
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
 
 def create_eurobioimaging_vector_database(output_dir=None):
     if output_dir is None:
         output_dir = os.environ.get("BIOIMAGEIO_KNOWLEDGE_BASE_PATH", "./bioimageio-knowledge-base")
     os.makedirs(output_dir, exist_ok=True)
+    
+    EUROBIOIMAGING_TOKEN = os.getenv("EUROBIOIMAGING_TOKEN")
+    assert EUROBIOIMAGING_TOKEN is not None, "Please set the EUROBIOIMAGING_TOKEN environment variable to access the EuroBioImaging API."
     
     embeddings = OpenAIEmbeddings()
     
@@ -56,35 +58,37 @@ def create_eurobioimaging_vector_database(output_dir=None):
     collections = response.json()
     
     for name in ["technologies", "nodes"]:
-        all_embedding_pairs = []
         all_metadata = []
+        all_contents = []
         for item in collections[name]:
-            print(f"Download description from {item['url']} and create embeddings...")
+            print(f"Fetch description from {item['url']}...")
             response = requests.get(f"https://www.eurobioimaging.eu/api-page-content.php?a={EUROBIOIMAGING_TOKEN}&url={item['url']}")
             content = md(response.text, heading_style="ATX")
             description = re.sub(r"\n{3,}", "\n\n", content).strip()
             
             # Generate embeddings for the item
             item_content = f"# {item['name']}\n\n{description}"
-            item_embedding = embeddings.embed_documents([item_content])[0]
-
-            # Append the item_embedding to the all_embedding_pairs list
-            all_embedding_pairs.append((item_content, item_embedding))
+            all_contents.append(item_content)
             if "description" in item:
                 item.pop("description")
-            
             all_metadata.append(item)
+        
+        print(f"Embedding {len(all_contents)} documents...")
+        all_embedding_pairs = []
+        for chunk in chunkify(all_contents, 300):
+            item_embeddings = embeddings.embed_documents(chunk)
+            all_embedding_pairs.extend(zip(chunk, item_embeddings))
 
         # Create the FAISS index from all the embeddings
         vectordb = FAISS.from_embeddings(all_embedding_pairs, embeddings, metadatas=all_metadata)
         print("Saving the vector database...")
-        vectordb.save_local(output_dir, index_name=name)
+        vectordb.save_local(output_dir, index_name="eurobioimaging-" + name)
         print("Created a vector database from the downloaded documents.")
 
     node_index = {}
     for item in collections["nodes"]:
         node_index[item['node_id']] = item
-    with open(os.path.join(output_dir, "eurobioimaging_node_index.json"), "w") as f:
+    with open(os.path.join(output_dir, "eurobioimaging-node-index.json"), "w") as f:
         json.dump(node_index, f)
     
 
@@ -189,7 +193,11 @@ def get_extension():
     ), "Please set the BIOIMAGEIO_KNOWLEDGE_BASE_PATH environment variable to the path of the knowledge base."
     
     # check if node_index exists
-    if not os.path.exists(os.path.join(knowledge_base_path, "eurobioimaging_node_index.json")):
+    if not os.path.exists(os.path.join(knowledge_base_path, "eurobioimaging-node-index.json")):
+        EUROBIOIMAGING_TOKEN = os.getenv("EUROBIOIMAGING_TOKEN")
+        if EUROBIOIMAGING_TOKEN is None:
+            print("Warning: Disable EuroBioImaging extension because the EUROBIOIMAGING_TOKEN is not set.")
+            return None
         print("Creating EuroBioImaging vector database...")
         create_eurobioimaging_vector_database(knowledge_base_path)
         
@@ -208,11 +216,10 @@ def get_extension():
     )
 
 if __name__ == "__main__":
-    # import asyncio
-    # async def main():
-    #     extension = get_extension()
-    #     query = "mouse embryos"
-    #     top_k = 2
-    #     print(await extension.tools["search_technology"](keywords=query, top_k=top_k))
-    # asyncio.run(main())
-    create_eurobioimaging_vector_database()
+    import asyncio
+    async def main():
+        extension = get_extension()
+        query = "mouse embryos"
+        top_k = 2
+        print(await extension.tools["search_technology"](keywords=query, top_k=top_k))
+    asyncio.run(main())
