@@ -4,6 +4,7 @@ from schema_agents import schema_tool
 from langchain_community.vectorstores import FAISS
 from langchain_openai import OpenAIEmbeddings
 from pydantic import Field, BaseModel
+from typing import Any, Dict
 import json
 import requests
 from markdownify import markdownify as md
@@ -20,6 +21,7 @@ class DocWithScore(BaseModel):
 
     doc: str = Field(description="The document retrieved.")
     score: float = Field(description="The relevance score of the retrieved document.")
+    metadata: Dict[str, Any] = Field(description="The metadata of the retrieved document.")
 
 def load_eurobioimaging_base(db_path):
     docs_store_dict = {}
