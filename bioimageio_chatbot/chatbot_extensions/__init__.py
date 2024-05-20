@@ -1,6 +1,7 @@
 import asyncio
 import re
 import pkgutil
+import importlib.util
 from pydantic import BaseModel
 from bioimageio_chatbot.utils import ChatbotExtension
 from bioimageio_chatbot.jsonschema_pydantic import json_schema_to_pydantic_model
@@ -10,7 +11,13 @@ def get_builtin_extensions():
     extensions = []
     for module in pkgutil.walk_packages(__path__, __name__ + '.'):
         if module.name.endswith('_extension'):
-            ext_module = module.module_finder.find_module(module.name).load_module(module.name)
+            if hasattr(module.module_finder, 'find_module'):
+                ext_module = module.module_finder.find_module(module.name).load_module(module.name)
+            else:
+                # for newer python versions, find_spec is used instead of find_module
+                module_spec = importlib.util.find_spec(module.name)
+                ext_module = importlib.util.module_from_spec(module_spec)
+                module_spec.loader.exec_module(ext_module)
             exts = ext_module.get_extension() or []
             if isinstance(exts, ChatbotExtension):
                 exts = [exts]
