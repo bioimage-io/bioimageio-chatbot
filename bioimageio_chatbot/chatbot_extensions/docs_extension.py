@@ -135,9 +135,6 @@ def get_extension():
         )
         os.makedirs(knowledge_base_path, exist_ok=True)
 
-    knowledge_base_path = os.environ.get(
-        "BIOIMAGEIO_KNOWLEDGE_BASE_PATH", "./bioimageio-knowledge-base"
-    )
     docs_store_dict = load_knowledge_base(knowledge_base_path)
     
     docs_tools = {}
