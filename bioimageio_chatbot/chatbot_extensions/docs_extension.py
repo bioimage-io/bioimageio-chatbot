@@ -152,6 +152,8 @@ def get_extension():
             description="Search information in the documents of the bioimage.io knowledge base. Provide a list of keywords to search information in the documents. Returns a list of relevant documents.",
             tools=docs_tools,
         )
+    else:
+        sinfo1 = None
     if books_tools:
         sinfo2 = ChatbotExtension(
             id="books",
@@ -159,5 +161,7 @@ def get_extension():
             description="Search information in BioImage books. Provide a list of keywords to search information in the books. Returns a list of relevant documents.",
             tools=books_tools,
         )
+    else: 
+        sinfo2 = None
 
     return sinfo1, sinfo2
