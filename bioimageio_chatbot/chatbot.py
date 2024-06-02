@@ -368,7 +368,7 @@ async def register_chat_service(server):
                 {"role": "user", "content": user_message.question}
             )
             user_message.chat_history.append(
-                {"role": "assistant", "content": response.text}
+                {"role": "assistant", "content": response.text, "steps": [step.dict() for step in response.steps]}
             )
             version = pkg_resources.get_distribution("bioimageio-chatbot").version
             chat_his_dict = {
