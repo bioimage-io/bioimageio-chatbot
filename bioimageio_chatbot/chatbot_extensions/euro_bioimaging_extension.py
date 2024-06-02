@@ -11,7 +11,6 @@ from markdownify import markdownify as md
 import re
 import os
 
-
 class DocWithScore(BaseModel):
     """A document with an associated relevance score."""
 
@@ -22,7 +21,7 @@ class DocWithScore(BaseModel):
 def load_eurobioimaging_base(db_path):
     docs_store_dict = {}
     print(f"Loading EuroBioImaging docs store from {db_path}")
-    for collection in ['technologies', 'nodes']:
+    for collection in ['technologies', 'nodes', 'publication']:
         try:
             docs_store = load_docs_store(db_path, f"eurobioimaging-{collection}")
             length = len(docs_store.docstore._dict.keys())
@@ -90,9 +89,58 @@ def create_eurobioimaging_vector_database(output_dir=None):
         node_index[item['node_id']] = item
     with open(os.path.join(output_dir, "eurobioimaging-node-index.json"), "w") as f:
         json.dump(node_index, f)
-    
+ 
 
 def create_tools(docs_store_dict, node_index):
+    # async def search_publication(
+    #     keywords: str = Field(..., description="The keywords used for searching and extracting use cases from the publications."),
+    #     top_k: int = Field(..., description="Return the top_k number of search results")
+    # ):
+    #     """Search the relevant use cases in the publications"""
+    #     restuls = []
+    #     restuls.append(
+    #         await docs_store_dict["publication"].asimilarity_search_with_relevance_scores(
+    #             keywords, k=top_k
+    #         )
+    #     )
+    #     docs_with_score = [
+    #         DocWithScore(
+    #             doc=doc.page_content,
+    #             score=round(score, 2),
+    #             metadata=doc.metadata, 
+    #         )
+    #         for results_with_scores in restuls
+    #         for doc, score in results_with_scores
+    #     ]
+    #     # sort by relevance score
+    #     docs_with_score = sorted(docs_with_score, key=lambda x: x.score, reverse=True)[
+    #         : top_k
+    #     ]
+    #     if len(docs_with_score) > 2:
+    #         print(
+    #             f"Retrieved documents:\n{docs_with_score[0].doc[:20] + '...'} (score: {docs_with_score[0].score})\n{docs_with_score[1].doc[:20] + '...'} (score: {docs_with_score[1].score})\n{docs_with_score[2].doc[:20] + '...'} (score: {docs_with_score[2].score})"
+    #         )
+    #     else:
+    #         print(f"Retrieved documents:\n{docs_with_score}")
+    #     return docs_with_score
+
+    async def search_publication(
+        keywords: str = Field(..., description="The keywords used for searching and extracting use cases from the publications."),
+    ):
+        """Search the relevant publications in the list"""
+        import pandas as pd
+        file_path = '/home/alalulu/workspace/chatbot_bmz/chatbot/tests/publications.csv'
+        df = pd.read_csv(file_path)
+        results = []
+        for index, row in df.iterrows():
+            # search if keywords in the title
+            if keywords.lower() in row['Title'].lower():
+                results.append(row)
+        # convert the results to a list of dictionaries
+        results = results.to_dict(orient='records')
+        return results
+ 
+        
     async def search_technology(
         keywords: str = Field(..., description="The keywords used for searching the technology in EuroBioImaging service index."),
         top_k: int = Field(..., description="Return the top_k number of search results")
@@ -180,7 +228,7 @@ def create_tools(docs_store_dict, node_index):
         else:
             print(f"Retrieved documents:\n{docs_with_score}")
         return docs_with_score
-    return schema_tool(search_technology), schema_tool(search_node), schema_tool(get_node_details)
+    return schema_tool(search_technology), schema_tool(search_node), schema_tool(get_node_details), schema_tool(search_publication)
 
 
 def get_extension():
@@ -202,16 +250,17 @@ def get_extension():
         create_eurobioimaging_vector_database(knowledge_base_path)
         
     docs_store_dict, node_index = load_eurobioimaging_base(knowledge_base_path)
-    search_technology, search_node, get_node_details = create_tools(docs_store_dict, node_index)
+    search_technology, search_node, get_node_details, search_publication = create_tools(docs_store_dict, node_index)
     
     return ChatbotExtension(
         id="eurobioimaging",
         name="EuroBioImaging Service Index",
-        description="Help users to find bioimaging services in the EuroBioimaging network; You can search by keywords for the imaging technology, then use the returned node_id to find out details about the service providing node in the EuroBioimang network",
+        description="Help users find bioimaging services and technologies in the EuroBioimaging network. For a given study or research, you should firstly search publications to find relevant use cases and the technologies used in the study. Then you can search by keywords for the imaging technology, and use the returned node_id to find out details about the service providing node in the EuroBioimang network",
         tools=dict(
             search_technology=search_technology,
             search_node=search_node,
-            get_node_details=get_node_details
+            get_node_details=get_node_details,
+            search_publication=search_publication,
         )
     )
 
