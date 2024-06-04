@@ -175,13 +175,13 @@ def create_assistants(builtin_extensions):
     bridget = Role(
         instructions=bridget_instructions,
         actions=[respond_to_user],
-        model="gpt-4-0125-preview",
+        model="gpt-4-turbo-2024-04-09",
     )
 
     nina = Role(
         instructions=nina_instructions,
         actions=[respond_to_user],
-        model="gpt-4-0125-preview",
+        model="gpt-4-turbo-2024-04-09",
     )
     
     skyler_instructions = (
@@ -193,7 +193,7 @@ def create_assistants(builtin_extensions):
     skyler = Role(
         instructions=skyler_instructions,
         actions=[respond_to_user],
-        model="gpt-4-0125-preview",
+        model="gpt-4-turbo-2024-04-09",
     )
 
 
@@ -440,8 +440,12 @@ async def register_chat_service(server):
     server_url = server.config["public_base_url"]
 
     service_id = hypha_service_info["id"]
+    print("=============================\n"
+          f"To test the BioImage.IO Chatbot locally, visit: {server_url}/chat"
+          )
     print(
-        f"\nThe BioImage.IO Assistants are available at: https://bioimage.io/chat?server={server_url}&service_id={service_id}\n"
+        f"\nOr, you can also visit the public chat client available at: https://bioimage.io/chat?server={server_url}&service_id={service_id}\n"
+        "\n=============================\n"
     )
 
 
