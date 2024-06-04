@@ -7,7 +7,7 @@ version = "0.2.1"
 readme = "README.md"
 description = "Your Personal Assistant in Computational BioImaging."
 dependencies = [
-  "schema-agents>=0.1.49",
+  "schema-agents>=0.1.52",
   "imjoy-rpc>=0.5.48.post2",
   "requests",
   "pypdf",
