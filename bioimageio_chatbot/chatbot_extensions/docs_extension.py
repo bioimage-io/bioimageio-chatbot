@@ -135,9 +135,6 @@ def get_extension():
         )
         os.makedirs(knowledge_base_path, exist_ok=True)
 
-    knowledge_base_path = os.environ.get(
-        "BIOIMAGEIO_KNOWLEDGE_BASE_PATH", "./bioimageio-knowledge-base"
-    )
     docs_store_dict = load_knowledge_base(knowledge_base_path)
     
     docs_tools = {}
@@ -155,6 +152,8 @@ def get_extension():
             description="Search information in the documents of the bioimage.io knowledge base. Provide a list of keywords to search information in the documents. Returns a list of relevant documents.",
             tools=docs_tools,
         )
+    else:
+        sinfo1 = None
     if books_tools:
         sinfo2 = ChatbotExtension(
             id="books",
@@ -162,5 +161,7 @@ def get_extension():
             description="Search information in BioImage books. Provide a list of keywords to search information in the books. Returns a list of relevant documents.",
             tools=books_tools,
         )
+    else: 
+        sinfo2 = None
 
     return sinfo1, sinfo2

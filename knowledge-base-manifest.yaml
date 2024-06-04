@@ -132,7 +132,12 @@ collections:
     description: "High-performance spatial analysis in a web browser, Node.js, and across programming languages and hardware architectures"
     base_url: https://wasm.itk.org
     format: markdown
-
+  - name: Euro-BioImaging-Publication
+    id: eurobioimaging-publication
+    source: https://raw.githubusercontent.com/oeway/hypha-knowledge-base/gh-pages/eurobioimaging-ragaller-et-al-2024-quantifying-fluorescence-lifetime-responsiveness-of-environment-sensitive-probes-for-membrane.pdf
+    description: "Quantifying fluorescence lifetime responsiveness of environment-sensitive probes for membrane"
+    base_url: https://www.eurobioimaging.eu/
+    format: pdf
 additional_channels:
   - name: "biii.eu"
     id: biii.eu

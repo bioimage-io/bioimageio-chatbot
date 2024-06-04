@@ -1,4 +1,4 @@
-schema-agents>=0.1.45
+schema-agents>=0.1.51
 imjoy-rpc>=0.5.48.post2
 requests
 pypdf
@@ -18,3 +18,4 @@ langchain-openai==0.0.8
 rank-bm25==0.2.2
 html2text==2020.1.16
 setuptools
+markdownify

@@ -7,7 +7,7 @@ version = "0.1.99"
 readme = "README.md"
 description = "Your Personal Assistant in Computational BioImaging."
 dependencies = [
-  "schema-agents>=0.1.49",
+  "schema-agents>=0.1.51",
   "imjoy-rpc>=0.5.48.post2",
   "requests",
   "pypdf",
@@ -25,6 +25,7 @@ dependencies = [
   "langchain-core>=0.1.31",
   "langchain-community>=0.0.27",
   "html2text",
+  "markdownify",
 ]
 
 [tool.setuptools]
