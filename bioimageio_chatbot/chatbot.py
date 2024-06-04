@@ -440,11 +440,11 @@ async def register_chat_service(server):
     server_url = server.config["public_base_url"]
 
     service_id = hypha_service_info["id"]
-    print("=============================\n"
-          f"To test the BioImage.IO Chatbot locally, visit: {server_url}/chat"
-          )
+    print("=============================\n")
+    if server_url.startswith("http://localhost") or server_url.startswith("http://127.0.0.1"):
+        print(f"To test the BioImage.IO Chatbot locally, visit: {server_url}/chat")
     print(
-        f"\nOr, you can also visit the public chat client available at: https://bioimage.io/chat?server={server_url}&service_id={service_id}\n"
+        f"\nThe chat client are available publicly at: https://bioimage.io/chat?server={server_url}&service_id={service_id}\n"
         "\n=============================\n"
     )
 
