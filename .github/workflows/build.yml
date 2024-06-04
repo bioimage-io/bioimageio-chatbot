@@ -27,12 +27,21 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
+      - name: Trigger workflow at bioimage.io
+        uses: benc-uk/workflow-dispatch@v1
+        with:
+          workflow: build-site.yml
+          repo: bioimage-io/bioimage.io
+          inputs: '{}'
+          # Required when using the `repo` option. Either a PAT or a token generated from the GitHub app or CLI
+          token: "${{ secrets.PAT_TOKEN_WORKFLOW }}"
       - name: Run Init
         run: python -m bioimageio_chatbot init
       - name: Test server
         env:
           OPENAI_API_KEY: sk-xxxxxxxx
         run: python -m bioimageio_chatbot start-server --host=0.0.0.0 --port=9000 & wget http://127.0.0.1:9000/
+
       # - name: Build vector database
       #   if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       #   run: |
