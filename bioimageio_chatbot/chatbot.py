@@ -151,7 +151,7 @@ def create_assistants(builtin_extensions):
         "and if necessary, request additional clarification."
         "Your goal is to deliver an accurate, complete, and transparent response efficiently.",
         actions=[respond_to_user],
-        model="gpt-4-turbo-2024-04-09",
+        model="gpt-4o",
     )
     event_bus = melman.get_event_bus()
     event_bus.register_default_events()
@@ -175,13 +175,13 @@ def create_assistants(builtin_extensions):
     bridget = Role(
         instructions=bridget_instructions,
         actions=[respond_to_user],
-        model="gpt-4-turbo-2024-04-09",
+        model="gpt-4o",
     )
 
     nina = Role(
         instructions=nina_instructions,
         actions=[respond_to_user],
-        model="gpt-4-turbo-2024-04-09",
+        model="gpt-4o",
     )
     
     skyler_instructions = (
@@ -193,7 +193,7 @@ def create_assistants(builtin_extensions):
     skyler = Role(
         instructions=skyler_instructions,
         actions=[respond_to_user],
-        model="gpt-4-turbo-2024-04-09",
+        model="gpt-4o",
     )
 
 

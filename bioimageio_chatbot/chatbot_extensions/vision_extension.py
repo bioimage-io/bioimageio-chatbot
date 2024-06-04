@@ -71,7 +71,7 @@ async def aask(images, messages, max_tokens=1024):
         user_message.append({"type": "text", "text": message})
 
     response = await aclient.chat.completions.create(
-        model="gpt-4-1106-vision-preview",
+        model="gpt-4o",
         messages=[
             {
                 "role": "system",
