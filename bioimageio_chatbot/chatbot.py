@@ -1,6 +1,7 @@
 import asyncio
 import os
 import json
+import re
 import datetime
 import secrets
 import aiofiles
@@ -321,7 +322,7 @@ async def register_chat_service(server):
         print(f"User report saved to {filename}")
 
     async def talk_to_assistant(
-        assistant_name, session_id, user_message: QuestionWithHistory, status_callback, user
+        assistant_name, session_id, user_message: QuestionWithHistory, status_callback, user, cross_assistant=False
     ):
         user = user or {}
         if quota_manager.check_quota(user.get("email")) <= 0:
@@ -362,6 +363,8 @@ async def register_chat_service(server):
         print(
             f"\nUser: {user_message.question}\nAssistant({assistant_name}): {response.text}\nRemaining quota: {response.remaining_quota}\n"
         )
+        if cross_assistant:
+            response.text = f"`{assistant_name}`: {response.text}"
 
         if session_id:
             user_message.chat_history.append(
@@ -400,6 +403,25 @@ async def register_chat_service(server):
                 context.get("user")
             ), "You don't have permission to use the chatbot, please sign up and wait for approval"
 
+        text = text.strip()
+        
+        assistant_names = [a["name"].lower() for a in assistants]
+
+        # Check if the text starts with @ followed by a name
+        match = re.match(r'@(\w+)', text, flags=re.IGNORECASE)
+        if match:
+            # If it does, extract the name and set it as the assistant_name
+            assistant_name = match.group(1).lower()
+            # Check if the assistant_name is in the list of assistant_names
+            if assistant_name not in assistant_names:
+                raise ValueError(f"Assistant '{assistant_name}' not found. Available assistants are {assistant_names}")
+            # Remove the @name part from the text
+            text = re.sub(r'@(\w+)', '', text, 1).strip()
+            assistant_name = assistants[assistant_names.index(assistant_name)]['name']
+            cross_assistant = True
+        else:
+            cross_assistant = False
+
         m = QuestionWithHistory(
             question=text,
             chat_history=chat_history,
@@ -407,7 +429,7 @@ async def register_chat_service(server):
             chatbot_extensions=extensions,
             context=context,
         )
-        return await talk_to_assistant(assistant_name, session_id, m, status_callback, context.get("user"))
+        return await talk_to_assistant(assistant_name, session_id, m, status_callback, context.get("user"), cross_assistant)
 
     async def ping(context=None):
         if login_required and context and context.get("user"):
