@@ -67,16 +67,19 @@ class HPAClient:
         section: str = Field("subcellular", description="Section of the Human Protein Atlas to search for the protein. Valid options are 'subcellular', 'tissue',")
         ) -> List[str]:
         """Retrieve a list of cell image links from the Human Protein Atlas, where a specific protein is tagged in the green channel. 
-        The results should be rendered as a horizatal table of images and create link (format: `[![](http://..._thumb.jpg)](http://....jpg)`) to the full-size image without the '_thumb' suffix."""
+        The results SHOULD BE rendered as a horizatal table of images and create link (format: `[![](http://..._thumb.jpg)](http://....jpg)`) to the full-size image without the '_thumb' suffix."""
         link_name = f"{ensembl}-{gen}"
         http_link = f"https://www.proteinatlas.org/{link_name}/{section}"
         # read the source code of the page
         response = requests.get(http_link)
+        if '<p>Not available</p>' in response.text:
+            return 'No cell image available.'
         # Search for image links, capturing the part after 'src="'
-        pattern = r'src="(?P<url>//images\.proteinatlas\.org/.*?_red_green_thumb\.jpg)"'
+        pattern = r'src="(?P<url>//images\.proteinatlas\.org/.*?_blue_red_green_thumb\.jpg)"'
         image_links = re.findall(pattern, response.text)
+        
         # replace the 'red_green' with 'blue_red_green_yellow' 
-        image_links = [link.replace('red_green', 'blue_red_green_yellow') for link in image_links]
+        image_links = [link.replace('blue_red_green', 'blue_red_green_yellow') for link in image_links]
         # Remove '_thumb' from each link and print or process them
         final_image_links = []
         for link in image_links:
@@ -93,7 +96,7 @@ def get_extension():
     return ChatbotExtension(
         id="hpa",
         name="Human Protein Atlas",
-        description="Search the Human Protein Atlas to find human protein-related information, including gene expressions, functions, locations, disease associations, and cell images etc.",
+        description="Search the Human Protein Atlas to find human protein-related information, including gene expressions, functions, locations, disease associations, and cell images etc. WHen searching for cell images, always search for the gene name and Ensembl ID of the protein.",
         tools=dict(
             search=search_tool,
             read=read_tool,
