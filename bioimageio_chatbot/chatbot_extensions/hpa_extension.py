@@ -75,11 +75,10 @@ class HPAClient:
         if '<p>Not available</p>' in response.text:
             return 'No cell image available.'
         # Search for image links, capturing the part after 'src="'
-        pattern = r'src="(?P<url>//images\.proteinatlas\.org/.*?_blue_red_green_thumb\.jpg)"'
+        pattern = r'src="(?P<url>//images\.proteinatlas\.org/.*?_red_green_thumb\.jpg)"'
         image_links = re.findall(pattern, response.text)
-        
-        # replace the 'red_green' with 'blue_red_green_yellow' 
-        image_links = [link.replace('blue_red_green', 'blue_red_green_yellow') for link in image_links]
+        # replace the 'red_green' with 'blue_red_green_yellow' if 'blue' not in the link, otherwise replace 'blue_red_green' with 'blue_red_green_yellow'
+        image_links = [link.replace('red_green', 'blue_red_green_yellow') if 'blue' not in link else link.replace('blue_red_green', 'blue_red_green_yellow') for link in image_links]
         # Remove '_thumb' from each link and print or process them
         final_image_links = []
         for link in image_links:
