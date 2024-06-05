@@ -67,7 +67,7 @@ class HPAClient:
         section: str = Field("subcellular", description="Section of the Human Protein Atlas to search for the protein. Valid options are 'subcellular', 'tissue',")
         ) -> List[str]:
         """Retrieve a list of cell image links from the Human Protein Atlas, where a specific protein is tagged in the green channel. 
-        The results SHOULD BE rendered as a horizatal table of images and create link (format: `[![](http://..._thumb.jpg)](http://....jpg)`) to the full-size image without the '_thumb' suffix."""
+        ALWAYS render the result thumbnail images as a horizatal table and create link (format: `[![](http://..._thumb.jpg)](http://....jpg)`) to the full-size image without the '_thumb' suffix."""
         link_name = f"{ensembl}-{gen}"
         http_link = f"https://www.proteinatlas.org/{link_name}/{section}"
         # read the source code of the page
@@ -96,7 +96,7 @@ def get_extension():
     return ChatbotExtension(
         id="hpa",
         name="Human Protein Atlas",
-        description="Search the Human Protein Atlas to find human protein-related information, including gene expressions, functions, locations, disease associations, and cell images etc. WHen searching for cell images, always search for the gene name and Ensembl ID of the protein.",
+        description="Search the Human Protein Atlas to find human protein-related information, including gene expressions, functions, locations, disease associations, and cell images etc. When searching for cell images, always search for the gene name and Ensembl ID of the protein.",
         tools=dict(
             search=search_tool,
             read=read_tool,
