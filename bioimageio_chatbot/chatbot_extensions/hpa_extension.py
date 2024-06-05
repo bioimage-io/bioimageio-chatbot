@@ -62,13 +62,13 @@ class HPAClient:
 
 
     async def get_cell_image(self,
-        gen: str = Field(..., description="Gene name of the protein."),
+        gene: str = Field(..., description="Gene name of the protein."),
         ensembl: str = Field(..., description="Ensembl ID of the protein."),
         section: str = Field("subcellular", description="Section of the Human Protein Atlas to search for the protein. Valid options are 'subcellular', 'tissue',")
         ) -> List[str]:
         """Retrieve a list of cell image links from the Human Protein Atlas, where a specific protein is tagged in the green channel. 
         ALWAYS render the result thumbnail images as a horizatal table and create link (format: `[![](http://..._thumb.jpg)](http://....jpg)`) to the full-size image without the '_thumb' suffix."""
-        link_name = f"{ensembl}-{gen}"
+        link_name = f"{ensembl}-{gene}"
         http_link = f"https://www.proteinatlas.org/{link_name}/{section}"
         # read the source code of the page
         response = requests.get(http_link)
