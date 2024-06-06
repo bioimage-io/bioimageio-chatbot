@@ -102,10 +102,16 @@ To reproduce the use cases described in [Figure 2](https://docs.google.com/drawi
 
 ## Cite Us
 
-If you use the BioImage.IO Chatbot in your research, please cite us:
+If you use the BioImage.IO Chatbot in your research, please cite us: <a href="https://zenodo.org/records/10032227" target="_blank"><img id="record-doi-badge" data-target="[data-modal='10.5281/zenodo.10032228']" src="https://zenodo.org/badge/DOI/10.5281/zenodo.10032228.svg" alt="10.5281/zenodo.10032228"></a>
+
 
 ```
 Lei, W., Fuster-Barceló, C., Muñoz-Barrutia, A., & Ouyang, W. (2023). 🦒BioImage.IO Chatbot: A Personalized Assistant for BioImage Analysis Augmented by Community Knowledge Base (0.1.0). Zenodo. https://doi.org/10.5281/zenodo.10032228
+```
+
+You can also reference our preprint available on arXiv: [![arXiv](https://img.shields.io/badge/arXiv-2310.18351-red.svg)](https://arxiv.org/abs/2310.18351) 
+```
+Lei, W., Fuster-Barceló, C., Muñoz-Barrutia, A., & Ouyang, W. (2023). 🦒BioImage.IO Chatbot: A Personalized Assistant for BioImage Analysis Augmented by Community Knowledge Base. arXiv. https://arxiv.org/abs/2310.18351
 ```
 
 ## Acknowledgements
