@@ -15,7 +15,7 @@ Welcome to the BioImage.IO Chatbot user guide. This guide will help you get the 
 The BioImage.IO Chatbot is a versatile conversational agent designed to assist users in accessing information related to computational bioimaging. It leverages the power of Large Language Models (LLMs) and integrates user-specific data to provide contextually accurate and personalized responses. Whether you're a researcher, developer, or scientist, the chatbot is here to make your bioimaging journey smoother and more informative.
 
 
-![screenshot for the chatbot](./docs/screenshots/chatbot-animation.gif)
+![screenshot for the chatbot](./screenshots/chatbot-animation.gif)
 
 The following diagram shows how the chatbot works:
 
@@ -45,7 +45,7 @@ The BioImage.IO Chatbot is equipped with an array of capabilities designed to en
 
 We are providing a public chatbot service for you to try out. You can access the chatbot [here](https://chat.bioimage.io/chat).
 
-Please note that the chatbot is still in beta and is being actively developed, we will log the message you input into the chatbot for further investigation of issues and support our development. See the [Disclaimer for BioImage.IO Chatbot](./docs/DISCLAIMER.md). If you want to to remove your chat logs, please contact us via [this form](https://oeway.typeform.com/to/K3j2tJt7).
+Please note that the chatbot is still in beta and is being actively developed, we will log the message you input into the chatbot for further investigation of issues and support our development. See the [Disclaimer for BioImage.IO Chatbot](./DISCLAIMER.md). If you want to to remove your chat logs, please contact us via [this form](https://oeway.typeform.com/to/K3j2tJt7).
 
 Here you can find usage guide and more examples: [Usage guide and example screenshots](docs/usage-example.md).
 
@@ -63,15 +63,15 @@ The chatbot uses your user profile information, such as your name, occupation, a
 
 ## Setup Your Own Chatbot
 
-You can also set up your own chatbot server. Please refer to the [installation guide](./docs/installation.md) for detailed instructions on how to set up the chatbot server on your local machine or server.
+You can also set up your own chatbot server. Please refer to the [installation guide](./installation.md) for detailed instructions on how to set up the chatbot server on your local machine or server.
 
 ## Technical Overview
 
-Please read the [technical overview](./docs/technical-overview.md) for more details about the chatbot's design and implementation.
+Please read the [technical overview](./technical-overview.md) for more details about the chatbot's design and implementation.
 
 ## Develop Chatbot Extensions
 
-The BioImage.IO Chatbot is designed to be extensible, allowing developers to create custom extensions to add new functionalities to the chatbot. You can create extensions to integrate new tools, databases, and services into the chatbot, making it more powerful and versatile. See the [development guide](./docs/development.md) for more details.
+The BioImage.IO Chatbot is designed to be extensible, allowing developers to create custom extensions to add new functionalities to the chatbot. You can create extensions to integrate new tools, databases, and services into the chatbot, making it more powerful and versatile. See the [development guide](./development.md) for more details.
 
 ## Join Us as a Community Partner
 
@@ -92,7 +92,7 @@ Thanks for your support and helping make the BioImage.IO Chatbot more informativ
 For detailed description of our work, please read our preprint: **[![arXiv](https://img.shields.io/badge/arXiv-2310.18351-red.svg)](https://arxiv.org/abs/2310.18351) <a href="https://zenodo.org/records/10032227" target="_blank"><img id="record-doi-badge" data-target="[data-modal='10.5281/zenodo.10032227']" src="https://zenodo.org/badge/DOI/10.5281/zenodo.10032227.svg" alt="10.5281/zenodo.10032227"></a>**
 
 
-To reproduce the use cases described in [Figure 2](https://docs.google.com/drawings/d/e/2PACX-1vTIRwRldQBnTFqz0hvS01znGOEdoeDMJmZC-PlBM-O59u_xo7DfJlUEE9SlRsy6xO1hT2HuSOBrLmUz/pub?w=1324&amp;h=1063) in the manuscript, please refer to the [reproducing example usage scenarios](./docs/figure-2-use-cases.md).
+To reproduce the use cases described in [Figure 2](https://docs.google.com/drawings/d/e/2PACX-1vTIRwRldQBnTFqz0hvS01znGOEdoeDMJmZC-PlBM-O59u_xo7DfJlUEE9SlRsy6xO1hT2HuSOBrLmUz/pub?w=1324&amp;h=1063) in the manuscript, please refer to the [reproducing example usage scenarios](./figure-2-use-cases.md).
 
 <img style="width:300px;" src="https://docs.google.com/drawings/d/e/2PACX-1vTIRwRldQBnTFqz0hvS01znGOEdoeDMJmZC-PlBM-O59u_xo7DfJlUEE9SlRsy6xO1hT2HuSOBrLmUz/pub?w=1324&amp;h=1063">
 

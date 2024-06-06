@@ -1,7 +1,7 @@
 <!-- docs/_sidebar.md -->
-* [Overview](/overview)
+* [Overview](/README)
 * [Installation](/installation)
-* [Usage guide and example screenshots](/usage-example)
+* [Usage guide](/usage-example)
 * [Technical Overview](/technical-overview)
 * [Extension Development](/development)
 * [Contribution Guidelines](/CONTRIBUTING)

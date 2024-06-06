@@ -73,7 +73,7 @@ Open the link in a browser, and you will see the chat interface.
 
 Please note that the chatbot server may not be accessible to users outside your local network.
 
-A user guide and technical overview can be found [here](./docs/technical-overview.md).
+A user guide and technical overview can be found [here](./technical-overview.md).
 
 To be able to share your chatbot service over the internet (especially for users outside your local network), you will need to expose your server publicly. Please, see [Connect to Server](#connect-to-server)
 
