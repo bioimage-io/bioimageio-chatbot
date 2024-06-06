@@ -17,6 +17,9 @@ The BioImage.IO Chatbot is a versatile conversational agent designed to assist u
 
 ![screenshot for the chatbot](./screenshots/chatbot-animation.gif)
 
+You can watch a demonstration of the BioImage.IO Chatbot performing image analysis in this [video](https://zenodo.org/records/10967840/preview/Supplementary-Video-2-bioimageio-chatbot-ai-image-analysis.mp4?include_deleted=0).
+
+
 The following diagram shows how the chatbot works:
 
 <img src="https://docs.google.com/drawings/d/e/2PACX-1vROHmf1aZPMLOMvwjot1laB9wvRsaDkjkYbGNNveqN-Pm_9xWlD48krQMobWT1WrrOrZnwH9gPLsDRw/pub?w=1392&amp;h=1112">
