@@ -22,6 +22,11 @@ Follow these steps to contribute to the BioImage.IO Chatbot:
 
 Remember that, in any step of the process you can contact us to look for feedback or assistance. We deeply appreciate your contribution!
 
+## Develop Customed Extenstion
+
+You can also contribute to the chatbot by developing your customed extension. 
+
+
 ## Contact Us
 
 If you have any questions, need assistance, or want to contribute to the chatbot's knowledge base, please don't hesitate to contact us via [Github issues](https://github.com/bioimage-io/bioimageio-chatbot/issues). Our team is here to help you get started and make valuable contributions.
