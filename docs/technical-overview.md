@@ -34,8 +34,7 @@ The BioImage.IO Chatbot employs diverse methods to generate responses, currently
 
 ### Search BioImage Docs
 This extension allows the chatbot to search information in a community-driven bioimage related knowledge base. With a specific query, the chatbot extracts essential elements from the user's question to fetch information from the relevant documentation. 
-
-    ![direct-response](./screenshots/search-bioimage-docs.png)
+        ![direct-response](./screenshots/search-bioimage-docs.png)
     *Figure 6. Search in Bioimage Knolwedge base documentation.*
 
 ### Search BioImage Information Index (biii.eu)
@@ -57,14 +56,12 @@ This extension allows the chatbot to search bioimage related topics and software
 
 ### Search Web
 This extension allows the chatbot to search for information from the web. This extension is triggered while the chatbot realizes it can not find relevant information from the knowledge base.
-
     ![search-web](./screenshots/search-web.png)
     *Figure 10. Search in the web.*
 
 
 ### BioImage Model Zoo
 This mode is designed for queries requiring detailed model information or specific actions, generating and executing Python scripts for tailored solutions.
-
     ![script-gen-exe-retrieval](./screenshots/search-model-zoo.png)
     *Figure 11. Scripting retrieval for complex queries.*
 
