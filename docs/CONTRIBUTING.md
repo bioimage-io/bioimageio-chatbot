@@ -22,9 +22,9 @@ Follow these steps to contribute to the BioImage.IO Chatbot:
 
 Remember that, in any step of the process you can contact us to look for feedback or assistance. We deeply appreciate your contribution!
 
-## Develop Customed Extenstion
+## Develop Custom Extenstion
 
-You can also contribute to the chatbot by developing your customed extension. 
+The BioImage.IO Chatbot offers a framework designed for easy extensibility, allowing developers to enrich its capabilities with custom extensions. Please check details on how to contribute to the chatbot by developing custom extension [`Develop Extension1`](./development.md).
 
 
 ## Contact Us
