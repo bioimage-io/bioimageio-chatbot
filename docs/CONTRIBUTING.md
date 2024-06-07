@@ -7,6 +7,7 @@ Thank you for your interest in contributing to the BioImage.IO Chatbot. Your con
 The BioImage.IO Chatbot relies on a comprehensive knowledge base to provide accurate responses to user queries. We encourage contributions to expand this knowledge base by adding new databases, information, or resources. Whether you're a researcher, developer, or domain expert, your contributions can help improve the chatbot's functionality.
 
 ## Contribution Process
+### Knowledge Base
 
 You can contribute to the chatbot's knowledge base by adding new databases or information.
 
@@ -21,6 +22,11 @@ Follow these steps to contribute to the BioImage.IO Chatbot:
 5. Once your contribution is accepted and the chatbot's knowledge is updated, test that the chatbot is accurate on its responses when retrieving information from your database.
 
 Remember that, in any step of the process you can contact us to look for feedback or assistance. We deeply appreciate your contribution!
+
+### Develop Custom Extenstion
+
+The BioImage.IO Chatbot offers a framework designed for easy extensibility, allowing developers to enrich its capabilities with custom extensions. Please check details on how to contribute to the chatbot by developing custom extension [`Developing Chatbot Extensions`](./development.md).
+
 
 ## Contact Us
 
