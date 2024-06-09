@@ -38,8 +38,8 @@ async def browse_web_pages(query: str=Field(description="keywords or a sentence 
         print("LLM_Web_search | Could not find any page content "
               "similar enough to be extracted, using basic search fallback...")
         return "No relevant information found."
-    return documents
-
+    #return the json serializable documents
+    return [doc.page_content + '\nsource: ' + doc.metadata.get('source') for doc in documents]
 
 @schema_tool
 async def read_webpage(url: str=Field(description="the web url to read")) -> str:
@@ -66,5 +66,5 @@ def get_extension():
         id="web",
         name="Search Web",
         description="Search the web for information using duckduckgo. Search by keywords and returns a list of relevant documents.",
-        tools=dict(search=search_web, browse=browse_web_pages, read=read_webpage)
+        tools=dict(search=search_web, browse=browse_web_pages)
     )
