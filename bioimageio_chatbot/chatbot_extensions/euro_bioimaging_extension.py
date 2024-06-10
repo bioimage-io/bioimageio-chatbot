@@ -95,40 +95,70 @@ def create_eurobioimaging_vector_database(output_dir=None):
     with open(os.path.join(output_dir, "eurobioimaging-node-index.json"), "w") as f:
         json.dump(node_index, f)
  
+ 
+def get_pmid_from_doi(doi):
+    esearch_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
+    params = {
+        "db": "pubmed",
+        "term": doi,
+        "retmode": "json"
+    }
+    response = requests.get(esearch_url, params=params)
+    data = response.json()
+    idlist = data["esearchresult"]["idlist"]
+    if idlist:
+        return idlist[0]
+    else:
+        return None
+    
+def get_article_details(pmids):
+    esummary_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
+    params = {
+        "db": "pubmed",
+        "id": ",".join(pmids),
+        "retmode": "json"
+    }
+    response = requests.get(esummary_url, params=params)
+    data = response.json()
+    return data["result"]
 
+def get_article_abstract(pmid):
+    efetch_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
+    params = {
+        "db": "pubmed",
+        "id": pmid,
+        "retmode": "xml",
+        "rettype": "abstract"
+    }
+    response = requests.get(efetch_url, params=params)
+    return response.text
+
+
+def read_publication_abstract(
+        doi: str = Field(..., description="The DOI of the publication"),
+    ):
+        """Read the abstract of the publication with the provided DOI"""
+        # get the doi and title
+        pmid = get_pmid_from_doi(doi)
+        if pmid:
+            article = get_article_details(pmid)
+            # article_details = article[pmid]
+            # title = article_details['title']
+            abstract_xml = get_article_abstract(pmid)
+
+            # Extract the abstract text from the XML
+            from xml.etree import ElementTree as ET
+            root = ET.fromstring(abstract_xml)
+            abstract = ""
+            for elem in root.findall(".//AbstractText"):
+                abstract += elem.text + " "
+            # print(f"Abstract: {abstract.strip()}")
+            return abstract.strip()
+        else:
+            # print("No article found for the provided DOI.")
+            return "No article found for the provided DOI."
+                         
 def create_tools(docs_store_dict, node_index):
-    # async def search_publication(
-    #     keywords: str = Field(..., description="The keywords used for searching and extracting use cases from the publications."),
-    #     top_k: int = Field(..., description="Return the top_k number of search results")
-    # ):
-    #     """Search the relevant use cases in the publications"""
-    #     restuls = []
-    #     restuls.append(
-    #         await docs_store_dict["publication"].asimilarity_search_with_relevance_scores(
-    #             keywords, k=top_k
-    #         )
-    #     )
-    #     docs_with_score = [
-    #         DocWithScore(
-    #             doc=doc.page_content,
-    #             score=round(score, 2),
-    #             metadata=doc.metadata, 
-    #         )
-    #         for results_with_scores in restuls
-    #         for doc, score in results_with_scores
-    #     ]
-    #     # sort by relevance score
-    #     docs_with_score = sorted(docs_with_score, key=lambda x: x.score, reverse=True)[
-    #         : top_k
-    #     ]
-    #     if len(docs_with_score) > 2:
-    #         print(
-    #             f"Retrieved documents:\n{docs_with_score[0].doc[:20] + '...'} (score: {docs_with_score[0].score})\n{docs_with_score[1].doc[:20] + '...'} (score: {docs_with_score[1].score})\n{docs_with_score[2].doc[:20] + '...'} (score: {docs_with_score[2].score})"
-    #         )
-    #     else:
-    #         print(f"Retrieved documents:\n{docs_with_score}")
-    #     return docs_with_score
-
     async def search_publication(
         keywords: str = Field(..., description="The keywords used for searching and extracting use cases from the publications."),
     ):
@@ -143,10 +173,16 @@ def create_tools(docs_store_dict, node_index):
         if results:
             # convert the results to dictionary
             results_dict = [obj.to_dict() for obj in results]
+            # get the DOI of the publication
+            for result in results_dict:
+                result['DOI'] = result['DOI'].split(' ')[0]
+                abstract = read_publication_abstract(result['DOI'])
+                result['Abstract'] = abstract
             return results_dict
         else:
             return f"No publication found with keywords: {keywords}"
- 
+    
+    
         
     async def search_technology(
         keywords: str = Field(..., description="The keywords used for searching the technology in EuroBioImaging service index."),
@@ -268,14 +304,16 @@ def get_extension():
             search_node=search_node,
             get_node_details=get_node_details,
             search_publication=search_publication,
+            # read_publication_abstract=read_publication_abstract,
         )
     )
 
 if __name__ == "__main__":
-    import asyncio
-    async def main():
-        extension = get_extension()
-        query = "mouse embryos"
-        top_k = 2
-        print(await extension.tools["search_technology"](keywords=query, top_k=top_k))
-    asyncio.run(main())
+    # import asyncio
+    # async def main():
+    #     extension = get_extension()
+    #     query = "mouse embryos"
+    #     top_k = 2
+    #     print(await extension.tools["search_technology"](keywords=query, top_k=top_k))
+    # asyncio.run(main())
+    create_eurobioimaging_publication_vector_database()
