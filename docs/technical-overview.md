@@ -56,7 +56,7 @@ This extension allows the chatbot to search bioimage related topics and software
 
 ### Search Web
 This extension allows the chatbot to search for information from the web. This extension is triggered while the chatbot realizes it can not find relevant information from the knowledge base.
-    ![search-web](./screenshots/search-web.png)
+    ![search-web](./screenshots/web-search.png)
     *Figure 10. Search in the web.*
 
 
