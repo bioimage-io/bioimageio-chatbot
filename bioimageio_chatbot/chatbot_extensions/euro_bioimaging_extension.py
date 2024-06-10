@@ -11,6 +11,11 @@ from markdownify import markdownify as md
 import re
 import os
 
+import pandas as pd
+file_path = '/home/alalulu/workspace/chatbot_bmz/chatbot/tests/publications.csv'
+publication_df = pd.read_csv(file_path)
+        
+        
 class DocWithScore(BaseModel):
     """A document with an associated relevance score."""
 
@@ -128,17 +133,19 @@ def create_tools(docs_store_dict, node_index):
         keywords: str = Field(..., description="The keywords used for searching and extracting use cases from the publications."),
     ):
         """Search the relevant publications in the list"""
-        import pandas as pd
-        file_path = '/home/alalulu/workspace/chatbot_bmz/chatbot/tests/publications.csv'
-        df = pd.read_csv(file_path)
+        
         results = []
-        for index, row in df.iterrows():
+        for index, row in publication_df.iterrows():
             # search if keywords in the title
             if keywords.lower() in row['Title'].lower():
                 results.append(row)
-        # convert the results to a list of dictionaries
-        results = results.to_dict(orient='records')
-        return results
+        
+        if results:
+            # convert the results to dictionary
+            results_dict = [obj.to_dict() for obj in results]
+            return results_dict
+        else:
+            return f"No publication found with keywords: {keywords}"
  
         
     async def search_technology(
