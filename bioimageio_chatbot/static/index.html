@@ -936,129 +936,66 @@ import sys
 import numpy as np
 from imjoy_rpc.hypha import connect_to_server
 
-class BioEngine():
-    """
-    The BioEngine service allows you to run models and perform inference tasks.
-    Here is a list of async functions:
-     - "list_models" function to list available models.
-     - "get_model_info" function to get detailed input/output information about a specific model.
-     - "run_model" function to run a model with the given input and parameters.
-    For every model in the BioEngine, you can call the "get_model_info" function to get detailed information (input/output formats, etc.) about a specific model, then call the "run_model" function to run the model with the given input and parameters.
-    Importantly, you need to reshape the input image to the correct format to match the exact dimensions required by the model.
-    """
+# Connect to the server link
+server_url = "https://ai.imjoy.io"
+server = await connect_to_server({"server_url": server_url})
 
-    async def initialize(self):
-        """Initialize the BioEngine service."""
-        server = await connect_to_server(
-            {"server_url": "https://ai.imjoy.io"}
-        )
-        self.triton = await server.get_service("public/workspace-manager:triton-client")
-        assert self.triton, "Triton client not found."
-        print("BioEngine initialized, you can now use it directly to run models.")
 
-    async def list_models(self):
-        """
-        The function returns a list of available models. Returns a list of dictionaries, each containing the model ID, name, and description.
-        """
-        return [
-          {"id": "cellpose", "name": "Cellpose", "description": "Cellpose model for cell segmentation."},
-          {"id": "affable-shark", "name": "Affable Shark", "description": "Affable Shark model for image segmentation."}
-        ]
-    
-    async def get_model_info(self, model_id: str):
-        """
-        get_model_info(model_id: str)
-        The function returns detailed information about a specific model. The input to the "get_model_info" function is the model ID. The model ID is the unique identifier of the model you want to get information about.
-        """
-        if model_id == "cellpose":
-            return """
-            Cellpose model for cell segmentation. You can run this model with "run_model" using the following arguments:
-            - input_image (float32 numpy array): an image with required input dimensions is: (channel, W, H).
-            - kwargs (dict): optional parameters for the model, you can specify the estimated object diameter as, e.g. {"diameter": 10} and also the model type as, e.g. {"model_type": "cyto"}.
-            The return value is the segmented mask with shape [channel, W, H].
-            """
-        else:
-            return """
-            You can run the model with "run_model" using the following arguments:
-            - input_image (float32 numpy array): an image with required input dimensions is: (batch, channel, W, H).
-            - kwargs: should be None for this model.
-            The return value is the segmented mask with shape (batch, channel, W, H)
-            """
-
-    async def run_model(self, model_id, input_image, kwargs=None):
-        """
-        Run a specified model with the provided input image and optional parameters. The input image should be a numpy array with the required dimensions.
-
-        Parameters:
-          model_id (str): The unique identifier of the model to run. For example, "cellpose" to run the Cellpose model.
-          input_image (np.array): The image data to process. This should be a numpy array. The format required may vary depending on the model.
-          kwargs (dict, optional): Additional arguments to pass to the model. This should be a dictionary for cellpose model, where the possible keys are: "diameter" and "model_type", and other models should be None. 
-
-        Returns:
-          np.array: The output of the model. For the "cellpose" model, this will be the segmented mask. For other models, this will be the result of the model's outputs.
-        """
-        kwargs = kwargs or {}
-        if not hasattr(self, "triton"):
-            await self.initialize()
-        input_image = input_image.astype("float32")
-        if model_id == "cellpose":
-            assert input_image.ndim == 3, "Input image should have shape (channel, W, H)"
-            assert input_image.shape[0] == 1, "Input image should have a single channel"
-            # Run cellpose model
-            ret = await self.triton.execute(
-                inputs=[input_image, kwargs],
-                model_name="cellpose-python",
-                decode_json=True,
-            )
-            assert "mask" in ret, "Model execution failed"
-            return ret["mask"]
-        else:
-            # Run inference
-            ret = await self.triton.execute(
-                inputs=[{"inputs": [input_image], "model_id": model_id}],
-                model_name="bioengine-model-runner",
-                serialization="imjoy",
-            )
-            result = ret["result"]
-            assert result.get("success") == True, "Model execution failed: " + result.get("error")
-            mask = result['outputs'][0]
-            return mask
-
-# define the bioengine so you can use it to run models
-bioengine = BioEngine()
-
-sys.modules["bioengine"] = bioengine
-# mask = await bioengine.run_model("cellpose", image[None, ...].astype(np.float32), {"diameter": 10})
-# mask = await bioengine.run_model("affable-shark", image[None, None, ...], {})
+svc = await server.register_service(
+    {
+        "name": "Model Trainer",
+        "id": "bioimageio-colab",
+        "config": {"visibility": "public", "run_in_executor": True},
+        # Exposed functions:
+        # get a random image from the dataset
+        # returns the image as a numpy image
+        "get_random_image": partial(get_random_image, path2data, path2source),
+        # save the annotation mask
+        # pass the filename of the image, the new filename, the features and the image shape
+        "save_annotation": partial(save_annotation, path2data, path2source, path2label),
+        # load the model
+        # pass the model-name to load the model
+        # returns the model-id
+        "load_model": partial(load_model, ds),
+        # compute the image embeddings:
+        # pass the model-id and the image to compute the embeddings on
+        "compute_embeddings": partial(compute_embeddings, ds),
+        # run interactive segmentation based on prompts
+        # NOTE: this is just for demonstration purposes. For fast annotation
+        # and for reliable multi-user support you should use the ONNX model and run the interactive
+        # segmentation client-side.
+        # pass the predictor-id the point coordinates and labels
+        # returns the predicted mask encoded as geo json
+        "segment": partial(segment, ds),
+        # download the source and label images as a zip file
+        "download_labels": partial(download_labels, ds, outpath),
+    }
+)
+sid = svc["id"]
+config_str = f'{{"service_id": "{sid}", "server_url": "{server_url}"}}'
+encoded_config = urllib.parse.quote(
+    config_str, safe="/", encoding=None, errors=None
+)
+annotator_url = (
+    "https://imjoy.io/lite?plugin=https://raw.githubusercontent.com/bioimage-io/bioimageio-colab/main/plugins/bioimageio-colab.imjoy.html&config="
+    + encoded_config
+)
+print("-" * 80)
+print("Annotation server is running at:")
+print(annotator_url)
 `
 
         codeInterperterPrompt = `
 ## Instructions for Code Interpreter
-Assist users in bioimage analysis within a Pyodide environment.
+Assist users in data provider within a Pyodide environment.
 You will generate and run script in the code interpreter to help users analyze their data.
 The code interperter is a Jupyter notebook-like environment, it support top-level await operations and the asyncio event loop is already running, so you can call "await func()" directly without wrapping in a async function or using asyncio.run.
-The environment has access to remote servers, so you can fetch remote data by using python modules "requests" or "imjoy_rpc.hypha" for connect to the Hypha/BioEngine server.
+The environment has access to remote servers, so you can fetch remote data by using python modules "requests" or "imjoy_rpc.hypha" for connect to the Hypha server.
 User data will be mounted to the \`/mnt\` directory. Use "os.listdir('/mnt')" to explore available files before processing.
 The code interpreter can produce outputs such as stdout or stderr, matplotlib plots, and image/audio displays which is rendered in the user interface. For key results (e.g. result images), display them in the final response to the user.
 Global variables, functions and results will be maintained across multiple code interpreter executions, so try to save the intermediate results into global variables that can be subsequently reused.
 
 
-**Image Processing and Visualization**:
-- For image analysis tasks, you should first inspect the files loaded by the user, then load the image analyse the image type and shape, and process or run the model on the image.
-- For image loading and manipulation, utilize \`imageio\` for reading and writing images, compatible with a wide range of formats.
-- After the analysis, saving the result using imageio and displaying images using matplotlib.
-- If needed, use the Vision Inspector to inspect user's images, result images and plots. To inspect the analysis results, pass inputs and outputs together to the vision inspector.  
-- Use the BioEngine service to run AI models (cellpose and any other models in the model zoo).
-  To use a service, first import it (e.g. import bioengine), then run a script to print e.g. "bioengine.__doc__" first to obtain the documentation of the service. Then based on the documentation, decide which function(s) to call, the detailed usage of each function can be obtained by printing "service.func.__doc__". 
-
-  **Example usage**:
-  \`\`\`
-  import bioengine
-  print(bioengine.__doc__)
-  print(bioengine.run_model.__doc__)
-  image = np.random.rand(1, 256, 256).astype('float32')
-  mask = await bioengine.run_model("cellpose", image, {"diameter": 10})
-  \`\`\
 `
 
         // IDEA:
