@@ -11,12 +11,13 @@ A chatbot extension object is a dictionary with the following keys:
  - `description`: a short description of the extension;
  - `type`: it must be `bioimageio-chatbot-extension`;
  - `tools`: a dictionary with functions of tools, it represents the set of functions your extension offers, each accepting configuration parameters as input. These functions should carry out specific tasks and return their results in a dictionary;
- - `get_schema`: a function returns the schema for the tools, it returns a JSON schema for each tool function, specifying the structure and types of the expected parameters. This schema is crucial for instructing the chatbot to generate the correct input paramters and validate the inputs and ensuring they adhere to the expected format. Importantly, the chatbot uses the title and description for each field to understand what expected for the tool will generating a function call to run the tool (also see the detailed instructions below).
-
+ - `get_schema`: a function returns the schema for the tools, it returns a JSON schema for each tool function, specifying the structure and types of the expected parameters. This schema is crucial for instructing the chatbot to generate the correct input paramters and validate the inputs and ensuring they adhere to the expected format. Importantly, the chatbot uses the title and description for each field to understand what expected for the tool will generating a function call to run the tool (also see the detailed instructions below). To produce the schema, you can either create it manually, or generated it automatically using libraries such as `pydantic`.
 
 The following is a chatbot extension object defined in Python:
 ```python
-
+def my_tool(config):
+    print(config["my_param"])
+    return {"result": "success"}
 
 def get_schema():
     return {
@@ -33,9 +34,33 @@ def get_schema():
         }
     }
 
+chatbot_extension = {
+    "id": "my-extension",
+    "type": "bioimageio-chatbot-extension",
+    "name": "My Extension",
+    "description": "This is my extension",
+    "get_schema": get_schema,
+    "tools": {
+        "my_tool": my_tool
+    }
+}
+```
+
+
+Instead of writing the schema manually, it is recommended to use libraries such as `pydantic` to generate the schema:
+```python
+class MyTool(BaseModel):
+    """my tool description"""
+    my_param: float = Field(..., description="This is my parameter doc")
+
 def my_tool(config):
     print(config["my_param"])
     return {"result": "success"}
+
+def get_schema():
+    return {
+        "my_tool": MyTool.schema()
+    }
 
 chatbot_extension = {
     "id": "my-extension",
@@ -49,7 +74,7 @@ chatbot_extension = {
 }
 ```
 
-Or in JavaScript:
+In JavaScript, you can also create the extension similarily:
 ```javascript
 
 const chatbotExtension = {
@@ -62,11 +87,11 @@ const chatbotExtension = {
             my_tool: {
                 type: "object",
                 title: "my_tool",
-                description: "my tool",
+                description: "my tool description",
                 properties: {
                     my_param: {
                         type: "number",
-                        description: "This is my parameter"
+                        description: "This is my parameter doc"
                     }
                 }
             }
