@@ -934,55 +934,96 @@
         const bioengineStartupScript = `
 import sys
 import numpy as np
+import os
+import urllib
+import zipfile
+from functools import partial
+from logging import getLogger
+import requests
+import shutil
 from imjoy_rpc.hypha import connect_to_server
+import types
 
-# Connect to the server link
-server_url = "https://ai.imjoy.io"
-server = await connect_to_server({"server_url": server_url})
+class StartDataProvider():
+  def get_random_image(self, path2data, path2source):
+      filenames = [f for f in os.listdir(path2data) if f.endswith(".tif")]
+      n = np.random.randint(len(filenames) - 1)
+      image = imread(os.path.join(path2data, filenames[n]))
+      if len(image.shape) == 3 and image.shape[0] == 3:
+          image = np.transpose(image, [1, 2, 0])
+      new_filename = f"{len(os.listdir(path2source)) + 1}_{filenames[n]}"
+      return (
+          image,
+          filenames[n],
+          new_filename,
+      )
 
 
-svc = await server.register_service(
-    {
-        "name": "Model Trainer",
-        "id": "bioimageio-colab",
-        "config": {"visibility": "public", "run_in_executor": True},
-        # Exposed functions:
-        # get a random image from the dataset
-        # returns the image as a numpy image
-        "get_random_image": partial(get_random_image, path2data, path2source),
-        # save the annotation mask
-        # pass the filename of the image, the new filename, the features and the image shape
-        "save_annotation": partial(save_annotation, path2data, path2source, path2label),
-        # load the model
-        # pass the model-name to load the model
-        # returns the model-id
-        "load_model": partial(load_model, ds),
-        # compute the image embeddings:
-        # pass the model-id and the image to compute the embeddings on
-        "compute_embeddings": partial(compute_embeddings, ds),
-        # run interactive segmentation based on prompts
-        # NOTE: this is just for demonstration purposes. For fast annotation
-        # and for reliable multi-user support you should use the ONNX model and run the interactive
-        # segmentation client-side.
-        # pass the predictor-id the point coordinates and labels
-        # returns the predicted mask encoded as geo json
-        "segment": partial(segment, ds),
-        # download the source and label images as a zip file
-        "download_labels": partial(download_labels, ds, outpath),
-    }
-)
-sid = svc["id"]
-config_str = f'{{"service_id": "{sid}", "server_url": "{server_url}"}}'
-encoded_config = urllib.parse.quote(
-    config_str, safe="/", encoding=None, errors=None
-)
-annotator_url = (
-    "https://imjoy.io/lite?plugin=https://raw.githubusercontent.com/bioimage-io/bioimageio-colab/main/plugins/bioimageio-colab.imjoy.html&config="
-    + encoded_config
-)
-print("-" * 80)
-print("Annotation server is running at:")
-print(annotator_url)
+  def save_annotation(self, path2data, path2source, path2label, filename, newname, features, image_shape):
+      mask = features_to_mask(features, image_shape)
+      image = imread(os.path.join(path2data, filename))
+      if len(image.shape) == 3 and image.shape[0] == 3:
+          image = np.transpose(image, [1, 2, 0])
+      imwrite(os.path.join(path2source, newname), image)
+      imwrite(os.path.join(path2label, newname), mask)
+
+  async def start_data_provider_server(self, path2data, outpath):
+    # Connect to the server link
+    server_url = "https://ai.imjoy.io"
+    server = await connect_to_server({"server_url": server_url})
+    # Check if the data is available
+    path2data = os.path.abspath(path2data)
+    if not os.path.exists(path2data):
+        # Create the path
+        os.makedirs(path2data)
+
+    # Create the output paths
+    path2source = os.path.abspath(os.path.join(outpath, "source"))
+    path2label = os.path.abspath(os.path.join(outpath, "labels"))
+    os.makedirs(path2source, exist_ok=True)
+    os.makedirs(path2label, exist_ok=True)
+    # Generate token for the current workspace
+    token = await server.generate_token()
+
+    # Register the service
+    svc = await server.register_service(
+        {
+            "name": "Collaborative Annotation",
+            "id": "bioimageio-colab-annotation",
+            "config": {"visibility": "public", "run_in_executor": True},  # make protected
+            # Exposed functions:
+            # get a random image from the dataset
+            # returns the image as a numpy image
+            #"get_random_image": partial(get_random_image, path2data, path2source),
+            # save the annotation mask
+            # pass the filename of the image, the new filename, the features and the image shape
+            #"save_annotation": partial(
+            #    save_annotation, path2data, path2source, path2label
+            #),
+            # download the source and label images as a zip file
+            #"download_labels": partial(download_labels, ds, outpath),
+        }
+    )
+    annotation_sid = svc["id"]
+    #model_sid = "oNwLbCSSNbiWrpr7h85F9f/ardFE2rx8wFB69JbbUGFfp:bioimageio-colab-model"
+    config_str = f'{{"server_url": "{server_url}", "annotation_service_id": "{annotation_sid}", "token": "{token}"}}'
+    encoded_config = urllib.parse.quote(
+        config_str, safe="/", encoding=None, errors=None
+    )
+    annotator_url = (
+        "https://imjoy.io/lite?plugin=https://raw.githubusercontent.com/bioimage-io/bioimageio-colab/kubernetes/plugins/bioimageio-colab-annotator.imjoy.html&config="
+        + encoded_config
+    )
+    print("-" * 80)
+    print("Annotation server is running at:")
+    print(annotator_url)
+    return annotator_url
+
+
+# Create a fake module
+data_provider_module = types.ModuleType("data_provider")
+data_provider_module.StartDataProvider = StartDataProvider
+sys.modules["data_provider"] = data_provider_module
 `
 
         codeInterperterPrompt = `
@@ -994,6 +1035,15 @@ The environment has access to remote servers, so you can fetch remote data by us
 User data will be mounted to the \`/mnt\` directory. Use "os.listdir('/mnt')" to explore available files before processing.
 The code interpreter can produce outputs such as stdout or stderr, matplotlib plots, and image/audio displays which is rendered in the user interface. For key results (e.g. result images), display them in the final response to the user.
 Global variables, functions and results will be maintained across multiple code interpreter executions, so try to save the intermediate results into global variables that can be subsequently reused.
+
+### Example Usage
+\`\`\`
+  from data_provider import StartDataProvider
+  data_provider = StartDataProvider()
+  path2data = '/mnt'
+  outpath = '/mnt/output'
+  server_url = await data_provider.start_data_provider_server(path2data, outpath)
+  \`\`\
 
 
 `
