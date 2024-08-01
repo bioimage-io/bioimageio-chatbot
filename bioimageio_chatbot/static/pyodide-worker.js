@@ -5,7 +5,7 @@ importScripts(`${indexURL}pyodide.js`);
     self.pyodide = await loadPyodide({ indexURL })
     await self.pyodide.loadPackage("micropip");
     const micropip = self.pyodide.pyimport("micropip");
-    await micropip.install(['numpy', 'imjoy-rpc', 'pyodide-http']);
+    await micropip.install(['numpy', 'imjoy-rpc', 'pyodide-http', 'imageio']);
     // NOTE: We intentionally avoid runPythonAsync here because we don't want this to pre-load extra modules like matplotlib.
     self.pyodide.runPython(setupCode)
     self.postMessage({loading: true})  // Inform the main thread that we finished loading.
