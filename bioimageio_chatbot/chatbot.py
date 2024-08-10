@@ -91,6 +91,7 @@ def create_assistants(builtin_extensions):
         
         tools = []
         tool_prompts = {}
+        ext_states = []
         for ext in question_with_history.chatbot_extensions:
             if "id" in ext and ext["id"] in extensions_by_id:
                 extension = extensions_by_id[ext["id"]]
@@ -115,7 +116,19 @@ def create_assistants(builtin_extensions):
                 tool_prompts[create_tool_name(extension.id) + "*"] = extension.description.replace("\n", ";")[:max_length]
             extensions_by_tool_name.update({t.__name__: extension for t in ts})
             tools += ts
-            
+            if extension.get_state:
+                # the state of the extension is a dictionary with keys and values for the states of the extension
+                states = await extension.get_state()
+                assert isinstance(states, dict), f"Extension {extension.name} state must be a dictionary."
+                # each state may be a multi-line string so we need to create a code block for each state
+                state_prompt = "## " + extension.name + "\n"
+                for key, value in states.items():
+                    value = str(value)
+                    if "\n" in value:
+                        state_prompt += f"### {key}:\n```\n{value}\n```\n"
+                    else:
+                        state_prompt += f"### {key}: {value}\n"
+                ext_states.append(state_prompt)
 
         class ThoughtsSchema(BaseModel):
             """Details about the thoughts"""
@@ -126,8 +139,10 @@ def create_assistants(builtin_extensions):
             )
             # reasoning: str = Field(..., description="brief explanation about the reasoning")
             # criticism: str = Field(..., description="constructive self-criticism")
-
+        
         tool_usage_prompt = "Tool usage guidelines (* represent the prefix of a tool group):\n" + "\n".join([f" - {ext}:{tool_prompt}" for ext, tool_prompt in tool_prompts.items()])
+        if ext_states:
+            tool_usage_prompt += "\nHere are the state of the tools:\n" + "\n".join(ext_states)
         response, metadata = await role.acall(
             inputs,
             tools,
