@@ -215,7 +215,7 @@ def create_assistants(builtin_extensions):
 
     # convert to a list
     all_extensions = [
-        {"id": ext.id, "name": ext.name, "description": ext.description} for ext in builtin_extensions
+        {"id": ext.id, "name": ext.name, "description": ext.description, "info": ext.info} for ext in builtin_extensions
     ]
     # remove item with 'book' in all_extensions
     melman_extensions = [

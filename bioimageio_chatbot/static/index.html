@@ -491,6 +491,7 @@
             <br>
             <span>Extensions: </span>
             <select multiple="multiple" style="width: calc(100% - 100px);" id="extensions"></select>
+            <div id="about-extensions" style="margin-top:10px"></div>
           </div>
         </div>
       </div>
@@ -1607,6 +1608,7 @@ Global variables, functions and results will be maintained across multiple code 
             }
           }
           updateDropdownOptions(extensions);
+          updateAboutExtensions(extensions);
           showReadyStatus();
           appendRobotMessage(allAssistants[assistantName]['welcome_message'], "message-0"); // Append robot message to the message container
           return svc;
@@ -1685,6 +1687,78 @@ Global variables, functions and results will be maintained across multiple code 
       renderer.link = function (href, title, text) {
         return '<a target="_blank" href="' + href + '" title="' + title + '">' + text + '</a>';
       }
+
+      function updateAboutExtensions(extensions) {
+        $('#about-extensions').empty();
+    
+        // Create the card structure
+        const card = document.createElement('div');
+        card.className = 'card';
+        const cardHeader = `
+        <div class="card-header">
+            <img src="https://bioimage.io/static/img/bioimage-io-icon.svg" alt="BioImage.IO Icon" style="height: 24px; margin-right: 10px">
+            About BioImage.IO Chatbot Extensions
+        </div>`;
+        
+        const cardBody = document.createElement('div');
+        cardBody.className = 'card-body';
+    
+        // Add leading text
+        const leadingText = `
+        <div class="leading-text">
+            <p>Our chatbot is enhanced by a diverse set of extensions that utilize the following valuable sources. We extend our sincere gratitude to all contributors, particularly the original authors whose works have significantly enriched this project. These sources are primarily used for research purposes, in accordance with the European Union's copyright exception on Text and Data Mining (TDM) under <a href="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32019L0790" target="_blank">Directive (EU) 2019/790</a>.</p>
+            <p>If you are an author of any material used within these extensions and wish to have your content removed or updated, we respectfully request that you contact us directly. We will promptly address your concerns and ensure that your material is removed from our system.</p>
+            <p><strong>Notice:</strong> Users of this chatbot are kindly reminded to carefully check with the original sources for accuracy and completeness. For any work derived from these sources, please ensure that you respect their respective licenses and adhere to the conditions set forth by the original authors.</p>
+        </div>`;
+    
+        // Append title and leading text to the card body
+        cardBody.innerHTML = leadingText;
+    
+        // Initialize a markdown renderer
+        const renderer = new marked.Renderer();
+    
+        for (const ext of extensions) {
+            const extInfo = document.createElement('div');
+    
+            // Start creating markdown content with improved formatting
+            let markdownContent = `### ${ext.name} 📚\n\n#### ${ext.description}\n\n`;
+    
+            // Iterate through each tool in the extension info
+            for (const [key, tool] of Object.entries(ext.info)) {
+                markdownContent += `----\n**${tool.name} 🛠️**\n\n`;
+                markdownContent += `**📝 Description**: ${tool.description}\n\n`;
+    
+                markdownContent += `**👥 Authors**:\n`;
+                for (const author of tool.authors) {
+                    markdownContent += `- ${author.name}, *${author.organization}*\n`;
+                }
+    
+                markdownContent += `\n**📜 License**: ${tool.license}\n\n`;
+                markdownContent += `**🔗 [Reference](${tool.reference})**: ${tool.reference}\n\n`;
+            }
+    
+            // Convert markdown content to HTML using marked
+            const renderedContent = marked(markdownContent, { renderer: renderer });
+    
+            // Wrap the content in a collapsible <details> block
+            extInfo.innerHTML = `
+                <details class='details-box'>
+                    <summary>Extension: ${ext.name}</summary>
+                    ${renderedContent}
+                </details>
+            `;
+    
+            // Append the rendered content to the card body
+            cardBody.appendChild(extInfo);
+        }
+    
+        // Combine the card structure
+        card.innerHTML = cardHeader;
+        card.appendChild(cardBody);
+    
+        // Append the entire card to the about-extensions section
+        $('#about-extensions').append(card);
+    } 
 
       function autoResize() {
         this.style.height = (this.scrollHeight) + 'px';
