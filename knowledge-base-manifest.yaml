@@ -63,60 +63,140 @@ collections:
     directory: chapters
     description: "A book written by Pete Bankhead about introduction to bioimage analysis, including practical exercises and Jupyter Book content"
     base_url: https://bioimagebook.github.io/
+    authors:
+      - name: Pete Bankhead
+        organization: University of Edinburgh
+    license: "CC BY 4.0"
+    reference: "https://bioimagebook.github.io/"
     format: markdown
   - name: Deep Learning for Medical Image Analysis
     id: book-dlfmia
     source: https://raw.githubusercontent.com/oeway/hypha-knowledge-base/gh-pages/deep-learning-for-medical-image-analysis-1nbsped-0128104082-978-0-12-810408-8_compress.pdf
     description: "A book written by S. Kevin Zhou, Hayit Greenspan, Dinggang Shen about deep learning for medical image analysis"
     base_url: https://www.elsevier.com/books/deep-learning-for-medical-image-analysis/zhou/978-0-12-810408-8
+    authors:
+      - name: S. Kevin Zhou
+        organization: University of Science and Technology of China
+      - name: Hayit Greenspan
+        organization: Tel Aviv University
+      - name: Dinggang Shen
+        organization: ShanghaiTech University
+    license: "All rights reserved"
+    reference: "https://www.elsevier.com/books/deep-learning-for-medical-image-analysis/zhou/978-0-12-810408-8"
     format: pdf
   - name: How deep learning is used within microscopy
     id: book-hdluwm
     source: https://raw.githubusercontent.com/oeway/hypha-knowledge-base/gh-pages/Nikon-Deep-Learning-ebook-compressed.pdf
     description: "A book written by Nikon about how deep learning is used within microscopy"
-    base_url: https://www.microscope.healthcare.nikon.com/en_EU/products/software/deep-learning
+    base_url: https://www.microscope.healthcare.nikon.com/resources/ebooks/how-deep-learning-is-used-within-microscopy
+    authors:
+      - name: Nikon
+        organization: Nikon
+    license: "All rights reserved"
+    reference: "https://www.microscope.healthcare.nikon.com/resources/ebooks/how-deep-learning-is-used-within-microscopy"
     format: pdf
   - name: BioImage Data Analysis
     id: book-bda
     source: https://raw.githubusercontent.com/oeway/hypha-knowledge-base/gh-pages/bioimagedataanalysis-compressed.pdf
     description: "A book written by Kota Miura about bioimage data analysis"
     base_url: https://analyticalscience.wiley.com/content/article-do/bioimage-data-analysis
+    authors:
+      - name: Kota Miura
+        organization: Nikon Imaging Center, Heidelberg
+    reference: "https://analyticalscience.wiley.com/content/article-do/bioimage-data-analysis"
+    license: "All rights reserved"
     format: pdf
   - name: Deep Learning in Medical Imaging
     id: book-dlmi
     source: https://raw.githubusercontent.com/oeway/hypha-knowledge-base/gh-pages/Deep%20Learning%20in%20Medical%20Imaging.pdf
-    description: "A book written by Daniel K. Sodickson, MD, PhD, and W. Clem Karl, PhD about deep learning in medical imaging"
+    description: "A book written by Narjes Benameur and Ramzi Mahmoudi about deep learning in medical imaging"
     base_url: https://www.rsna.org/-/media/Files/RSNA/Education/RSNA-Press/Deep-Learning-in-Medical-Imaging.pdf
+    authors:
+      - name: Narjes Benameur
+        organization: University of Tunis el Manar
+      - name: Ramzi Mahmoudi
+        organization: University of Monastir, Tunisia
+    license: "Licensee IntechOpen. Creative Commons Attribution 3.0 License"
+    reference: "https://www.intechopen.com/chapters/87248"
     format: pdf
   - name: FUTURE AI International consensus guideline for trustworthy and deployable AI in healthcare
     id: book-fat
     source: https://raw.githubusercontent.com/oeway/hypha-knowledge-base/gh-pages/FUTURE%20AI%20International%20consensus%20guideline%20for%20trustworthy%20and%20deployable%20artificial%20intelligence%20in%20healthcare.pdf
-    description: "A book written by the FUTURE AI consortium about international consensus guideline for trustworthy and deployable artificial intelligence in healthcare"
-    base_url: https://www.nature.com/articles/s41591-021-01412-4
+    description: "An article written by the FUTURE AI consortium about international consensus guideline for trustworthy and deployable artificial intelligence in healthcare"
+    base_url: https://arxiv.org/abs/2309.12325
+    authors:
+      - name: Karim Lekadir
+        organization: University of Barcelona
+      - name: Aasa Feragen
+        organization: Technical University of Denmark
+      - name: et al.
+    license: "arXiv.org perpetual, non-exclusive license 1.0"
+    reference: "https://arxiv.org/abs/2309.12325"
     format: pdf
   - name: Roadmap on Deep Learning for Microscopy
     id: book-rdlfm
     source: https://raw.githubusercontent.com/oeway/hypha-knowledge-base/gh-pages/Roadmap%20on%20Deep%20Learning%20for%20Microscopy-compressed.pdf
-    description: "A book written by the FUTURE AI consortium about international consensus guideline for trustworthy and deployable artificial intelligence in healthcare"
-    base_url: https://www.nature.com/articles/s41592-021-01108-9
+    description: "An article written by Giovanni Volpe, et al. about roadmap on deep learning for microscopy"
+    base_url: https://arxiv.org/abs/2303.03793
+    authors: 
+      - name: Giovanni Volpe
+        organization: University of Gothenburg
+      - name: Carolina Wählby
+        organization: Uppsala University
+      - name: Lei Tian
+        organization: Boston University
+      - name: et al.
+    license: "arXiv.org perpetual, non-exclusive license 1.0"
+    reference: "https://arxiv.org/abs/2303.03793"
     format: pdf
   - name: The Rise of Data-Driven Microscopy powered by Machine Learning
     id: book-tddmpml
     source: https://raw.githubusercontent.com/oeway/hypha-knowledge-base/gh-pages/The%20Rise%20of%20Data-Driven%20Microscopy%20powered%20by%20Machine%20Learning.pdf
-    description: "A book written by the FUTURE AI consortium about international consensus guideline for trustworthy and deployable artificial intelligence in healthcare"
-    base_url: https://www.nature.com/articles/s41592-021-01108-9
+    description: "An article written by Leonor Morgado, et al. about the rise of data-driven microscopy powered by machine learning"
+    base_url: https://onlinelibrary.wiley.com/doi/full/10.1111/jmi.13282
+    authors:
+      - name: Leonor Morgado
+        organization: Instituto Gulbenkian de Ciência, Oeiras, Portugal
+      - name: Estibaliz Gómez-de-Mariscal
+        organization: Instituto Gulbenkian de Ciência, Oeiras, Portugal
+      - name: Hannah S. Heil
+        organization: Instituto Gulbenkian de Ciência, Oeiras, Portugal
+      - name: Ricardo Henriques
+        organization: Instituto Gulbenkian de Ciência, Oeiras, Portugal
+    license: "All rights reserved"
+    reference: "https://onlinelibrary.wiley.com/doi/full/10.1111/jmi.13282"
     format: pdf
   - name: The ITK Software Guide Book 1 Introduction and Development Guidelines
     id: book-isg1idg
     source: https://github.com/InsightSoftwareConsortium/ITKSoftwareGuide/releases/download/v5.3.0/InsightSoftwareGuide-Book1-5.3.0.pdf
     description: "Introduction to ITK, how to install, build, basis system concepts, design of data structures and application of analysis methods, and how to contribute"
     base_url: https://docs.itk.org
+    authors:
+      - name: Hans J. Johnson
+        organization: University of Iowa
+      - name: Matthew M. McCormick
+        organization: Kitware
+      - name: Luis Ibáñez
+        organization: Google LLC
+      - name: Insight Software Consortium
+    license: "Apache 2.0"
+    reference: "https://itk.org/ITKSoftwareGuide/html/Book1/ITKSoftwareGuide-Book1.html"
     format: pdf
   - name: The ITK Software Guide Book 2 Design and Functionality
     id: book-isg2df
     source: https://github.com/InsightSoftwareConsortium/ITKSoftwareGuide/releases/download/v5.3.0/InsightSoftwareGuide-Book2-5.3.0.pdf
     description: "Detailed design and functionality for reading and writing images, filtering, registration, segmentation, and performing statistical analysis"
     base_url: https://docs.itk.org
+    authors:
+      - name: Hans J. Johnson
+        organization: University of Iowa
+      - name: Matthew M. McCormick
+        organization: Kitware
+      - name: Luis Ibáñez
+        organization: Google LLC
+      - name: Insight Software Consortium
+    license: "Apache 2.0"
+    reference: "https://itk.org/ITKSoftwareGuide/html/Book2/ITKSoftwareGuide-Book2.html"
     format: pdf
   - name: ITK
     id: itk
@@ -124,6 +204,10 @@ collections:
     directory: Documentation/docs
     description: "ITK builds on a proven, spatially-oriented architecture for processing, segmentation, and registration of scientific images in two, three, or more dimensions"
     base_url: https://docs.itk.org
+    authors:
+      - name: Insight Software Consortium
+    license: "Apache 2.0"
+    reference: "https://github.com/InsightSoftwareConsortium/ITK"
     format: markdown
   - name: ITK-Wasm
     id: itkwasm
@@ -131,8 +215,11 @@ collections:
     directory: docs
     description: "High-performance spatial analysis in a web browser, Node.js, and across programming languages and hardware architectures"
     base_url: https://wasm.itk.org
+    authors:
+      - name: Insight Software Consortium
+    license: "Apache 2.0"
+    reference: "https://github.com/InsightSoftwareConsortium/itk-wasm"
     format: markdown
-
 additional_channels:
   - name: "biii.eu"
     id: biii.eu
