@@ -108,6 +108,8 @@ Lei, W., Fuster-Barceló, C., Reder, G. et al. BioImage.IO Chatbot: a community-
 
 ## Acknowledgements
 
+The BioImage.IO Chatbot is greatly enriched by the valuable resources contributed by the global bioimage analysis community. We extend our deepest gratitude to all authors and contributors listed in the [knowledge base manifest](https://github.com/bioimage-io/bioimageio-chatbot/blob/main/knowledge-base-manifest.yaml), especially the original authors of the materials integrated into our extensions. Their work has significantly enhanced the capabilities of this chatbot, providing users with high-quality information and tools.
+
 We thank [AI4Life consortium](https://ai4life.eurobioimaging.eu/) for its crucial support in the development of the BioImage.IO Chatbot.
 
 ![AI4Life](https://ai4life.eurobioimaging.eu/wp-content/uploads/2022/09/AI4Life-logo_giraffe-nodes-2048x946.png)
@@ -116,7 +118,6 @@ AI4Life has received funding from the European Union’s Horizon Europe research
 
 ## Disclaimer
 
-The BioImage.IO Chatbot is greatly enriched by the valuable resources contributed by the global bioimage analysis community. We extend our deepest gratitude to all contributors, especially the original authors of the materials integrated into our extensions. Their work has significantly enhanced the capabilities of this chatbot, providing users with high-quality information and tools.
 
 These resources are primarily utilized for research purposes in compliance with the European Union's copyright exception on Text and Data Mining (TDM) as outlined in [Directive (EU) 2019/790](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32019L0790).
 

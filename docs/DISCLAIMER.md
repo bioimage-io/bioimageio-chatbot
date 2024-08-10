@@ -2,7 +2,7 @@
 
 ## Research Purpose and Use of Copyrighted Material
 
-The BioImage.IO Chatbot ("Chatbot") is part of a research project focused on Text and Data Mining (TDM) to support advancements in bioimage analysis. The primary purpose of this Chatbot is to assist users in navigating resources, tools, and workflows related to bioimage analysis for research and educational purposes. In compliance with the European Union's copyright exception on TDM as outlined in [Directive (EU) 2019/790](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32019L0790), the Chatbot utilizes copyrighted materials to which we have lawful access. These materials are used exclusively for non-commercial research purposes.
+The BioImage.IO Chatbot ("Chatbot") is part of a research project focused on Text and Data Mining (TDM) to support advancements in bioimage analysis. The primary purpose of this Chatbot is to assist users in navigating resources, tools, and workflows related to bioimage analysis for research purposes. In compliance with the European Union's copyright exception on TDM as outlined in [Directive (EU) 2019/790](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32019L0790), the Chatbot utilizes copyrighted materials to which we have lawful access. These materials are used exclusively for non-commercial research purposes.
 
 ## Evaluation-Only Use of Source Code and Live Demo
 
