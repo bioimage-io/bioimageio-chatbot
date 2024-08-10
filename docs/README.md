@@ -121,3 +121,18 @@ We thank [AI4Life consortium](https://ai4life.eurobioimaging.eu/) for its crucia
 ![AI4Life](https://ai4life.eurobioimaging.eu/wp-content/uploads/2022/09/AI4Life-logo_giraffe-nodes-2048x946.png)
 
 AI4Life has received funding from the European Union’s Horizon Europe research and innovation programme under grant agreement number 101057970. Views and opinions expressed are, however those of the author(s) only and do not necessarily reflect those of the European Union or the European Research Council Executive Agency. Neither the European Union nor the granting authority can be held responsible for them.
+
+## Disclaimer
+
+The BioImage.IO Chatbot is greatly enriched by the valuable resources contributed by the global bioimage analysis community. We extend our deepest gratitude to all contributors, especially the original authors of the materials integrated into our extensions. Their work has significantly enhanced the capabilities of this chatbot, providing users with high-quality information and tools.
+
+These resources are primarily utilized for research purposes in compliance with the European Union's copyright exception on Text and Data Mining (TDM) as outlined in [Directive (EU) 2019/790](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32019L0790).
+
+The full list of sources and resources used by the BioImage.IO Chatbot can be found in our [knowledge base manifest](https://github.com/bioimage-io/bioimageio-chatbot/blob/main/knowledge-base-manifest.yaml). We kindly ask users to carefully verify the accuracy and completeness of information with the original sources. For any work derived from these resources, please ensure that you respect the respective licenses and adhere to the conditions set forth by the original authors.
+
+If you are an author of any material used within the BioImage.IO Chatbot and wish to have your content removed, please contact us directly. We are committed to respecting the rights of all contributors and will promptly address your request.
+
+We would also like to thank the open-source community for their ongoing support and innovation, which continuously drives the development and improvement of the BioImage.IO platform.
+
+Thank you for supporting the BioImage.IO project and contributing to the advancement of bioimage analysis!
+
