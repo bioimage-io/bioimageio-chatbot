@@ -1,8 +1,6 @@
 # 🦒 BioImage.IO Chatbot 🤖
 
-**📣New Preprint: [![arXiv](https://img.shields.io/badge/arXiv-2310.18351-red.svg)](https://arxiv.org/abs/2310.18351) <a href="https://zenodo.org/records/10032227" target="_blank"><img id="record-doi-badge" data-target="[data-modal='10.5281/zenodo.10032228']" src="https://zenodo.org/badge/DOI/10.5281/zenodo.10032228.svg" alt="10.5281/zenodo.10032228"></a>**
-
-**📚 Documentation: https://bioimage-io.github.io/bioimageio-chatbot/**
+**📣 Publication on Nature Methods: https://www.nature.com/articles/s41592-024-02370-y </a>**
 
 **👇 Want to Try the Chatbot? [Visit here!](https://bioimage.io/chat)**
 
@@ -102,16 +100,10 @@ To reproduce the use cases described in [Figure 2](https://docs.google.com/drawi
 
 ## Cite Us
 
-If you use the BioImage.IO Chatbot in your research, please cite us: <a href="https://zenodo.org/records/10032227" target="_blank"><img id="record-doi-badge" data-target="[data-modal='10.5281/zenodo.10032228']" src="https://zenodo.org/badge/DOI/10.5281/zenodo.10032228.svg" alt="10.5281/zenodo.10032228"></a>
-
+If you use the BioImage.IO Chatbot in your research, please cite us:
 
 ```
-Lei, W., Fuster-Barceló, C., Muñoz-Barrutia, A., & Ouyang, W. (2023). 🦒BioImage.IO Chatbot: A Personalized Assistant for BioImage Analysis Augmented by Community Knowledge Base (0.1.0). Zenodo. https://doi.org/10.5281/zenodo.10032228
-```
-
-You can also reference our preprint available on arXiv: [![arXiv](https://img.shields.io/badge/arXiv-2310.18351-red.svg)](https://arxiv.org/abs/2310.18351) 
-```
-Lei, W., Fuster-Barceló, C., Muñoz-Barrutia, A., & Ouyang, W. (2023). 🦒BioImage.IO Chatbot: A Personalized Assistant for BioImage Analysis Augmented by Community Knowledge Base. arXiv. https://arxiv.org/abs/2310.18351
+Lei, W., Fuster-Barceló, C., Reder, G. et al. BioImage.IO Chatbot: a community-driven AI assistant for integrative computational bioimaging. Nat Methods 21, 1368–1370 (2024). https://doi.org/10.1038/s41592-024-02370-y
 ```
 
 ## Acknowledgements
@@ -136,3 +128,4 @@ We would also like to thank the open-source community for their ongoing support 
 
 Thank you for supporting the BioImage.IO project and contributing to the advancement of bioimage analysis!
 
+See the full [Disclaimer for BioImage.IO Chatbot](./DISCLAIMER.md).
