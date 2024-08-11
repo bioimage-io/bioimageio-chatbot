@@ -121,6 +121,8 @@ def create_tool(docs_store_dict, collection):
     run_extension.__doc__ = f"""Searching documentation for {channel_id}: {collection['description']}.{base_url_prompt}"""
     return schema_tool(run_extension)
 
+INFO_KEYS = ["name","description", "authors", "license", "reference"]
+
 def get_extension():
     collections = get_manifest()["collections"]
     knowledge_base_path = os.environ.get(
@@ -141,12 +143,20 @@ def get_extension():
     docs_store_dict = load_knowledge_base(knowledge_base_path)
     
     docs_tools = {}
+    docs_info = {}
     books_tools = {}
+    books_info = {}
     for col in collections:
+        info = {k: col[k] for k in INFO_KEYS if k in col}
         if "book" in col["id"]:
             books_tools["search_" + col["id"]] = create_tool(docs_store_dict, col)
+            if info:
+                books_info["search_" + col["id"]] = info
         else:
             docs_tools["search_" + col["id"]] = create_tool(docs_store_dict, col)
+            if info:
+                docs_info["search_" + col["id"]] = info
+            
 
     if docs_tools:
         sinfo1 = ChatbotExtension(
@@ -154,6 +164,7 @@ def get_extension():
             name="Search BioImage Docs",
             description="Search information in the documents of the bioimage.io knowledge base. Provide a list of keywords to search information in the documents. Returns a list of relevant documents.",
             tools=docs_tools,
+            info=docs_info
         )
     if books_tools:
         sinfo2 = ChatbotExtension(
@@ -161,6 +172,7 @@ def get_extension():
             name="Search BioImage Books",
             description="Search information in BioImage books. Provide a list of keywords to search information in the books. Returns a list of relevant documents.",
             tools=books_tools,
+            info=books_info
         )
 
     return sinfo1, sinfo2

@@ -65,6 +65,7 @@ class ChatbotExtension(BaseModel):
     tools: Optional[Dict[str, Any]] = {}
     get_schema: Optional[Callable] = None
     get_state: Optional[Callable] = None
+    info: Optional[Dict[str, Any]] = {}
 
 class LegacyChatbotExtension(BaseModel):
     """A class that defines the interface for a user extension"""
