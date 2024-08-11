@@ -8,6 +8,10 @@ collections:
     directory: documentation
     description: ilastik - the interactive learning and segmentation toolkit, Leverage machine learning algorithms to easily segment, classify, track and count your cells or other experimental data
     base_url: https://www.ilastik.org/documentation/
+    authors:
+      - name: ilastik Team
+    license: "GPLv2"
+    reference: "https://www.ilastik.org/documentation/"
     format: markdown
   - name: BioImage.IO
     id: bioimage.io
@@ -15,6 +19,10 @@ collections:
     directory: docs
     description: A platform for sharing and deploying deep learning models in bioimaging.
     base_url: https://bioimage.io/docs/
+    authors:
+      - name: BioImage.IO Team
+    license: "MIT License"
+    reference: "https://bioimage.io/docs/"
     format: markdown
   - name: imagej.net
     id: imagej.net
@@ -22,6 +30,10 @@ collections:
     directory: _pages
     description: The ImageJ wiki with a lot of useful information about ImageJ, Fiji and related plugins and tools.
     base_url: https://imagej.net
+    authors:
+      - name: ImageJ Team
+    license: "Creative Commons Attribution 3.0 Unported"
+    reference: "https://github.com/imagej/imagej.github.io?tab=readme-ov-file"
     format: markdown
   - name: bio.tools
     id: bio.tools
@@ -29,6 +41,10 @@ collections:
     directory: data
     description: A repository for research software tools with metadata.
     base_url: https://bio.tools
+    authors:
+      - name: bio.tools Team
+    license: "CC BY 4.0"
+    reference: "https://biotools.readthedocs.io/en/latest/index.html"
     format: json 
   - name: ImJoy
     id: imjoy
@@ -36,6 +52,10 @@ collections:
     directory: docs
     description: A plugin powered hybrid computing platform for deploying deep learning applications such as advanced image analysis tools.
     base_url: https://imjoy.io/docs/#/
+    authors:
+      - name: ImJoy Team
+    license: "MIT License"
+    reference: "https://imjoy.io/docs/#/"
     format: markdown
   - name: deepImageJ
     id: deepimagej
@@ -43,12 +63,24 @@ collections:
     directory: "."
     description: The ImageJ plugin to run deep-learning models
     base_url: https://deepimagej.github.io/
+    authors:
+      - name: DeepImageJ Team
+    license: "BSD 2-Clause"
+    reference: "https://deepimagej.github.io/about.html"
     format: markdown
   - name: scikit-image
     id: scikit-image
     source: https://raw.githubusercontent.com/oeway/hypha-knowledge-base/gh-pages/scikit-image-0.21.0.pdf
     description: A collection of algorithms for image processing.
     base_url: https://scikit-image.org/docs/stable/
+    authors:
+      - name: Stefan van der Walt
+        organization: University of California, Berkeley
+      - name: Juan Nunez-Iglesias
+        organization: Monash University
+      - name: et al.
+    license: "BSD 3-Clause"
+    reference: "https://github.com/scikit-image/scikit-image?tab=readme-ov-file"
     format: pdf
   - name: napari
     id: napari
@@ -56,6 +88,10 @@ collections:
     directory: docs
     description: napari is a fast, interactive, multi-dimensional image viewer for Python. It's designed for browsing, annotating, and analyzing large multi-dimensional images.
     base_url: https://napari.org/stable/
+    authors:
+      - name: napari Team
+    license: "BSD 3-Clause"
+    reference: "https://github.com/napari/napari?tab=readme-ov-file"
     format: markdown
   - name: Introduction to Bioimage Analysis
     id: book-itba
