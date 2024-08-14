@@ -152,7 +152,28 @@ def create_assistants(builtin_extensions):
             tool_usage_prompt=tool_usage_prompt,
         )
         result_steps = metadata["steps"]
+        
+        # Create a map to store the mapping of result step names to their corresponding info
+        info_map = {}
+        # Iterate through each extension in the dictionary
+        for ext_id, ext in extensions_by_id.items():
+            # Iterate through the info dictionary of each extension
+            for tool_key, tool_info in ext.info.items():
+                # remove all special characters and convert to lowercase, and add `ext_id` to the beginning
+                step_name = f"{ext_id}-{tool_key}".replace(" ", "").replace("-", "").replace("_","").lower()
+                # Map the step name to the tool info
+                info_map[step_name] = tool_info
+                
         for idx, step_list in enumerate(result_steps):
+            for step in step_list:
+                # Get the step name
+                step_name = step['name'].lower()
+                # Get the corresponding info for the step
+                step_info = info_map.get(step_name)
+                if step_info:
+                    # Add the info to the step details
+                    step["info"] = step_info
+                
             steps.append(
                 ResponseStep(
                     name=f"step-{idx}", details={"details": convert_to_dict(step_list)}

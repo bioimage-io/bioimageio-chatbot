@@ -112,13 +112,18 @@ def create_tool(docs_store_dict, collection):
 
     channel_id = collection["id"]
     base_url = collection.get("base_url")
+    reference = collection.get("reference")
     if base_url:
         base_url_prompt = f" The documentation is available at {base_url}."
     else:
         base_url_prompt = ""
-        
+    
+    if reference:
+        reference_prompt = f" The reference is available at {reference}."
+    else:
+        reference_prompt = ""
     run_extension.__name__ = "Search" + title_case(channel_id)
-    run_extension.__doc__ = f"""Searching documentation for {channel_id}: {collection['description']}.{base_url_prompt}"""
+    run_extension.__doc__ = f"""Searching documentation for {channel_id}: {collection['description']}.{base_url_prompt}. {reference_prompt}"""
     return schema_tool(run_extension)
 
 INFO_KEYS = ["name","description", "authors", "license", "reference"]
@@ -162,7 +167,7 @@ def get_extension():
         sinfo1 = ChatbotExtension(
             id="docs",
             name="Search BioImage Docs",
-            description="Search information in the documents of the bioimage.io knowledge base. Provide a list of keywords to search information in the documents. Returns a list of relevant documents.",
+            description="Search information in the documents of the bioimage.io knowledge base. Provide a list of keywords to search information in the documents. Returns a list of relevant documents. Ensure that the reference to the document is ALWAYS included!",
             tools=docs_tools,
             info=docs_info
         )
@@ -170,7 +175,7 @@ def get_extension():
         sinfo2 = ChatbotExtension(
             id="books",
             name="Search BioImage Books",
-            description="Search information in BioImage books. Provide a list of keywords to search information in the books. Returns a list of relevant documents.",
+            description="Search information in BioImage books. Provide a list of keywords to search information in the books. Returns a list of relevant documents. Ensure that the reference to the book is ALWAYS included!",
             tools=books_tools,
             info=books_info
         )

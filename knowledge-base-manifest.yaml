@@ -10,7 +10,7 @@ collections:
     base_url: https://www.ilastik.org/documentation/
     authors:
       - name: ilastik Team
-    license: "GPLv2"
+    license: "[GPLv2](https://www.ilastik.org/license)"
     reference: "https://www.ilastik.org/documentation/"
     format: markdown
   - name: BioImage.IO
@@ -21,7 +21,7 @@ collections:
     base_url: https://bioimage.io/docs/
     authors:
       - name: BioImage.IO Team
-    license: "MIT License"
+    license: "[MIT License](https://github.com/bioimage-io/bioimage.io?tab=MIT-1-ov-file#readme)"
     reference: "https://bioimage.io/docs/"
     format: markdown
   - name: imagej.net
@@ -32,7 +32,7 @@ collections:
     base_url: https://imagej.net
     authors:
       - name: ImageJ Team
-    license: "Creative Commons Attribution 3.0 Unported"
+    license: "[Creative Commons Attribution 3.0 Unported](https://github.com/imagej/imagej.github.io?tab=License-1-ov-file#readme)"
     reference: "https://github.com/imagej/imagej.github.io?tab=readme-ov-file"
     format: markdown
   - name: bio.tools
@@ -43,7 +43,7 @@ collections:
     base_url: https://bio.tools
     authors:
       - name: bio.tools Team
-    license: "CC BY 4.0"
+    license: "[CC BY 4.0](https://biotools.readthedocs.io/en/latest/license.html)"
     reference: "https://biotools.readthedocs.io/en/latest/index.html"
     format: json 
   - name: ImJoy
@@ -54,7 +54,7 @@ collections:
     base_url: https://imjoy.io/docs/#/
     authors:
       - name: ImJoy Team
-    license: "MIT License"
+    license: "[MIT License](https://imjoy.io/docs/#/?id=license)"
     reference: "https://imjoy.io/docs/#/"
     format: markdown
   - name: deepImageJ
@@ -65,7 +65,7 @@ collections:
     base_url: https://deepimagej.github.io/
     authors:
       - name: DeepImageJ Team
-    license: "BSD 2-Clause"
+    license: "[BSD 2-Clause](https://github.com/deepimagej/deepimagej-plugin/blob/master/LICENSE)"
     reference: "https://deepimagej.github.io/about.html"
     format: markdown
   - name: scikit-image
@@ -79,7 +79,7 @@ collections:
       - name: Juan Nunez-Iglesias
         organization: Monash University
       - name: et al.
-    license: "BSD 3-Clause"
+    license: "[BSD 3-Clause](https://github.com/scikit-image/scikit-image?tab=License-1-ov-file#readme)"
     reference: "https://github.com/scikit-image/scikit-image?tab=readme-ov-file"
     format: pdf
   - name: napari
@@ -90,7 +90,7 @@ collections:
     base_url: https://napari.org/stable/
     authors:
       - name: napari Team
-    license: "BSD 3-Clause"
+    license: "[BSD 3-Clause](https://github.com/napari/napari?tab=BSD-3-Clause-1-ov-file#readme)"
     reference: "https://github.com/napari/napari?tab=readme-ov-file"
     format: markdown
   - name: Introduction to Bioimage Analysis
@@ -102,7 +102,7 @@ collections:
     authors:
       - name: Pete Bankhead
         organization: University of Edinburgh
-    license: "CC BY 4.0"
+    license: "[CC BY 4.0](https://bioimagebook.github.io/chapters/0-preamble/license.html)"
     reference: "https://bioimagebook.github.io/"
     format: markdown
   - name: Deep Learning for Medical Image Analysis
@@ -117,7 +117,7 @@ collections:
         organization: Tel Aviv University
       - name: Dinggang Shen
         organization: ShanghaiTech University
-    license: "All rights reserved"
+    license: "[All rights reserved]"
     reference: "https://www.elsevier.com/books/deep-learning-for-medical-image-analysis/zhou/978-0-12-810408-8"
     format: pdf
   - name: How deep learning is used within microscopy
@@ -128,7 +128,7 @@ collections:
     authors:
       - name: Nikon
         organization: Nikon
-    license: "All rights reserved"
+    license: "[All rights reserved]"
     reference: "https://www.microscope.healthcare.nikon.com/resources/ebooks/how-deep-learning-is-used-within-microscopy"
     format: pdf
   - name: BioImage Data Analysis
@@ -140,19 +140,19 @@ collections:
       - name: Kota Miura
         organization: Nikon Imaging Center, Heidelberg
     reference: "https://analyticalscience.wiley.com/content/article-do/bioimage-data-analysis"
-    license: "All rights reserved"
+    license: "[All rights reserved]"
     format: pdf
   - name: Deep Learning in Medical Imaging
     id: book-dlmi
     source: https://raw.githubusercontent.com/oeway/hypha-knowledge-base/gh-pages/Deep%20Learning%20in%20Medical%20Imaging.pdf
     description: "A book written by Narjes Benameur and Ramzi Mahmoudi about deep learning in medical imaging"
-    base_url: https://www.rsna.org/-/media/Files/RSNA/Education/RSNA-Press/Deep-Learning-in-Medical-Imaging.pdf
+    base_url: https://www.intechopen.com/chapters/87248
     authors:
       - name: Narjes Benameur
         organization: University of Tunis el Manar
       - name: Ramzi Mahmoudi
         organization: University of Monastir, Tunisia
-    license: "Licensee IntechOpen. Creative Commons Attribution 3.0 License"
+    license: "[Licensee IntechOpen. Creative Commons Attribution 3.0 License](https://www.intechopen.com/chapters/87248)"
     reference: "https://www.intechopen.com/chapters/87248"
     format: pdf
   - name: FUTURE AI International consensus guideline for trustworthy and deployable AI in healthcare
@@ -166,7 +166,7 @@ collections:
       - name: Aasa Feragen
         organization: Technical University of Denmark
       - name: et al.
-    license: "arXiv.org perpetual, non-exclusive license 1.0"
+    license: "[arXiv.org perpetual, non-exclusive license 1.0](https://arxiv.org/licenses/nonexclusive-distrib/1.0/license.html)"
     reference: "https://arxiv.org/abs/2309.12325"
     format: pdf
   - name: Roadmap on Deep Learning for Microscopy
@@ -182,7 +182,7 @@ collections:
       - name: Lei Tian
         organization: Boston University
       - name: et al.
-    license: "arXiv.org perpetual, non-exclusive license 1.0"
+    license: "[arXiv.org perpetual, non-exclusive license 1.0](https://arxiv.org/licenses/nonexclusive-distrib/1.0/license.html)"
     reference: "https://arxiv.org/abs/2303.03793"
     format: pdf
   - name: The Rise of Data-Driven Microscopy powered by Machine Learning
@@ -199,7 +199,7 @@ collections:
         organization: Instituto Gulbenkian de Ciência, Oeiras, Portugal
       - name: Ricardo Henriques
         organization: Instituto Gulbenkian de Ciência, Oeiras, Portugal
-    license: "All rights reserved"
+    license: "[All rights reserved]"
     reference: "https://onlinelibrary.wiley.com/doi/full/10.1111/jmi.13282"
     format: pdf
   - name: The ITK Software Guide Book 1 Introduction and Development Guidelines
@@ -215,7 +215,7 @@ collections:
       - name: Luis Ibáñez
         organization: Google LLC
       - name: Insight Software Consortium
-    license: "Apache 2.0"
+    license: "[Apache 2.0](https://github.com/InsightSoftwareConsortium/ITK?tab=Apache-2.0-1-ov-file)"
     reference: "https://itk.org/ITKSoftwareGuide/html/Book1/ITKSoftwareGuide-Book1.html"
     format: pdf
   - name: The ITK Software Guide Book 2 Design and Functionality
@@ -231,7 +231,7 @@ collections:
       - name: Luis Ibáñez
         organization: Google LLC
       - name: Insight Software Consortium
-    license: "Apache 2.0"
+    license: "[Apache 2.0](https://github.com/InsightSoftwareConsortium/ITK?tab=Apache-2.0-1-ov-file)"
     reference: "https://itk.org/ITKSoftwareGuide/html/Book2/ITKSoftwareGuide-Book2.html"
     format: pdf
   - name: ITK
@@ -242,7 +242,7 @@ collections:
     base_url: https://docs.itk.org
     authors:
       - name: Insight Software Consortium
-    license: "Apache 2.0"
+    license: "[Apache 2.0](https://github.com/InsightSoftwareConsortium/ITK?tab=Apache-2.0-1-ov-file)"
     reference: "https://github.com/InsightSoftwareConsortium/ITK"
     format: markdown
   - name: ITK-Wasm
@@ -253,7 +253,7 @@ collections:
     base_url: https://wasm.itk.org
     authors:
       - name: Insight Software Consortium
-    license: "Apache 2.0"
+    license: "[Apache 2.0](https://github.com/InsightSoftwareConsortium/itk-wasm?tab=Apache-2.0-1-ov-file#readme)"
     reference: "https://github.com/InsightSoftwareConsortium/itk-wasm"
     format: markdown
 additional_channels:
