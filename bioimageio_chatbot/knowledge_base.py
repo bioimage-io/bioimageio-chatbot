@@ -11,20 +11,14 @@ import json
 import pickle
 from bioimageio_chatbot.utils import get_manifest, download_file
 
-KNOWLEDGE_BASE_URL = os.environ.get("BIOIMAGEIO_KNOWLEDGE_BASE_URL", "https://uk1s3.embassy.ebi.ac.uk/public-datasets/bioimageio-knowledge-base")
-
 
 def load_docs_store(db_path, collection_name):
     # Each collection has two files [collection_name].faiss and [collection_name].pkl
     # Check if it exists, otherwise, download from {KNOWLEDGE_BASE_URL}/[collection].faiss
     if not os.path.exists(os.path.join(db_path, f"{collection_name}.faiss")):
-        print(f"Downloading {collection_name}.faiss from {KNOWLEDGE_BASE_URL}/{collection_name}.faiss")
-        download_file(f"{KNOWLEDGE_BASE_URL}/{collection_name}.faiss", os.path.join(db_path, f"{collection_name}.faiss"))
-    
+        raise Exception(f"Please build the docs store {collection_name} by running create_vector_knowledge_base first.")
     if not os.path.exists(os.path.join(db_path, f"{collection_name}.pkl")):
-        print(f"Downloading {collection_name}.pkl from {KNOWLEDGE_BASE_URL}/{collection_name}.pkl")
-        download_file(f"{KNOWLEDGE_BASE_URL}/{collection_name}.pkl", os.path.join(db_path, f"{collection_name}.pkl"))
-
+        raise Exception(f"Please build the docs store {collection_name} by running create_vector_knowledge_base first.")
     # Load from vector store
     embeddings = OpenAIEmbeddings()
     docs_store = FAISS.load_local(index_name=collection_name, folder_path=db_path, embeddings=embeddings, allow_dangerous_deserialization=True)

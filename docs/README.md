@@ -1,8 +1,6 @@
 # 🦒 BioImage.IO Chatbot 🤖
 
-**📣New Preprint: [![arXiv](https://img.shields.io/badge/arXiv-2310.18351-red.svg)](https://arxiv.org/abs/2310.18351) <a href="https://zenodo.org/records/10032227" target="_blank"><img id="record-doi-badge" data-target="[data-modal='10.5281/zenodo.10032228']" src="https://zenodo.org/badge/DOI/10.5281/zenodo.10032228.svg" alt="10.5281/zenodo.10032228"></a>**
-
-**📚 Documentation: https://bioimage-io.github.io/bioimageio-chatbot/**
+**📣 Publication on Nature Methods: https://www.nature.com/articles/s41592-024-02370-y </a>**
 
 **👇 Want to Try the Chatbot? [Visit here!](https://bioimage.io/chat)**
 
@@ -102,22 +100,33 @@ To reproduce the use cases described in [Figure 2](https://docs.google.com/drawi
 
 ## Cite Us
 
-If you use the BioImage.IO Chatbot in your research, please cite us: <a href="https://zenodo.org/records/10032227" target="_blank"><img id="record-doi-badge" data-target="[data-modal='10.5281/zenodo.10032228']" src="https://zenodo.org/badge/DOI/10.5281/zenodo.10032228.svg" alt="10.5281/zenodo.10032228"></a>
-
+If you use the BioImage.IO Chatbot in your research, please cite us:
 
 ```
-Lei, W., Fuster-Barceló, C., Muñoz-Barrutia, A., & Ouyang, W. (2023). 🦒BioImage.IO Chatbot: A Personalized Assistant for BioImage Analysis Augmented by Community Knowledge Base (0.1.0). Zenodo. https://doi.org/10.5281/zenodo.10032228
-```
-
-You can also reference our preprint available on arXiv: [![arXiv](https://img.shields.io/badge/arXiv-2310.18351-red.svg)](https://arxiv.org/abs/2310.18351) 
-```
-Lei, W., Fuster-Barceló, C., Muñoz-Barrutia, A., & Ouyang, W. (2023). 🦒BioImage.IO Chatbot: A Personalized Assistant for BioImage Analysis Augmented by Community Knowledge Base. arXiv. https://arxiv.org/abs/2310.18351
+Lei, W., Fuster-Barceló, C., Reder, G. et al. BioImage.IO Chatbot: a community-driven AI assistant for integrative computational bioimaging. Nat Methods 21, 1368–1370 (2024). https://doi.org/10.1038/s41592-024-02370-y
 ```
 
 ## Acknowledgements
+
+The BioImage.IO Chatbot is greatly enriched by the valuable resources contributed by the global bioimage analysis community. We extend our deepest gratitude to all authors and contributors listed in the [knowledge base manifest](https://github.com/bioimage-io/bioimageio-chatbot/blob/main/knowledge-base-manifest.yaml), especially the original authors of the materials integrated into our extensions. Their work has significantly enhanced the capabilities of this chatbot, providing users with high-quality information and tools.
+
+We would also like to thank the open-source community for their ongoing support and innovation, which continuously drives the development and improvement of the BioImage.IO platform.
 
 We thank [AI4Life consortium](https://ai4life.eurobioimaging.eu/) for its crucial support in the development of the BioImage.IO Chatbot.
 
 ![AI4Life](https://ai4life.eurobioimaging.eu/wp-content/uploads/2022/09/AI4Life-logo_giraffe-nodes-2048x946.png)
 
 AI4Life has received funding from the European Union’s Horizon Europe research and innovation programme under grant agreement number 101057970. Views and opinions expressed are, however those of the author(s) only and do not necessarily reflect those of the European Union or the European Research Council Executive Agency. Neither the European Union nor the granting authority can be held responsible for them.
+
+Thank you for supporting the BioImage.IO project and contributing to the advancement of bioimage analysis!
+
+## Disclaimer
+
+
+These resources are primarily utilized for research purposes in compliance with the European Union's copyright exception on Text and Data Mining (TDM) as outlined in [Directive (EU) 2019/790](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32019L0790).
+
+The full list of sources and resources used by the BioImage.IO Chatbot can be found in our [knowledge base manifest](https://github.com/bioimage-io/bioimageio-chatbot/blob/main/knowledge-base-manifest.yaml). We kindly ask users to carefully verify the accuracy and completeness of information with the original sources. For any work derived from these resources, please ensure that you respect the respective licenses and adhere to the conditions set forth by the original authors.
+
+If you are an author of any material used within the BioImage.IO Chatbot and wish to have your content removed, please contact us directly. We are committed to respecting the rights of all contributors and will promptly address your request.
+
+See the full [Disclaimer for BioImage.IO Chatbot](./DISCLAIMER.md).
