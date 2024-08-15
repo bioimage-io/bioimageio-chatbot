@@ -88,6 +88,7 @@ def create_assistants(builtin_extensions):
         extensions_by_id = {ext.id: ext for ext in builtin_extensions}
         extensions_by_name = {ext.name: ext for ext in builtin_extensions}
         extensions_by_tool_name = {}
+        tool_info = {}
         
         tools = []
         tool_prompts = {}
@@ -115,6 +116,11 @@ def create_assistants(builtin_extensions):
                 assert len(extension.description) <= max_length, f"Extension tool prompt is too long: {extension.description}"
                 tool_prompts[create_tool_name(extension.id) + "*"] = extension.description.replace("\n", ";")[:max_length]
             extensions_by_tool_name.update({t.__name__: extension for t in ts})
+            
+            if extension.info:
+                for t in ts:
+                    tool_info[t.__name__] = extension.info.get(t.__tool_id__)
+
             tools += ts
             if extension.get_state:
                 # the state of the extension is a dictionary with keys and values for the states of the extension
@@ -152,24 +158,13 @@ def create_assistants(builtin_extensions):
             tool_usage_prompt=tool_usage_prompt,
         )
         result_steps = metadata["steps"]
-        
-        # Create a map to store the mapping of result step names to their corresponding info
-        info_map = {}
-        # Iterate through each extension in the dictionary
-        for ext_id, ext in extensions_by_id.items():
-            # Iterate through the info dictionary of each extension
-            for tool_key, tool_info in ext.info.items():
-                # remove all special characters and convert to lowercase, and add `ext_id` to the beginning
-                step_name = f"{ext_id}-{tool_key}".replace(" ", "").replace("-", "").replace("_","").lower()
-                # Map the step name to the tool info
-                info_map[step_name] = tool_info
                 
         for idx, step_list in enumerate(result_steps):
             for step in step_list:
                 # Get the step name
-                step_name = step['name'].lower()
+                step_name = step['name']
                 # Get the corresponding info for the step
-                step_info = info_map.get(step_name)
+                step_info = tool_info.get(step_name)
                 if step_info:
                     # Add the info to the step details
                     step["info"] = step_info

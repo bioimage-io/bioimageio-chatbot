@@ -4,7 +4,7 @@ requests
 pypdf
 pillow
 matplotlib
-hypha>=0.15.50
+hypha==0.15.53
 tqdm
 aiofiles
 serpapi
