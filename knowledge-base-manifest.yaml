@@ -134,10 +134,10 @@ collections:
   - name: BioImage Data Analysis
     id: book-bda
     source: https://raw.githubusercontent.com/oeway/hypha-knowledge-base/gh-pages/bioimagedataanalysis-compressed.pdf
-    description: "A book written by Kota Miura about bioimage data analysis"
+    description: "A book about bioimage data analysis"
     base_url: https://analyticalscience.wiley.com/content/article-do/bioimage-data-analysis
     authors:
-      - name: Kota Miura
+      - name: Kota Miura (editor) et al.
         organization: Nikon Imaging Center, Heidelberg
     reference: "https://analyticalscience.wiley.com/content/article-do/bioimage-data-analysis"
     license: "[All rights reserved]"
