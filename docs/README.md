@@ -1,6 +1,6 @@
 # 🦒 BioImage.IO Chatbot 🤖
 
-**📣 Publication on Nature Methods: https://www.nature.com/articles/s41592-024-02370-y </a>**
+**📣 Publication on Nature Methods: https://www.nature.com/articles/s41592-024-02370-y. Free access: https://rdcu.be/dQuw7  </a>**
 
 **👇 Want to Try the Chatbot? [Visit here!](https://bioimage.io/chat)**
 
