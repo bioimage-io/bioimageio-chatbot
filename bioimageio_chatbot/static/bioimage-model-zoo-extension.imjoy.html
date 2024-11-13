@@ -46,7 +46,7 @@ def matches_keywords(text: str, keywords: List[str]) -> bool:
 
 def search_item(item: Dict[str, Any], keywords: List[str]) -> bool:
     search_fields = [item.get('id', ''), item.get('nickname', ''), item.get('name', ''),
-        item.get('nickname_icon', ''), item.get('license', ''), item.get('description', ''), item.get('created'),
+        item.get('nickname_icon', ''), item.get('license', ''), item.get('description', ''), item.get('created')
     ] + [tag for tag in item.get('tags', [])]
     search_fields += [author['name'] for author in item.get('authors', [])]
     return any(matches_keywords(field, keywords) for field in search_fields)
