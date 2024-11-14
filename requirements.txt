@@ -1,10 +1,10 @@
-schema-agents>=0.1.58
-imjoy-rpc>=0.5.48.post2
+schema-agents>=0.1.59
+hypha-rpc==0.20.38
 requests
 pypdf
 pillow
 matplotlib
-hypha==0.15.53
+hypha==0.20.38.post19
 tqdm
 aiofiles
 serpapi

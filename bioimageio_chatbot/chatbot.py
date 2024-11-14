@@ -6,7 +6,7 @@ import datetime
 import secrets
 import aiofiles
 from functools import partial
-from imjoy_rpc.hypha import login, connect_to_server
+from hypha_rpc import login, connect_to_server
 
 from pydantic import BaseModel, Field
 from schema_agents import Role, Message
@@ -487,9 +487,7 @@ async def register_chat_service(server):
         }
     )
 
-    server_info = await server.get_connection_info()
-
-    await serve_actions(server, server_info.public_base_url, builtin_extensions)
+    await serve_actions(server, server.config.public_base_url, builtin_extensions)
     server_url = server.config["public_base_url"]
 
     service_id = hypha_service_info["id"]

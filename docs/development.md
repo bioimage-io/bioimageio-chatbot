@@ -159,7 +159,7 @@ console.log(`Extension service registered with id: ${svc.id}, you can visit the 
 ### Serve Chatbot Extension with Hypha in Python
 
 ```python
-from imjoy_rpc.hypha import connect_to_server, login
+from hypha_rpc import connect_to_server, login
 
 server_url = "https://chat.bioimage.io"
 token = await login({"server_url": server_url})
@@ -179,7 +179,7 @@ To make it public, you need to set the visibility of the chatbot extension servi
 See the example below:
 
 ```python
-from imjoy_rpc.hypha import connect_to_server, login
+from hypha_rpc import connect_to_server, login
 
 server_url = "https://chat.bioimage.io"
 token = await login({"server_url": server_url})
