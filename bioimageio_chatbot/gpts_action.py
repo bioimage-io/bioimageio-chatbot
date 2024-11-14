@@ -2,7 +2,7 @@ import asyncio
 from openai import AsyncOpenAI
 from bioimageio_chatbot.chatbot_extensions import extension_to_tools
 from schema_agents.utils.schema_conversion import get_service_openapi_schema
-from imjoy_rpc.hypha import login, connect_to_server
+from hypha_rpc import login, connect_to_server
 
 client = AsyncOpenAI()
 

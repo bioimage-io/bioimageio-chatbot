@@ -47,7 +47,7 @@ Follow the steps below to develop a new extension for microscope stage control a
 - **Pre-requisites**: You will need a microscope and the squid control software
 
 - **Create microscope extension**: Following the example in the above [chatbot extension example notebook](https://imjoy-notebook.netlify.app/lab/index.html?load=https://raw.githubusercontent.com/bioimage-io/bioimageio-chatbot/main/docs/bioimage-chatbot-extension-tutorial.ipynb&open=1), create a hypha service extension for controlling the microscope:
-    1. **Setup the Developer Environment**: Open a Jupyter Notebook. Install and import the `imjoy_rpc` and `pydantic` packages.
+    1. **Setup the Developer Environment**: Open a Jupyter Notebook. Install and import the `imjoy_rpc`, `hypha_rpc` and `pydantic` packages.
     2. **Define Input Schemas**: Create classes for `MoveStageInput` and `SnapImageInput` to structure the user input. (Note: To help the chatbot understand the "center", you will need to tell the chatbot about the boundaries of the stage via the docstring of the `MoveStageInput` class)
     3. **Implement Control Functions**: Write asynchronous functions `move_stage` and `snap_image`.
     4. **Setup Extension Interface**: Develop the extension interface and define a schema getter function.
