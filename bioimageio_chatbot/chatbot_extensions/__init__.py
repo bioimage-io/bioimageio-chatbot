@@ -61,7 +61,7 @@ async def extension_to_tools(extension: ChatbotExtension):
             assert k in extension.tools, f"Tool `{k}` not found in extension `{extension.id}`."
             ext_tool = extension.tools[k]
             tool = tool_factory(extension.id, k, ext_tool, schemas[k])
-            ext_tool.__tool_id__ = k
+            tool.__tool_id__ = k
             tools.append(tool)
     else:
         tools = []
