@@ -62,7 +62,7 @@ collections:
     source: https://s3.imjoy.io/public-datasets/deepimagej-plugin.wiki.zip
     directory: "."
     description: The ImageJ plugin to run deep-learning models
-    base_url: https://deepimagej.github.io/
+    base_url: https://github.com/deepimagej/deepimagej-plugin/wiki/
     authors:
       - name: DeepImageJ Team
     license: "[BSD 2-Clause](https://github.com/deepimagej/deepimagej-plugin/blob/master/LICENSE)"
