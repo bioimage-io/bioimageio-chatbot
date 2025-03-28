@@ -4,6 +4,7 @@
 
 **👇 Want to Try the Chatbot? [Visit here!](https://bioimage.io/chat)**
 
+**📖 Read the full Documentation [here](https://bioimage-io.github.io/bioimageio-chatbot/#/)**
 ## Your Personal Assistant in Computational Bioimaging
 
 Welcome to the BioImage.IO Chatbot user guide. This guide will help you get the most out of the chatbot, providing detailed information on how to interact with it and retrieve valuable insights related to computational bioimaging.
